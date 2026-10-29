@@ -1,0 +1,63 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   This Razor file is part of the MAUI application. *@
+@model TaskLogViewerViewModel
+@{
+    Layout = null;
+    var titleTaskName = string.IsNullOrWhiteSpace(Model.TaskName) ? "Task" : Model.TaskName;
+    var windowTitle = $"MAUI Task Log - {Model.TaskId}: {titleTaskName}";
+    var userPreferences = await UserPreferencesService.GetCurrentAsync();
+}
+<!DOCTYPE html>
+<html lang="en" data-theme="@userPreferences.Theme">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@windowTitle</title>
+    <link rel="icon" type="image/x-icon" href="~/favicon.ico" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="task-log-viewer-page">
+    <main class="task-log-viewer-shell">
+        <header class="task-log-viewer-header">
+            <div>
+                <div class="task-log-viewer-brand">MAUI Task Log</div>
+                <h1>@titleTaskName</h1>
+                <div class="task-log-viewer-meta">
+                    <span><strong>Task ID</strong> @Model.TaskId</span>
+                    <span><strong>Log ID</strong> @Model.LogId</span>
+                    @if (!string.IsNullOrWhiteSpace(Model.ExitStatus))
+                    {
+                        <span><strong>Status</strong> @Model.ExitStatus</span>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(Model.StartTime))
+                    {
+                        <span><strong>Run</strong> <span data-log-viewer-start-time>@Model.StartTime</span></span>
+                    }
+                </div>
+            </div>
+            <button type="button" class="task-log-viewer-close" onclick="window.close()" aria-label="Close">×</button>
+        </header>
+
+        @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+        {
+            <div class="task-log-viewer-error">@Model.ErrorMessage</div>
+        }
+        else
+        {
+            <section class="task-log-viewer-content" aria-label="Task log text">
+                <pre>@Model.Content</pre>
+            </section>
+        }
+    </main>
+
+    <script>
+        (() => {
+            const target = document.querySelector('[data-log-viewer-start-time]');
+            if (!target) return;
+            const parsed = new Date(target.textContent || '');
+            if (!Number.isNaN(parsed.valueOf())) target.textContent = parsed.toLocaleString();
+        })();
+    </script>
+</body>
+</html>

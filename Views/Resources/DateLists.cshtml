@@ -1,0 +1,101 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI *@
+@model DateListsPageViewModel
+@{
+    ViewData["Title"] = "Date Lists";
+    ViewData["GridDeferInitialLoad"] = true;
+    ViewData["GridToolbarRightPrefixPartial"] = "_DateListRefreshControls";
+    ViewData["DateListLastRefreshUtc"] = Model.LastRefreshUtc;
+}
+<div class="page-heading compact-heading"><div><h1>Date Lists</h1><p>Create, review, and manage reusable MOVEit Date Lists.</p></div></div>
+@if (TempData["DateListLoadError"] is string loadError && !string.IsNullOrWhiteSpace(loadError)) { <div class="inline-alert error-alert">@loadError</div> }
+<partial name="_DataGrid" model="Model.Grid" />
+<form class="task-antiforgery" hidden>@Html.AntiForgeryToken()</form>
+<div data-date-list-page-config
+     data-login-url="@Url.Action("SessionExpired", "Account")"
+     data-create-date-list-url="@Url.Action("CreateDateList", "Resources")"
+     data-audit-report-url="@Url.Action("Audit", "Records")"
+     data-date-list-details-url="@Url.Action("DateListDetails", "Resources")"
+     data-save-date-list-details-url="@Url.Action("SaveDateListDetails", "Resources")"
+     data-export-date-list-url="@Url.Action("ExportDateList", "Resources")"
+     data-export-date-lists-url="@Url.Action("ExportDateLists", "Resources")"
+     data-preflight-import-date-list-url="@Url.Action("PreflightImportDateList", "Resources")"
+     data-import-date-list-url="@Url.Action("ImportDateList", "Resources")"
+     data-prepare-date-list-edit-url="@Url.Action("PrepareDateListEdit", "Resources")"
+     data-preflight-undo-date-list-url="@Url.Action("PreflightUndoDateList", "Resources")"
+     data-undo-date-list-url="@Url.Action("UndoDateList", "Resources")"
+     data-preflight-delete-date-lists-url="@Url.Action("PreflightDeleteDateLists", "Resources")"
+     data-delete-date-lists-url="@Url.Action("DeleteDateLists", "Resources")"
+     data-mark-date-list-edited-url="@Url.Action("MarkDateListEdited", "Resources")"
+     data-initial-date-list-grid-url="@Url.Action("InitialDateListsGrid", "Resources")"
+     data-refresh-date-list-grid-url="@Url.Action("RefreshDateListsGrid", "Resources")"
+     data-ui-date-list-refresh-seconds="@Model.UiDateListRefreshIntervalSeconds"
+     data-native-editor-session-url="@Url.Action("Session", "NativeEditor")"
+     data-prepare-task-edit-url="@Url.Action("PrepareTaskEdit", "Tasks")"
+     data-mark-task-edited-url="@Url.Action("MarkTaskEdited", "Tasks")"></div>
+
+<div class="task-row-action-menu" data-date-list-row-action-menu role="menu" aria-label="Date List actions" hidden>
+    <button type="button" role="menuitem" data-date-list-row-command="information">Date List Information</button>
+    <button type="button" role="menuitem" data-date-list-row-command="audit">View Audit Records</button>
+    <div class="task-row-action-divider" role="separator"></div>
+    <button type="button" role="menuitem" data-date-list-row-command="export">Export Date List</button>
+    <button type="button" role="menuitem" data-date-list-row-command="edit">Edit Date List</button>
+    <div class="task-row-action-divider" role="separator" data-date-list-undo-divider></div>
+    <button type="button" role="menuitem" data-date-list-row-command="undo">Undo Changes</button>
+    <div class="task-row-action-divider" role="separator" data-date-list-delete-divider></div>
+    <button type="button" role="menuitem" class="task-row-danger-action" data-date-list-row-command="delete">Delete Date List</button>
+</div>
+
+<dialog class="new-task-dialog" data-new-date-list-dialog>
+<form class="new-task-card" data-new-date-list-form>
+<div class="settings-header"><div><h2>New Date List</h2><p>Create the Date List in MOVEit and continue configuration in the native editor.</p></div><button type="button" class="dialog-close" data-new-date-list-close aria-label="Close">×</button></div>
+<div class="new-task-body">
+    <div class="inline-alert error-alert" data-new-date-list-error hidden></div>
+
+<label class="field-block full-span"><span>Date List Name</span><input class="text-input" type="text" autocomplete="off" data-new-date-list-name /></label>
+<label class="field-block full-span"><span>Description</span><textarea class="text-input textarea-input" rows="3" data-new-date-list-description></textarea></label>
+
+</div>
+<div class="settings-footer new-task-footer"><button type="button" class="secondary-button" data-new-date-list-cancel>Cancel</button><button type="submit" class="primary-button new-task-submit" data-new-date-list-submit><span class="inline-spinner button-spinner" data-new-date-list-spinner hidden></span><span data-new-date-list-submit-label>Create Date List</span></button></div>
+</form></dialog>
+
+
+<partial name="_ResourceImportDialog" model='new ResourceImportDialogViewModel { Key = "datelist", Label = "Date List" }' />
+<dialog class="new-task-dialog" data-undo-date-list-dialog><div class="new-task-card">
+<div class="settings-header"><div><h2>Undo Date List Changes</h2><p>Select a saved version to restore.</p></div><button type="button" class="dialog-close" data-undo-date-list-no aria-label="Close">×</button></div>
+<div class="new-task-body">
+    <div class="inline-alert error-alert" data-undo-date-list-error hidden></div>
+<p data-undo-date-list-message></p><div class="undo-history-list" data-undo-date-list-history></div><p><strong>The current Date List configuration will be replaced by the selected version.</strong></p></div>
+<div class="settings-footer new-task-footer"><button type="button" class="secondary-button" data-undo-date-list-no>Cancel</button><button type="button" class="danger-button" data-undo-date-list-yes>Restore Selected Version</button></div>
+</div></dialog>
+
+<dialog class="new-task-dialog" data-delete-date-list-dialog><div class="new-task-card">
+<div class="settings-header"><div><h2 data-delete-date-list-title>Delete Date List</h2><p>Deletes the selected Date List or Date Lists from MOVEit Automation. When available, MAUI saves a Recycle Bin recovery copy first.</p></div><button type="button" class="dialog-close" data-delete-date-list-no aria-label="Close">×</button></div>
+<div class="new-task-body">
+    <div class="inline-alert error-alert" data-delete-date-list-error hidden></div>
+<p data-delete-date-list-message></p><div class="delete-object-list" data-delete-date-list-list hidden></div><p><strong>Are you sure you want to continue?</strong></p></div>
+<div class="settings-footer new-task-footer"><button type="button" class="secondary-button" data-delete-date-list-no>Cancel</button><button type="button" class="danger-button" data-delete-date-list-yes>Yes, Delete</button></div>
+</div></dialog>
+
+<dialog class="task-details-dialog" data-date-list-details-dialog>
+<form method="dialog" class="task-details-card" data-date-list-details-form>
+<div class="settings-header"><div><h2>Date List Information</h2><p>MOVEit properties, MAUI metadata, and Task assignments.</p></div><button type="submit" class="dialog-close" aria-label="Close">×</button></div>
+<div class="task-details-tabs" role="tablist"><button type="button" class="task-details-tab active" data-date-list-details-tab="information">Information</button><button type="button" class="task-details-tab" data-date-list-details-tab="tasks">Tasks</button></div>
+<div class="task-details-body">
+    <div class="inline-alert error-alert" data-date-list-details-error hidden></div>
+<div class="details-loading" data-date-list-details-loading role="status" aria-live="polite" aria-label="Loading Date List information"><span class="inline-spinner" aria-hidden="true"></span><span>Loading...</span></div><div data-date-list-details-content hidden>
+<div data-date-list-details-panel="information">
+<section class="details-section"><div class="details-section-heading maui-object-properties-heading"><div class="task-identity-row maui-object-identity" aria-label="Date List identity"><div class="task-identity-item"><span>Type</span><strong>Date List</strong></div><div class="task-identity-item"><span>Date List ID</span><strong data-date-list-id></strong></div></div><span class="source-badge">MOVEit</span></div>
+<div class="details-grid"><label class="field-block full-span"><span>Date List Name</span><input class="text-input" data-date-list-name /></label><label class="field-block full-span"><span>Description</span><textarea class="text-input textarea-input" rows="3" data-date-list-description></textarea></label><label class="field-block full-span"><span>Entries</span><input class="text-input" type="text" data-date-list-entry-count readonly /></label><label class="field-block full-span"><span>Resource Groups</span><input class="text-input" data-date-list-resource-groups readonly /></label></div></section>
+<section class="details-section"><div class="details-section-heading"><h3>Additional Information</h3><span class="source-badge local-badge">MAUI</span></div><div class="details-grid" data-date-list-metadata-fields></div></section>
+<section class="details-section audit-section"><div class="details-section-heading"><h3>Date List Metadata</h3><span class="source-badge local-badge">MAUI</span></div><div class="audit-grid" data-date-list-metadata-audit></div></section>
+</div>
+<div data-date-list-details-panel="tasks" hidden><section class="details-section"><div class="details-section-heading details-related-tasks-heading"><div><h3>Assigned Tasks</h3><p>Visible Tasks that reference this Date List.</p></div></div><div class="host-tasks-empty" data-date-list-tasks-empty hidden>No visible Tasks currently reference this Date List.</div><div class="host-tasks-list" data-date-list-tasks-list hidden><div class="host-tasks-header"><div>Task ID</div><div>Task Name</div></div><div data-date-list-tasks-rows></div></div></section></div>
+</div></div>
+<div class="settings-footer"><button type="button" class="secondary-button" data-date-list-details-cancel>Close</button><button type="button" class="primary-button" data-date-list-details-save>Save</button></div>
+</form></dialog>
+
+@section Scripts {
+<script src="~/js/resource-portability.js" asp-append-version="true"></script>
+<script src="~/js/datelists.js" asp-append-version="true"></script>
+}

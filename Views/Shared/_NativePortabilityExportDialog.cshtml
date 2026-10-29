@@ -1,0 +1,48 @@
+@model MoveItAutomationUI.Models.NativePortabilityDialogViewModel
+@{ var plural = string.IsNullOrWhiteSpace(Model.PluralLabel) ? Model.ObjectType + "s" : Model.PluralLabel; }
+
+<dialog class="new-task-dialog task-import-dialog" data-native-portability-export-dialog>
+    <form class="new-task-card task-import-card" data-native-portability-export-form>
+        <div class="settings-header">
+            <div><h2>Export @plural</h2><p>Package the native MOVEit configuration together with MAUI metadata.</p></div>
+            <button type="button" class="dialog-close" data-native-portability-export-close aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body task-import-body">
+            <fieldset class="new-task-type-fieldset task-import-mode-fieldset">
+                <legend>Credential Protection</legend>
+                <label class="new-task-type-card">
+                    <input type="radio" name="nativePortabilityProtection" value="server-key" checked />
+                    <span class="new-task-type-copy"><strong>Server Key</strong><span>For importing back into this MOVEit environment or another environment that shares its encryption key material.</span></span>
+                </label>
+                <label class="new-task-type-card">
+                    <input type="radio" name="nativePortabilityProtection" value="passphrase" />
+                    <span class="new-task-type-copy"><strong>Portable — Passphrase</strong><span>Recommended for moving configuration to a different MOVEit Automation environment. MOVEit protects credentials and included key material with the passphrase.</span></span>
+                </label>
+            </fieldset>
+
+            <div class="details-grid" data-native-portability-passphrase-fields hidden>
+                <label class="field-block"><span>Passphrase</span><input class="text-input" type="text" minlength="16" autocomplete="off" spellcheck="false" data-native-portability-export-passphrase /></label>
+                <label class="field-block"><span>Confirm Passphrase</span><input class="text-input" type="text" minlength="16" autocomplete="off" spellcheck="false" data-native-portability-export-confirm /></label>
+                <small class="field-help full-span">MAUI generates a random 16-character passphrase when Portable protection is selected. You can replace it. Passphrases must contain at least 1 uppercase letter, 1 lowercase letter, 1 digit, and 1 special character.</small>
+            </div>
+
+            <label class="configuration-import-acknowledgement native-portability-option">
+                <input type="checkbox" data-native-portability-include-keys checked />
+                <span>Include referenced Keys and Certificates</span>
+            </label>
+            <div class="inline-alert info-alert">
+                MAUI custom metadata fields and Tags are included for exported native objects where MAUI supports metadata. Folder placement, audit timestamps, and Undo/Recycle history are not portable.
+            </div>
+            <div class="inline-alert warning-alert">
+                Export files can contain credential and private-key material protected by MOVEit. Treat every <strong>.maui</strong> portability package as sensitive.
+            </div>
+        </div>
+        <div class="settings-footer new-task-footer native-portability-export-footer">
+            <span class="native-portability-export-error" data-native-portability-export-error role="alert" aria-live="assertive" hidden></span>
+            <button type="button" class="secondary-button" data-native-portability-export-cancel>Cancel</button>
+            <button type="submit" class="primary-button" data-native-portability-export-submit>
+                <span data-native-portability-export-submit-label>Export</span>
+            </button>
+        </div>
+    </form>
+</dialog>

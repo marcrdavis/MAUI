@@ -1,0 +1,83 @@
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; font-family: Arial, sans-serif; font-size: 14px; color: rgb(34, 34, 34)">
+  <tbody><tr>
+    <td style="padding-top: 14px; padding-right: 14px; padding-bottom: 14px; padding-left: 14px; background-color: rgb(253, 236, 236)">
+      <div style="font-size: 18px; font-weight: bold; color: rgb(161, 38, 34)">Task Failed</div>
+      <div style="margin-top: 4px">MOVEit Automation encountered one or more errors while running this task.</div>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="padding-top: 16px">
+      <table width="100%" cellpadding="6" cellspacing="0" border="1" style="border-collapse: collapse">
+        <tbody><tr>
+          <td width="180" style="font-weight: bold; background-color: rgb(245, 245, 245)">Task Name</td>
+          <td>[TaskName]</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; background-color: rgb(245, 245, 245)">Task ID</td>
+          <td>[TaskID]</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; background-color: rgb(245, 245, 245)">Task Status</td>
+          <td>[TaskStatus]</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; background-color: rgb(245, 245, 245)">Nominal Start</td>
+          <td>[NominalStart]</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; background-color: rgb(245, 245, 245)">Notification Time</td>
+          <td>[yyyy]-[mm]-[dd] [hh]:[tt]:[ss]</td>
+        </tr>
+      </tbody></table>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="padding-top: 16px">
+      <strong>Error Details</strong>
+      <table width="100%" cellpadding="6" cellspacing="0" border="1" style="border-collapse: collapse; margin-top: 6px">
+        <tbody><tr>
+          <td width="180" style="font-weight: bold; background-color: rgb(245, 245, 245)">Task Error Code</td>
+          <td>[ErrorCodeTask]</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; background-color: rgb(245, 245, 245)">Task Error Description</td>
+          <td>[ErrorDescriptionTask]</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; background-color: rgb(245, 245, 245)">File Error Code</td>
+          <td>[ErrorCodeFile]</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; background-color: rgb(245, 245, 245)">File Error Description</td>
+          <td>[ErrorDescriptionFile]</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; background-color: rgb(245, 245, 245)">File</td>
+          <td>[OrigName]</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; background-color: rgb(245, 245, 245)">Source Path</td>
+          <td>[FullPath]</td>
+        </tr>
+      </tbody></table>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="padding-top: 16px">
+      <div style="padding-top: 12px; padding-right: 12px; padding-bottom: 12px; padding-left: 12px; background-color: rgb(255, 247, 247)">
+        <strong>Escalation Instructions</strong><br><br>
+        REPLACE THIS TEXT WITH THE ESCALATION PROCEDURE FOR THIS TASK.<br><br>
+        Suggested information: support team, ticket queue, business contact, retry procedure, and escalation threshold.
+      </div>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="padding-top: 18px; font-size: 12px; color: rgb(102, 102, 102)">
+      This message was generated automatically by MOVEit Automation.
+    </td>
+  </tr>
+</tbody></table>

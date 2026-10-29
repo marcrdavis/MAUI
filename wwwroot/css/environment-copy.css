@@ -1,0 +1,89 @@
+/* Feature-scoped layout; colors, typography, controls and grouped surfaces come from the shared MAUI styles. */
+.environment-copy-dialog { width:min(1320px,calc(100vw - 48px)); }
+.environment-copy-card { width:100%; height:min(840px,calc(100dvh - 48px)); max-height:calc(100dvh - 48px); }
+.environment-copy-dialog [hidden],.environment-copy-differences [hidden] { display:none!important; }
+.environment-copy-card > header,.environment-copy-card > footer,.environment-copy-tabs { flex-shrink:0; }
+.environment-copy-body { flex:1; min-height:0; overflow:auto; display:flex; flex-direction:column; gap:16px; padding:20px 22px; }
+.environment-copy-panel { display:flex; flex-direction:column; gap:16px; min-height:0; }
+.environment-copy-panel .maui-property-card { padding:16px; display:grid; gap:16px; flex-shrink:0; }
+.environment-copy-panel p { margin:0; }
+.environment-copy-two { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.environment-copy-tools { display:flex; align-items:center; gap:12px; flex-shrink:0; }
+.environment-copy-tools > select { max-width:235px; }
+.environment-copy-tools > input { flex:1; min-width:100px; }
+.environment-copy-tools .selection-count { white-space:nowrap; margin-left:auto; }
+.environment-copy-table-wrap { overflow:auto; border:1px solid var(--border); border-radius:var(--radius-md); min-height:180px; max-height:400px; }
+.environment-copy-table-wrap .data-grid-table { width:100%; }
+.environment-copy-table-wrap th { position:sticky; top:0; background:var(--surface-2); z-index:1; }
+.environment-copy-table-wrap th,.environment-copy-table-wrap td { width:auto; }
+.environment-copy-table-wrap .environment-copy-check { width:32px; min-width:32px; max-width:32px; padding:0 6px; text-align:center; box-sizing:border-box; }
+.environment-copy-check-column { width:32px; }
+.environment-copy-type-column { width:20%; }
+.environment-copy-id-column { width:13%; }
+.environment-copy-inclusion-column { width:23%; }
+.environment-copy-table-wrap tr:is(.is-copy-dependency,.is-copy-reuse-only) td { color:var(--text-muted); }
+.environment-copy-table-wrap input[type=checkbox]:disabled { opacity:.55; cursor:default; }
+.environment-copy-bulk-menu button { white-space:nowrap; }
+.environment-copy-table-wrap td { white-space:normal; overflow-wrap:anywhere; }
+.environment-copy-table-wrap input[type=checkbox] { vertical-align:middle; }
+.environment-copy-dialog .checkbox-inline { display:flex; align-items:center; gap:9px; font-size:13px; }
+.environment-copy-dialog input[type=checkbox] { margin:0; flex-shrink:0; }
+.environment-copy-naming { grid-template-columns:minmax(140px,1fr) minmax(140px,1fr) minmax(245px,1.5fr) auto; align-items:end; }
+.environment-copy-unique { grid-column:1/-1; }
+.environment-copy-plan-head,.environment-copy-plan-main { display:grid; grid-template-columns:minmax(170px,1fr) minmax(200px,1.1fr) minmax(150px,.8fr) minmax(210px,1.15fr); gap:16px; align-items:start; }
+.environment-copy-plan-head { padding:10px 16px; font-size:12px; font-weight:650; color:var(--text-soft); background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius-sm); }
+.environment-copy-plan { display:grid; gap:12px; }
+.environment-copy-plan-row { border:1px solid var(--border); border-left:3px solid var(--border); border-radius:var(--radius-md); background:var(--surface); overflow:hidden; }
+.environment-copy-plan-row.needs-attention { border-left-color:var(--warning); background:color-mix(in srgb,var(--warning) 9%,var(--surface)); }
+.environment-copy-plan-main { padding:14px 16px 10px; }
+.environment-copy-plan-main > div { min-width:0; display:flex; flex-direction:column; gap:6px; }
+.environment-copy-plan-main strong { min-height:36px; display:block; line-height:36px; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.environment-copy-plan-main small { color:var(--text-soft); font-size:12px; overflow-wrap:anywhere; }
+.environment-copy-plan-main .text-input { width:100%; min-width:0; box-sizing:border-box; height:36px; }
+.environment-copy-plan-status { border-top:1px solid var(--border); padding:10px 16px; font-size:12px; display:flex; gap:12px; align-items:start; }
+.environment-copy-plan-status p { flex:1; white-space:pre-line; overflow-wrap:anywhere; }
+.environment-copy-plan-status button { flex-shrink:0; }
+.environment-copy-options { display:grid; gap:13px; }
+.environment-copy-feedback { flex:1; min-width:0; font-size:12px; color:var(--text-soft); overflow-wrap:anywhere; }
+.environment-copy-feedback.is-error { color:var(--danger); }
+.environment-copy-dialog button,.environment-copy-differences button { white-space:nowrap; }
+.environment-copy-dialog progress { width:100%; height:12px; accent-color:var(--accent); }
+.environment-copy-status [data-copy-phase] { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.environment-copy-status :is([data-copy-counts],[data-copy-phase-age]) { flex-shrink:0; white-space:nowrap; }
+.environment-copy-status :is([data-copy-counts],[data-copy-phase-age])::before { content:"·"; margin-right:8px; }
+.environment-copy-skips { font-size:12px; color:var(--text-soft); white-space:pre-line; overflow-wrap:anywhere; }
+.environment-copy-results { display:grid; gap:10px; }
+.environment-copy-result { border:1px solid var(--border); border-left-width:3px; border-radius:var(--radius-md); padding:12px 16px; display:grid; gap:6px; }
+.environment-copy-result strong { font-size:13px; }
+.environment-copy-result.access-change { border-left:3px solid var(--warning); background:color-mix(in srgb,var(--warning) 9%,var(--surface)); }
+.environment-copy-result.is-warning { border-left-color:var(--warning); background:color-mix(in srgb,var(--warning) 12%,var(--surface)); }
+.environment-copy-result.is-error { border-left-color:var(--danger); background:color-mix(in srgb,var(--danger) 10%,var(--surface)); }
+.environment-copy-result.has-metadata-notes { border-left-color:var(--accent); background:color-mix(in srgb,var(--accent) 10%,var(--surface)); }
+.environment-copy-result p { font-size:12px; color:var(--text-soft); white-space:pre-line; overflow-wrap:anywhere; }
+.environment-copy-differences { width:min(1120px,calc(100vw - 48px)); }
+.environment-copy-difference-card { width:100%; height:min(740px,calc(100dvh - 48px)); max-height:calc(100dvh - 48px); }
+.environment-copy-difference-card .environment-copy-body > * { flex-shrink:0; }
+.environment-copy-comparison { display:grid; border:1px solid var(--border); border-radius:var(--radius-md); overflow:hidden; }
+.environment-copy-comparison-row { display:grid; grid-template-columns:minmax(150px,.8fr) repeat(2,minmax(0,1.2fr)); border-top:1px solid var(--border); font-size:12px; }
+.environment-copy-comparison-row > div { padding:10px 12px; overflow-wrap:anywhere; white-space:pre-wrap; }
+.environment-copy-comparison-row > div + div { border-left:1px solid var(--border); }
+.environment-copy-comparison-row.changed { background:color-mix(in srgb,var(--warning) 9%,var(--surface)); }
+.environment-copy-comparison-row.code > div:not(:first-child) { font:12px/1.5 Consolas,"Cascadia Mono",monospace; }
+@media(max-width:1000px) {
+ .environment-copy-plan-head { display:none; }
+ .environment-copy-plan-main { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .environment-copy-naming { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:650px) {
+ .environment-copy-dialog,.environment-copy-differences { width:calc(100vw - 24px); }
+ .environment-copy-card,.environment-copy-difference-card { height:calc(100dvh - 24px); max-height:calc(100dvh - 24px); }
+ .environment-copy-dialog .script-editor-header h2 { font-size:18px; }
+ .environment-copy-two,.environment-copy-plan-main,.environment-copy-naming { grid-template-columns:1fr; }
+ .environment-copy-tools { flex-wrap:wrap; }
+ .environment-copy-plan-status { flex-direction:column; }
+ .environment-copy-dialog footer { flex-wrap:wrap; padding:12px 16px; gap:10px; }
+ .environment-copy-feedback { flex-basis:100%; }
+ .environment-copy-comparison-row { grid-template-columns:110px repeat(2,minmax(0,1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) { .environment-copy-dialog .inline-spinner { animation:none; } }

@@ -1,0 +1,1305 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   This Razor file is part of the MAUI application. *@
+@using MoveItAutomationUI.Services.Lifecycle
+@model ConfigurationSettingsViewModel
+@{
+    ViewData["Title"] = "Settings";
+    var isMoveItAdmin = ViewData["IsMoveItAdmin"] is true;
+}
+
+<div class="page-heading configuration-heading">
+    <div>
+        <h1>Settings</h1>
+        <p>Manage MAUI application behavior, MOVEit connections, metadata, and shared UI defaults.</p>
+    </div>
+</div>
+
+<div class="configuration-restart-banner @(Model.RestartRequired ? "visible" : string.Empty)" data-restart-banner>
+    <div>
+        <strong>Application restart required</strong>
+        <p>Restart MAUI to apply startup-sensitive configuration changes. Until then, the current startup values remain active.</p>
+        <ul data-restart-reasons>
+            @foreach (var reason in Model.RestartReasons)
+            {
+                <li>@reason</li>
+            }
+        </ul>
+    </div>
+    <div class="configuration-restart-actions">
+        <button type="button" class="secondary-button" data-application-restart-open>Restart Application</button>
+    </div>
+</div>
+
+<div class="configuration-workspace"
+     data-configuration-workspace
+     data-configuration-revision="@Model.ConfigurationRevision"
+     data-save-url="@Url.Action("SaveSettings", "Configuration")"
+     data-create-resource-group-folders-url="@Url.Action("CreateResourceGroupFolders", "Configuration")"
+     data-ssh-algorithms-url="@Url.Action("SshAlgorithms", "Configuration")"
+     data-database-test-url="@Url.Action("TestDatabase", "Configuration")"
+     data-factory-reset-url="@Url.Action("Execute", "MauiFactoryReset")"
+     data-application-restart-url="@Url.Action("Restart", "MauiApplicationRestart")"
+     data-application-restart-status-url="@Url.Action("Status", "MauiApplicationRestart")"
+     data-application-login-url="@MauiLifecyclePaths.BrowserUrl(Context.Request.PathBase, MauiLifecyclePaths.Login)"
+     data-moveit-config-export-url="@Url.Action("ExportMoveItConfiguration", "Configuration")"
+     data-moveit-config-import-url="@Url.Action("ImportMoveItConfiguration", "Configuration")"
+     data-metadata-export-url="@Url.Action("ExportMetadata", "Configuration")"
+     data-metadata-import-preview-url="@Url.Action("PreviewMetadataImport", "Configuration")"
+     data-metadata-import-apply-url="@Url.Action("ApplyMetadataImport", "Configuration")"
+     data-backup-now-url="@Url.Action("BackupNow", "Configuration")"
+     data-backups-url="@Url.Action("Backups", "Configuration")"
+     data-backup-download-url="@Url.Action("DownloadBackup", "Configuration")"
+     data-backup-remove-url="@Url.Action("RemoveBackup", "Configuration")"
+     data-backup-restore-url="@Url.Action("RestoreBackup", "Configuration")"
+     data-data-access-readiness-url="@Url.Action("DataAccessReadiness", "Configuration")"
+     data-system-jobs-list-url="@Url.Action("List", "SystemJobs")"
+     data-system-jobs-update-url="@Url.Action("Update", "SystemJobs")"
+     data-system-jobs-run-now-url="@Url.Action("RunNow", "SystemJobs")"
+     data-data-access-save-url="@Url.Action("SaveDataAccessCredentials", "Configuration")"
+     data-data-access-test-url="@Url.Action("TestDataAccessCredentials", "Configuration")"
+     data-data-access-clear-url="@Url.Action("ClearDataAccessCredentials", "Configuration")"
+     data-save-notification-template-url="@Url.Action("SaveNotificationTemplate", "Configuration")"
+     data-notification-templates-url="@Url.Action("NotificationTemplates", "Configuration")"
+     data-rename-notification-template-url="@Url.Action("RenameNotificationTemplate", "Configuration")"
+     data-delete-notification-template-url="@Url.Action("DeleteNotificationTemplate", "Configuration")"
+     data-outbound-report-smtp-clear-password-url="@Url.Action("ClearSmtpPassword", "OutboundReports")"
+     data-outbound-report-smtp-test-url="@Url.Action("TestSmtp", "OutboundReports")">
+    <aside class="configuration-local-nav" aria-label="Settings categories">
+        <div class="configuration-search-wrap">
+            <span class="configuration-search-icon">⌕</span>
+            <input type="search" class="configuration-search" placeholder="Search settings" aria-label="Search settings" data-configuration-search />
+        </div>
+        <nav class="configuration-category-list">
+            @foreach (var navSection in Model.NavigationSections)
+            {
+                <button type="button"
+                        class="configuration-category @(navSection.Key == "general" ? "active" : string.Empty)"
+                        data-config-section-target="@navSection.Key"><span>@navSection.Label</span></button>
+            }
+        </nav>
+    </aside>
+
+    <main class="configuration-content">
+        <section class="configuration-section active" data-config-section="general" data-search-terms="general recycle bin folders resource groups quick transfer enable transfers menu import settings import row limit csv excel batch preview app behavior auto format task host names task failure alerts audible login logging logs retention task history job scheduled reports system message announcement information important critical notification templates email message bodies">
+            <div class="configuration-section-heading">
+                <div><h2>General</h2><p>Common MAUI runtime behavior.</p></div>
+            </div>
+
+            <div class="panel-card configuration-card">
+                <div class="configuration-card-heading"><h3>Application Behavior</h3><p>Defaults that affect authentication, naming, failure alerts, application logging, history retention, and task status retrieval.</p></div>
+                <div class="configuration-setting-row">
+                    <div><strong>Checkout Objects for Duration of Edit</strong><p>Reserve objects while their MAUI editor is open to prevent concurrent edits. Checkout is released when the editor closes or its editing session expires. Applies to newly opened editors.</p></div>
+                    <label class="configuration-switch"><input type="checkbox" @(Model.CheckoutObjectsForDurationOfEdit ? "checked" : null) data-setting="checkoutObjectsForDurationOfEdit" /><span></span></label>
+                </div>
+                <div class="configuration-setting-row">
+                    <div><strong>Auto Format New Task/Host Names</strong><p>Controls if the Auto Format Name option is enabled by default for Tasks and Hosts.</p></div>
+                    <label class="configuration-switch"><input type="checkbox" @(Model.AutoFormatNewTaskHostNames ? "checked" : null) data-setting="autoFormatNewTaskHostNames" /><span></span></label>
+                </div>
+                <div class="configuration-setting-row">
+                    <div><strong>Task Failure Alerts</strong><p>Display a temporary System Message with an audible alert when one or more MOVEit Task runs fail. Alerts automatically dismiss after 30 seconds.</p></div>
+                    <label class="configuration-switch"><input type="checkbox" @(Model.TaskFailureAlertsEnabled ? "checked" : null) data-setting="taskFailureAlertsEnabled" /><span></span></label>
+                </div>
+                <div class="configuration-setting-row">
+                    <div><strong>Log Retention</strong><p>Number of days MAUI retains application log events in the metadata database before automatic cleanup.</p></div>
+                    <select class="text-input configuration-number-input" data-setting="logRetentionDays">
+                        @foreach (var days in Model.LogRetentionChoices)
+                        {
+                            <option value="@days" selected="@(days == Model.LogRetentionDays ? "selected" : null)">@days Days</option>
+                        }
+                    </select>
+                </div>
+                <div class="configuration-setting-row">
+                    <div><strong>Job History Retention</strong><p>Number of days MAUI retains scheduled job execution history, including individual Report run history.</p></div>
+                    <select class="text-input configuration-number-input" data-setting="jobHistoryRetentionDays">
+                        @foreach (var days in Model.JobHistoryRetentionChoices)
+                        {
+                            <option value="@days" selected="@(days == Model.JobHistoryRetentionDays ? "selected" : null)">@days Days</option>
+                        }
+                    </select>
+                </div>
+                @if (!Model.IdleSessionTimeoutMinutesHidden)
+                {
+                    <div class="configuration-setting-row">
+                        <div><strong>Idle Session Timeout <span class="configuration-inline-restart">Restart</span></strong><p>Choose how long MAUI keeps your signed-in session active without user activity.</p></div>
+                        <select class="text-input configuration-number-input" data-setting="idleSessionTimeoutMinutes">
+                            @foreach (var timeout in Model.IdleSessionTimeoutChoices)
+                            {
+                                var label = timeout switch
+                                {
+                                    15 => "15 minutes",
+                                    30 => "30 minutes",
+                                    60 => "1 hour",
+                                    120 => "2 hours",
+                                    240 => "4 hours",
+                                    480 => "8 hours",
+                                    _ => $"{timeout} minutes"
+                                };
+                                <option value="@timeout" selected="@(timeout == Model.IdleSessionTimeoutMinutes ? "selected" : null)">@label</option>
+                            }
+                        </select>
+                    </div>
+                }
+                else
+                {
+                    <input type="hidden" value="@Model.IdleSessionTimeoutMinutes" data-setting="idleSessionTimeoutMinutes" />
+                }
+                @if (!Model.TaskRunHistoryMaxCountHidden)
+                {
+                    <div class="configuration-setting-row">
+                        <div><strong>Task Run History Maximum <span class="configuration-inline-restart">Restart</span></strong><p>Maximum task-run records requested when determining each task's latest status.</p></div>
+                        <input class="text-input configuration-number-input" type="number" min="1" max="100000" value="@Model.TaskRunHistoryMaxCount" data-setting="taskRunHistoryMaxCount" />
+                    </div>
+                }
+                else
+                {
+                    <input type="hidden" value="@Model.TaskRunHistoryMaxCount" data-setting="taskRunHistoryMaxCount" />
+                }
+            </div>
+
+
+            <div class="panel-card configuration-card">
+                <div class="configuration-card-heading"><h3>Quick Transfer</h3><p>Control access to the Quick Transfer workspace.</p></div>
+                <div class="configuration-setting-row">
+                    <div><strong>Enable Quick Transfer</strong><p>Enable the Quick Transfers feature and show the Transfers menu in the left navigation. You will need to refresh the page after changing and saving this setting.</p></div>
+                    <label class="configuration-switch"><input type="checkbox" @(Model.EnableQuickTransfer ? "checked" : null) data-setting="enableQuickTransfer" /><span></span></label>
+                </div>
+            </div>
+
+            <div class="panel-card configuration-card">
+                <div class="configuration-card-heading"><h3>Import Settings</h3><p>Control CSV / Excel Task import batch and preview sizes.</p></div>
+                <div class="configuration-setting-row">
+                    <div><strong>Import Row Limit</strong><p>Maximum Task rows shown per preview page and processed per import action. Remaining rows can be imported in subsequent batches.</p></div>
+                    <input class="text-input configuration-number-input" type="number" min="1" max="1000" step="1" required value="@Model.ImportRowLimit" data-setting="importRowLimit" />
+                </div>
+            </div>
+
+            <div class="panel-card configuration-card">
+                <div class="configuration-card-heading"><h3>Folders</h3></div>
+                <div class="configuration-setting-row">
+                    <div><strong>Create top-level folders from Resource Group names.</strong><p>When clicked, MAUI will create a set of root-level folders from the current Resource Groups. If a folder already exists with the same name it will not be duplicated or overwritten.</p></div>
+                    <button type="button" class="secondary-button" data-create-resource-group-folders disabled="@(!isMoveItAdmin)" title="@(isMoveItAdmin ? null : "Only MOVEit administrators can manage Task folders.")">Create Folders</button>
+                </div>
+            </div>
+
+            <div class="panel-card configuration-card" data-system-message-settings>
+                <div class="configuration-card-heading"><h3>System Message</h3><p>Display a shared announcement banner across authenticated MAUI pages.</p></div>
+                <div class="configuration-setting-row">
+                    <div><strong>Display System Message</strong><p>Show the configured message banner to signed-in users.</p></div>
+                    <label class="configuration-switch"><input type="checkbox" @(Model.SystemMessageEnabled ? "checked" : null) data-setting="systemMessageEnabled" /><span></span></label>
+                </div>
+                <div class="configuration-setting-row">
+                    <div><strong>Message Type</strong><p>Controls the banner icon and visual severity.</p></div>
+                    <select class="text-input configuration-number-input" data-setting="systemMessageType">
+                        @foreach (var type in Model.SystemMessageTypeChoices)
+                        {
+                            <option value="@type" selected="@(type.Equals(Model.SystemMessageType, StringComparison.OrdinalIgnoreCase) ? "selected" : null)">@type</option>
+                        }
+                    </select>
+                </div>
+                <div class="configuration-setting-row configuration-setting-row-top">
+                    <div><strong>Message Body</strong><p>Plain-text message shown below the message type. Line breaks are preserved.</p></div>
+                    <textarea class="text-input textarea-input configuration-system-message-body" rows="5" data-setting="systemMessageBody">@Model.SystemMessageBody</textarea>
+                </div>
+            </div>
+
+            <div class="panel-card configuration-card" data-notification-template-settings>
+                <div class="configuration-card-heading row-heading"><div><h3>Notification Templates</h3><p>Load, edit, rename or delete reusable Task Notification templates for the current MOVEit environment.</p></div><button type="button" class="secondary-button" data-notification-template-load>Load Template</button></div>
+                <input type="file" accept=".txt,.htm,.html" data-notification-template-file hidden />
+                <p class="inline-alert error-alert" data-notification-template-load-error role="alert" hidden></p>
+                <div class="configuration-notification-template-list" data-notification-template-list>
+                    <div class="configuration-notification-template-empty">Loading notification templates…</div>
+                </div>
+            </div>
+
+            <div class="panel-card configuration-card" data-script-template-settings>
+                <div class="configuration-card-heading row-heading"><div><h3>Script Templates</h3><p>Load, edit, rename or delete reusable PowerShell templates for the current MOVEit environment.</p></div><button type="button" class="secondary-button" data-script-template-load>Load Template</button></div>
+                <input type="file" accept=".txt,.ps1" data-script-template-file hidden />
+                <div class="configuration-notification-template-list" data-script-template-list><div class="configuration-notification-template-empty">Loading Script templates…</div></div>
+                <p class="inline-alert error-alert" role="alert" data-script-template-settings-error hidden></p>
+            </div>
+
+            @if (!Model.RecycleBinEnabledHidden || !Model.RecycleBinRetentionDaysHidden)
+            {
+                <div class="panel-card configuration-card" data-general-recycle-bin>
+                    <div class="configuration-card-heading"><h3>Recycle Bin</h3><p>Recovery protection for supported objects deleted through MAUI.</p></div>
+                    @if (!Model.RecycleBinEnabledHidden)
+                    {
+                        <div class="configuration-setting-row">
+                            <div><strong>Enable Recycle Bin</strong><p>Save recoverable copies of Tasks, Hosts, custom Scripts, and Date Lists deleted through MAUI.</p></div>
+                            <label class="configuration-switch"><input type="checkbox" @(Model.RecycleBinEnabled ? "checked" : null) data-setting="recycleBinEnabled" /><span></span></label>
+                        </div>
+                    }
+                    @if (!Model.RecycleBinRetentionDaysHidden)
+                    {
+                        <div class="configuration-setting-row">
+                            <div><strong>Recycle Bin Retention</strong><p>Number of days deleted items remain available before MAUI automatically removes them.</p></div>
+                            <select class="text-input configuration-number-input" data-setting="recycleBinRetentionDays">
+                                @foreach (var days in Model.RecycleBinRetentionChoices)
+                                {
+                                    <option value="@days" selected="@(days == Model.RecycleBinRetentionDays ? "selected" : null)">@days Days</option>
+                                }
+                            </select>
+                        </div>
+                    }
+                </div>
+            }
+            @if (Model.RecycleBinEnabledHidden)
+            {
+                <input type="hidden" value="@(Model.RecycleBinEnabled ? "true" : "false")" data-setting="recycleBinEnabled" />
+            }
+            @if (Model.RecycleBinRetentionDaysHidden)
+            {
+                <input type="hidden" value="@Model.RecycleBinRetentionDays" data-setting="recycleBinRetentionDays" />
+            }
+
+        </section>
+
+        <section class="configuration-section" data-config-section="editors" data-search-terms="editors maui moveit native traditional advanced synchronization tasks hosts scripts date lists groups permissions MOVEit settings preferences">
+            <div class="configuration-section-heading">
+                <div><h2>Editors</h2><p>Choose the preferred editors for MOVEit objects and MOVEit Settings.</p></div>
+            </div>
+            @if (Model.UseMauiTaskEditorHidden) { <input type="hidden" value="@(Model.UseMauiTaskEditor ? "true" : "false")" data-setting="useMauiTaskEditor" /> }
+            @if (Model.UseMauiScriptEditorHidden) { <input type="hidden" value="@(Model.UseMauiScriptEditor ? "true" : "false")" data-setting="useMauiScriptEditor" /> }
+            @if (Model.UseMauiDateListEditorHidden) { <input type="hidden" value="@(Model.UseMauiDateListEditor ? "true" : "false")" data-setting="useMauiDateListEditor" /> }
+            @if (Model.UseMauiGroupsAndPermissionsEditorHidden) { <input type="hidden" value="@(Model.UseMauiGroupsAndPermissionsEditor ? "true" : "false")" data-setting="useMauiGroupsAndPermissionsEditor" /> }
+            @if (Model.UseMauiSystemSettingsEditorHidden) { <input type="hidden" value="@(Model.UseMauiSystemSettingsEditor ? "true" : "false")" data-setting="useMauiSystemSettingsEditor" /> }
+            @if (Model.UseMauiHostEditorHidden) { <input type="hidden" value="@(Model.UseMauiHostEditor ? "true" : "false")" data-setting="useMauiHostEditor" /> }
+            @if ((!Model.UseMauiTaskEditorHidden) ||
+                  (!Model.UseMauiHostEditorHidden) || (!Model.UseMauiScriptEditorHidden) || (!Model.UseMauiDateListEditorHidden) || (!Model.UseMauiGroupsAndPermissionsEditorHidden) || (!Model.UseMauiSystemSettingsEditorHidden))
+            {
+                <div class="panel-card configuration-card">
+                    <div class="configuration-card-heading"><h3>Editor Preferences</h3><p>MAUI can use either the native MOVEit editors or MAUI's own editors. Leave disabled to use MOVEit editors. Note: Keys &amp; Certificates and Global Parameters always use the MAUI Editors.</p></div>
+                    @if (!Model.UseMauiTaskEditorHidden)
+                    {
+                        <div class="configuration-setting-row">
+                            <div><strong>Use MAUI Task Editor</strong><p>Edit Traditional, Advanced and Synchronization Tasks with MAUI. Disable to use the MOVEit native editor.</p></div>
+                            <label class="configuration-switch"><input type="checkbox" @(Model.UseMauiTaskEditor ? "checked" : null) data-setting="useMauiTaskEditor" /><span></span></label>
+                        </div>
+                    }
+                    @if (!Model.UseMauiHostEditorHidden)
+                    {
+                        <div class="configuration-setting-row">
+                            <div><strong>Use MAUI Host Editor</strong><p>Edit Hosts with MAUI. Disable to use the MOVEit native editor.</p></div>
+                            <label class="configuration-switch"><input type="checkbox" @(Model.UseMauiHostEditor ? "checked" : null) data-setting="useMauiHostEditor" /><span></span></label>
+                        </div>
+                    }
+                    @if (!Model.UseMauiScriptEditorHidden)
+                    {
+                        <div class="configuration-setting-row">
+                            <div><strong>Use MAUI Script Editor</strong><p>Edit custom PowerShell and VBScript Scripts with MAUI. Disable to use the MOVEit native editor.</p></div>
+                            <label class="configuration-switch"><input type="checkbox" @(Model.UseMauiScriptEditor ? "checked" : null) data-setting="useMauiScriptEditor" /><span></span></label>
+                        </div>
+                    }
+                    @if (!Model.UseMauiDateListEditorHidden)
+                    {
+                        <div class="configuration-setting-row">
+                            <div><strong>Use MAUI Date List Editor</strong><p>Edit Date Lists with MAUI. Disable to use the MOVEit native editor.</p></div>
+                            <label class="configuration-switch"><input type="checkbox" @(Model.UseMauiDateListEditor ? "checked" : null) data-setting="useMauiDateListEditor" /><span></span></label>
+                        </div>
+                    }
+                    @if (!Model.UseMauiGroupsAndPermissionsEditorHidden)
+                    {
+                        <div class="configuration-setting-row">
+                            <div><strong>Use MAUI Group &amp; Permissions Editor</strong><p>Manage Resource Groups, membership and assigned user-group permissions with MAUI. Disable to use the MOVEit native editor.</p></div>
+                            <label class="configuration-switch"><input type="checkbox" @(Model.UseMauiGroupsAndPermissionsEditor ? "checked" : null) data-setting="useMauiGroupsAndPermissionsEditor" /><span></span></label>
+                        </div>
+                    }
+                    @if (!Model.UseMauiSystemSettingsEditorHidden)
+                    {
+                        <div class="configuration-setting-row">
+                            <div><strong>Use MAUI Settings Editor</strong><p>Edit MOVEit Settings and manage lockouts with MAUI. Disable to use the MOVEit native editor.</p></div>
+                            <label class="configuration-switch"><input type="checkbox" @(Model.UseMauiSystemSettingsEditor ? "checked" : null) data-setting="useMauiSystemSettingsEditor" aria-label="Use MAUI Settings Editor" /><span></span></label>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+
+        <section class="configuration-section" data-config-section="experimental" data-search-terms="experimental preview development unstable task json editor raw values bulk find replace copy between environments data access dependencies migration recovery retention">
+            <div class="configuration-section-heading">
+                <div><h2>Experimental</h2><p>Features and settings currently under active development.</p></div>
+            </div>
+
+            <div class="configuration-warning-card strong-warning">
+                <strong>Experimental Features</strong>
+                <p>Experimental features may be incomplete, unstable, change without notice, or be removed. They are not recommended for production use.</p>
+            </div>
+
+            <div class="panel-card configuration-card" data-search-terms="task json editor raw values bulk find replace">
+                <div class="configuration-card-heading"><h3>Task JSON Editor</h3></div>
+                <div class="configuration-setting-row">
+                    <div><strong>Task JSON Editor</strong><p>Edit individual Task JSON values or replace matching values across selected Tasks. Review changes before saving. Existing Task edit permissions and checkout safeguards apply. Disabled by default.</p></div>
+                    <label class="configuration-switch"><input type="checkbox" @(Model.TaskJsonEditor ? "checked" : null) data-setting="taskJsonEditor" aria-label="Task JSON Editor" /><span></span></label>
+                </div>
+            </div>
+
+            <div class="panel-card configuration-card" data-search-terms="copy between environments data access dependencies migration recovery">
+                <div class="configuration-card-heading"><h3>Copy Between Environments</h3></div>
+                <div class="configuration-setting-row">
+                    <div><strong>Copy Between Environments</strong><p>Copy selected objects and Task dependencies between configured MOVEit environments. Requires both MOVEit and MAUI administrator access and Data Access credentials for both environments. Disabled by default.</p></div>
+                    <label class="configuration-switch" data-copy-availability-hint title="@(Model.CopyBetweenEnvironmentsAvailable ? null : MoveItAutomationUI.Features.EnvironmentCopy.EnvironmentCopyAvailability.Requirement)"><input type="checkbox" disabled="@(!Model.CopyBetweenEnvironmentsAvailable)" @(Model.CopyBetweenEnvironments ? "checked" : null) data-setting="copyBetweenEnvironments" aria-label="Copy Between Environments" /><span></span></label>
+                </div>
+                <div class="configuration-setting-row">
+                    <div><strong>Copy recovery retention</strong><p>Retain operation reports and protected overwrite recovery definitions for this many days (1–90).</p></div>
+                    <span data-copy-availability-hint title="@(Model.CopyBetweenEnvironmentsAvailable ? null : MoveItAutomationUI.Features.EnvironmentCopy.EnvironmentCopyAvailability.Requirement)"><input type="number" class="text-input configuration-number-input" disabled="@(!Model.CopyBetweenEnvironmentsAvailable)" min="1" max="90" value="@Model.CopyRecoveryRetentionDays" data-setting="copyRecoveryRetentionDays" aria-label="Copy recovery retention days" /></span>
+                </div>
+            </div>
+        </section>
+        <section class="configuration-section" data-config-section="moveit" data-search-terms="moveit connection server web admin environment rest timeout certificate tls invalid data access credentials backup reports">
+            <div class="configuration-section-heading">
+                <div><h2>MOVEit Connections</h2><p>Configure Automation environments and REST connectivity.</p></div>
+                <span class="configuration-state-badge readonly">Server changes apply after Save</span>
+            </div>
+
+            <div class="configuration-warning-card">
+                <strong>MOVEit connection updates</strong>
+                <p>Adding, editing, or removing MOVEit servers takes effect immediately after Save—no IIS application restart is required. New logins and unattended operations use the updated connections. Existing sessions stay on their original server until sign-out. REST timeout and certificate-validation changes still require a restart. Changing a server endpoint, COM host, or Environment Key clears its unattended Data Access Credentials for security; re-enter them after Save.</p>
+            </div>
+
+            <div class="panel-card configuration-card">
+                <div class="configuration-card-heading row-heading">
+                    <div><h3>MOVEit Automation Servers</h3><p>Each configured node appears as a choice on the MAUI login screen.</p></div>
+                    <button type="button" class="secondary-button" data-add-server>+ Add Server</button>
+                </div>
+                <div class="configuration-server-list" data-server-list>
+                    @foreach (var server in Model.Servers)
+                    {
+                        <div class="configuration-server-card" data-server-row>
+                            <div class="configuration-server-card-header"><strong data-server-title>@server.DisplayName</strong><button type="button" class="configuration-remove-button" data-remove-server aria-label="Remove server">Remove</button></div>
+                            <div class="configuration-field-grid server-grid">
+                                <label class="configuration-field"><span>Key</span><input class="text-input configuration-locked-input" value="@server.Key" data-server-field="key" readonly /><small>Stable internal identifier generated by MAUI. It cannot be changed after the server is added.</small></label>
+                                <label class="configuration-field"><span>Environment Key</span><input class="text-input" value="@server.EnvironmentKey" data-server-field="environmentKey" /><small>Shared by HA nodes that use the same Automation configuration.</small></label>
+                                <label class="configuration-field"><span>Display Name</span><input class="text-input" value="@server.DisplayName" data-server-field="displayName" /></label>
+                                <label class="configuration-field"><span>Web Admin URL</span><input class="text-input" value="@server.WebAdminUrl" data-server-field="webAdminUrl" /></label>
+                                <label class="configuration-field full"><span>COM Server Host Override <em>optional</em></span><input class="text-input" value="@server.ServerHost" data-server-field="serverHost" /><small>Leave blank to derive the COM host from the Web Admin URL.</small></label>
+                            </div>
+                            <div class="configuration-server-data-access" data-data-access-row data-server-key="@server.Key" data-configured="@(server.DataAccessCredentialsConfigured ? "true" : "false")" data-persisted="true">
+                                <div>
+                                    <strong>Data Access Credentials</strong>
+                                    <p>Optional MOVEit Administrator credentials for automatic backups, scheduled Reports, and unattended System Jobs such as Host Health Check. Passwords are protected with Windows DPAPI LocalMachine scope and are never returned to the browser.</p>
+                                </div>
+                                <div class="configuration-data-access-summary">
+                                    <span><strong>Username:</strong> <span data-data-access-username>@(string.IsNullOrWhiteSpace(server.DataAccessUsername) ? "—" : server.DataAccessUsername)</span></span>
+                                    <span><strong>Password:</strong> <span data-data-access-password-state>@(server.DataAccessCredentialsConfigured ? "Configured" : "Not Configured")</span></span>
+                                </div>
+                                <div class="configuration-inline-actions data-access-actions">
+                                    <button type="button" class="secondary-button" data-data-access-configure>@(server.DataAccessCredentialsConfigured ? "Edit" : "Configure")</button>
+                                    <button type="button" class="secondary-button" data-data-access-test @(server.DataAccessCredentialsConfigured ? null : "disabled")>Test</button>
+                                    <button type="button" class="configuration-remove-button" data-data-access-clear @(server.DataAccessCredentialsConfigured ? null : "disabled")>Clear</button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="panel-card configuration-card">
+                <div class="configuration-card-heading"><h3>REST Connectivity</h3><p>Network behavior used by MAUI when communicating with MOVEit Automation.</p></div>
+                @if (!Model.RequestTimeoutSecondsHidden)
+                {
+                    <div class="configuration-setting-row">
+                        <div><strong>REST Request Timeout <span class="configuration-inline-restart">Restart</span></strong><p>Maximum time allowed for one MOVEit REST API request.</p></div>
+                        <div class="configuration-unit-input"><input class="text-input configuration-number-input" type="number" min="5" max="300" value="@Model.RequestTimeoutSeconds" data-setting="requestTimeoutSeconds" /><span>seconds</span></div>
+                    </div>
+                }
+                else
+                {
+                    <input type="hidden" value="@Model.RequestTimeoutSeconds" data-setting="requestTimeoutSeconds" />
+                }
+                @if (!Model.AllowInvalidServerCertificatesHidden)
+                {
+                    <div class="configuration-setting-row">
+                        <div><strong>Allow Invalid Server Certificates <span class="configuration-inline-restart">Restart</span></strong><p>Development-only option that accepts an untrusted TLS certificate from a configured Web Admin server.</p><span class="configuration-inline-warning">Not recommended for production.</span></div>
+                        <label class="configuration-switch"><input type="checkbox" @(Model.AllowInvalidServerCertificates ? "checked" : null) data-setting="allowInvalidServerCertificates" /><span></span></label>
+                    </div>
+                }
+                else
+                {
+                    <input type="hidden" value="@(Model.AllowInvalidServerCertificates ? "true" : "false")" data-setting="allowInvalidServerCertificates" />
+                }
+            </div>
+        </section>
+
+
+        <section class="configuration-section" data-config-section="moveit-configuration" data-search-terms="moveit configuration export import backup restore config xml passphrase server key sanitized">
+            <div class="configuration-section-heading">
+                <div><h2>MOVEit Configuration</h2><p>Export or import the complete MOVEit Automation configuration.</p></div>
+                <span class="configuration-state-badge readonly">MOVEit Admin</span>
+            </div>
+
+            @if (!isMoveItAdmin)
+            {
+                <div class="configuration-warning-card strong-warning">
+                    <strong>MOVEit Administrator access required</strong>
+                    <p>Configuration export and import are restricted by MOVEit Automation to MOVEit Administrators. Your MAUI administrator role does not grant access to these server-level operations.</p>
+                </div>
+            }
+
+            <div class="configuration-operation-grid">
+                <div class="panel-card configuration-card configuration-operation-card">
+                    <div class="configuration-card-heading">
+                        <h3>Export Configuration</h3>
+                        <p>Download the current MOVEit Automation <code>config.xml</code> using MOVEit's supported configuration export API.</p>
+                    </div>
+                    <div class="configuration-operation-body">
+                        <fieldset class="new-task-type-fieldset task-import-mode-fieldset configuration-operation-mode-fieldset">
+                            <legend>Export Type</legend>
+                            <label class="new-task-type-card">
+                                <input type="radio" name="moveItConfigurationExportType" value="Passphrase" data-moveit-config-export-mode checked @(isMoveItAdmin ? null : "disabled") />
+                                <span class="new-task-type-copy"><strong>Portable — Passphrase</strong><span>Protect sensitive values with a passphrase so the configuration can be imported on another compatible MOVEit Automation server.</span></span>
+                            </label>
+                            <label class="new-task-type-card">
+                                <input type="radio" name="moveItConfigurationExportType" value="ServerKey" data-moveit-config-export-mode @(isMoveItAdmin ? null : "disabled") />
+                                <span class="new-task-type-copy"><strong>Server Key</strong><span>Protect sensitive values with this MOVEit server's encryption key material. Use for same-server or shared-key recovery.</span></span>
+                            </label>
+                            <label class="new-task-type-card">
+                                <input type="radio" name="moveItConfigurationExportType" value="Sanitized" data-moveit-config-export-mode @(isMoveItAdmin ? null : "disabled") />
+                                <span class="new-task-type-copy"><strong>Sanitized / Troubleshooting</strong><span>Strip sensitive information for troubleshooting or support. Sanitized exports cannot be imported.</span></span>
+                            </label>
+                        </fieldset>
+
+                        <div class="configuration-field-grid two-column" data-moveit-config-export-passphrase-fields>
+                            <label class="configuration-field">
+                                <span>Passphrase</span>
+                                <input class="text-input" type="text" autocomplete="off" spellcheck="false" data-moveit-config-export-passphrase @(isMoveItAdmin ? null : "disabled") />
+                            </label>
+                            <label class="configuration-field">
+                                <span>Confirm Passphrase</span>
+                                <input class="text-input" type="text" autocomplete="off" spellcheck="false" data-moveit-config-export-confirm-passphrase @(isMoveItAdmin ? null : "disabled") />
+                            </label>
+                        </div>
+
+                        <div class="configuration-warning-card configuration-inline-operation-warning" data-moveit-config-export-sanitized-warning hidden>
+                            <strong>Sanitized exports cannot be restored</strong>
+                            <p>Sanitized configuration files are intended only for troubleshooting. MOVEit will not import a sanitized export.</p>
+                        </div>
+
+                        <div class="configuration-operation-actions">
+                            <button type="button" class="primary-button" data-moveit-config-export @(isMoveItAdmin ? null : "disabled")>Export Configuration</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-card configuration-card configuration-operation-card configuration-import-card">
+                    <div class="configuration-card-heading">
+                        <h3>Import Configuration</h3>
+                        <p>Import a complete MOVEit Automation configuration from an XML export.</p>
+                    </div>
+                    <div class="configuration-operation-body">
+                        <div class="configuration-destructive-warning">
+                            <strong>WARNING — Current MOVEit configuration will be overwritten</strong>
+                            <p>Importing replaces the active MOVEit Automation configuration. Tasks, hosts, resources, schedules, credentials, and other configuration may be replaced by values from the selected file.</p>
+                        </div>
+
+                        <label class="configuration-field">
+                            <span>Configuration File</span>
+                            <input class="text-input" type="file" accept=".xml,application/xml,text/xml" data-moveit-config-import-file @(isMoveItAdmin ? null : "disabled") />
+                            <small>Only MOVEit Automation configuration XML files are accepted. Maximum file size: 50 MB.</small>
+                        </label>
+
+                        <fieldset class="new-task-type-fieldset task-import-mode-fieldset configuration-operation-mode-fieldset">
+                            <legend>Import Type</legend>
+                            <label class="new-task-type-card">
+                                <input type="radio" name="moveItConfigurationImportType" value="Passphrase" data-moveit-config-import-mode checked @(isMoveItAdmin ? null : "disabled") />
+                                <span class="new-task-type-copy"><strong>Portable — Passphrase</strong><span>Import a portable configuration using the passphrase that protected it during export.</span></span>
+                            </label>
+                            <label class="new-task-type-card">
+                                <input type="radio" name="moveItConfigurationImportType" value="ServerKey" data-moveit-config-import-mode @(isMoveItAdmin ? null : "disabled") />
+                                <span class="new-task-type-copy"><strong>Server Key</strong><span>Import a configuration protected by this MOVEit server's encryption key material.</span></span>
+                            </label>
+                        </fieldset>
+
+                        <label class="configuration-field" data-moveit-config-import-passphrase-field>
+                            <span>Passphrase</span>
+                            <input class="text-input" type="password" autocomplete="off" data-moveit-config-import-passphrase @(isMoveItAdmin ? null : "disabled") />
+                        </label>
+
+                        <label class="configuration-import-acknowledgement">
+                            <input type="checkbox" data-moveit-config-import-acknowledge @(isMoveItAdmin ? null : "disabled") />
+                            <span>I understand that importing this file will overwrite the current MOVEit Automation configuration.</span>
+                        </label>
+
+                        <div class="configuration-operation-actions">
+                            <button type="button" class="danger-button" data-moveit-config-import disabled>Import Configuration</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="configuration-section" data-config-section="ssh-algorithms" data-search-terms="ssh kex algorithms sftp encryption key exchange defaults host">
+            <div class="configuration-section-heading">
+                <div><h2>SSH/KEX Algorithms</h2><p>Choose and order the default SSH encryption and key exchange algorithms for SFTP Hosts.</p></div>
+            </div>
+            <div class="panel-card configuration-card">
+                <div class="configuration-card-heading row-heading">
+                    <div><h3>SFTP Host Defaults</h3><p>Available algorithms come from the connected MOVEit server. Checked algorithms are enabled in the displayed order. These defaults apply to new SFTP Hosts, empty algorithm lists, and the Host editor Reset action. Existing Host selections are retained.</p></div>
+                    <button type="button" class="secondary-button" data-ssh-algorithms-reload hidden>Reload Lists</button>
+                </div>
+                <p class="muted">Reset restores the initial MOVEit default selections. Use Save Changes to apply your selections.</p>
+                <div class="configuration-operation-status" data-ssh-algorithms-status role="status">Loading supported SSH/KEX algorithms…</div>
+                <div class="configuration-ssh-algorithm-section">
+                    <input type="hidden" data-ssh-default="encryption" value="@Model.SshEncryption" data-original="@Model.SshEncryption" data-reset="@SshAlgorithmOptions.InitialEncryption" />
+                    <div data-ssh-algorithm-list="encryption" data-title="Encryption Algorithms" data-description="Enabled SSH encryption algorithms, in preference order."></div>
+                </div>
+                <div class="configuration-ssh-algorithm-section">
+                    <input type="hidden" data-ssh-default="keyExchange" value="@Model.SshKeyExchange" data-original="@Model.SshKeyExchange" data-reset="@SshAlgorithmOptions.InitialKeyExchange" />
+                    <div data-ssh-algorithm-list="keyExchange" data-title="KEX Algorithms" data-description="Enabled SSH key exchange algorithms, in preference order."></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="configuration-section" data-config-section="backup" data-search-terms="backup automatic frequency retention cleanup credentials password moveit sqlite configuration restore download remove zip">
+            <div class="configuration-section-heading">
+                <div><h2>Backup</h2><p>Protect MAUI and MOVEit configuration with scheduled or on-demand backups.</p></div>
+                <span class="configuration-state-badge live">Live Settings</span>
+            </div>
+            <div class="backup-readiness-alerts" data-backup-readiness hidden>
+                <div class="inline-alert warning-alert" data-backup-data-access-warning hidden>
+                    <strong>Data Access Credentials are missing.</strong> <span data-backup-data-access-warning-text></span>
+                </div>
+            </div>
+
+            <div class="panel-card configuration-card">
+                <div class="configuration-card-heading"><h3>Automatic Backup</h3><p>Backups are stored under <code>Data\Backups</code>. MOVEit configuration exports use Server Key protection. SQLite metadata is backed up live; SQL Server metadata is not included.</p></div>
+                <div class="configuration-setting-row">
+                    <div><strong>Enable Automatic Backup of MAUI and MOVEit Configuration Data</strong><p>When enabled, MAUI creates unattended backups at the selected interval using the Data Access Credentials configured on each MOVEit server.</p></div>
+                    <label class="configuration-switch"><input type="checkbox" @(Model.BackupEnabled ? "checked" : null) data-setting="backupEnabled" /><span></span></label>
+                </div>
+                <div class="configuration-setting-row">
+                    <div><strong>Backup Frequency</strong><p>How often MAUI creates an automatic backup. A successful manual backup also resets the automatic backup interval.</p></div>
+                    <select class="text-input configuration-number-input" data-setting="backupFrequencyHours">
+                        @foreach (var hours in Model.BackupFrequencyChoices)
+                        {
+                            <option value="@hours" selected="@(hours == Model.BackupFrequencyHours ? "selected" : null)">@hours hours</option>
+                        }
+                    </select>
+                </div>
+                <div class="configuration-setting-row">
+                    <div><strong>Backup Retention</strong><p>Backup folders older than the selected retention period are removed by the Backup Cleanup System Job.</p></div>
+                    <select class="text-input configuration-number-input" data-setting="backupRetentionDays">
+                        @foreach (var days in Model.BackupRetentionChoices)
+                        {
+                            <option value="@days" selected="@(days == Model.BackupRetentionDays ? "selected" : null)">@days @(days == 1 ? "day" : "days")</option>
+                        }
+                    </select>
+                </div>
+                <div class="configuration-setting-row">
+                    <div><strong>Backup Operations</strong><p>Backup Now uses Data Access Credentials when configured; otherwise it can use the current signed-in MOVEit user. Save Backup changes before running Backup Now or Backup Cleanup.</p></div>
+                    <div class="configuration-inline-actions">
+                        <button type="button" class="primary-button" data-backup-now>Backup Now</button>
+                    </div>
+                </div>
+                <div class="configuration-security-note" data-backup-status>Automatic backups skip MOVEit environments that have no active server with Data Access Credentials configured. SQL Server metadata databases are intentionally not backed up by MAUI; MOVEit configuration and appsettings.json are still backed up.</div>
+            </div>
+
+            <div class="panel-card configuration-card configuration-table-card backup-list-card">
+                <div class="configuration-card-heading row-heading">
+                    <div>
+                        <h3>Available Backups</h3>
+                        <p>Completed and partial backup folders under <code>Data\Backups</code>. Only completed, validated backups can be restored.</p>
+                    </div>
+                    <button type="button" class="secondary-button" data-backup-refresh>Refresh</button>
+                </div>
+                <div class="configuration-table-wrap">
+                    <table class="configuration-table backup-list-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th>Contents</th>
+                                <th>Size</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody data-backup-list>
+                            <tr><td colspan="5" class="backup-list-loading">Loading backups…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="configuration-security-note">Backup downloads can contain credentials, server configuration, and MAUI metadata. Store downloaded ZIP files securely. Removing a backup permanently deletes its folder from this MAUI server.</div>
+            </div>
+        </section>
+
+        <section class="configuration-section" data-config-section="scheduler" data-search-terms="scheduler system jobs reports maintenance monitoring backup cleanup retention host health check run now daily interval schedule data access credentials">
+            <div class="configuration-section-heading">
+                <div><h2>Scheduler</h2><p>Configure MAUI background jobs from one scheduler.</p></div>
+                <span class="configuration-state-badge live">Live Settings</span>
+            </div>
+            <div class="scheduler-readiness-alerts" data-scheduler-readiness hidden>
+                <div class="inline-alert warning-alert" data-scheduler-data-access-warning hidden>
+                    <strong>Data Access Credentials are missing.</strong> <span data-scheduler-data-access-warning-text></span>
+                </div>
+            </div>
+            <div class="panel-card configuration-card configuration-table-card">
+                <div class="configuration-card-heading row-heading">
+                    <div>
+                        <h3>System Jobs</h3>
+                        <p>System Jobs are supplied by MAUI.</p>
+                    </div>
+                </div>
+                <div class="configuration-table-wrap">
+                    <table class="configuration-table system-job-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Enabled</th>
+                                <th>Schedule</th>
+                                <th>Next Run</th>
+                                <th>Last Run</th>
+                                <th>Last Result</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody data-system-job-list>
+                            <tr><td colspan="7" class="system-job-loading">Loading System Jobs…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="configuration-security-note">Daily System Job times use the MAUI application server's local time. Reports checks for due scheduled Reports every 5 minutes. Backup Cleanup removes backup folders older than the configured Backup Retention period. Scheduled Reports and Host Health Check require Data Access Credentials for each MOVEit environment they access.</div>
+            </div>
+        </section>
+
+        <section class="configuration-section" data-config-section="database" data-search-terms="database metadata sqlite sql server connection string provider">
+            <div class="configuration-section-heading">
+                <div><h2>Database</h2><p>Configure storage for MAUI metadata and application state.</p></div>
+                <span class="configuration-state-badge restart">Restart required</span>
+            </div>
+            <div class="configuration-warning-card strong-warning">
+                <strong>Changes do not switch the active database while MAUI is running</strong>
+                <p>Database changes are saved to <code>appsettings.json</code> but do not take effect until MAUI restarts. Verify the target database before restarting.</p>
+            </div>
+            <div class="panel-card configuration-card">
+                <div class="configuration-card-heading row-heading">
+                    <div><h3>Metadata Database</h3><p>This database contains MAUI-specific information; it does not replace or modify the MOVEit Automation database.</p></div>
+                </div>
+                <div class="configuration-field-grid two-column">
+                    @if (!Model.DatabaseProviderHidden)
+                    {
+                        <label class="configuration-field">
+                            <span>Database Provider</span>
+                            <select class="text-input" data-setting="databaseProvider">
+                                <option value="SQLite" selected="@(Model.DatabaseProvider.Equals("SQLite", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">SQLite</option>
+                                <option value="SqlServer" selected="@(Model.DatabaseProvider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">SQL Server</option>
+                            </select>
+                        </label>
+                    }
+                    else
+                    {
+                        <input type="hidden" value="@Model.DatabaseProvider" data-setting="databaseProvider" />
+                    }
+                    @if (!Model.DatabaseConnectionStringHidden)
+                    {
+                        <label class="configuration-field full">
+                            <span>Connection String</span>
+                            <input class="text-input" value="@Model.DatabaseConnectionString" data-setting="databaseConnectionString" autocomplete="off" spellcheck="false" />
+                            <small>For SQLite, relative <code>Data Source</code> paths are resolved from the MAUI application folder; the default is <code>Data Source=Data\maui.db</code>. Absolute SQLite paths are also supported. SQL Server supports Windows Integrated Authentication or SQL authentication; SQL-auth credentials are stored in this connection string in <code>appsettings.json</code>.</small>
+                        </label>
+                    }
+                    else
+                    {
+                        <input type="hidden" value="@Model.DatabaseConnectionString" data-setting="databaseConnectionString" />
+                    }
+                </div>
+                <div class="configuration-database-test-row">
+                    <button type="button" class="secondary-button" data-test-database-configuration>Test Database</button>
+                    <span class="configuration-database-test-status" data-database-test-status>Tests the staged provider and connection string without changing the active database.</span>
+                </div>
+            </div>
+        </section>
+
+        @await Html.PartialAsync("_SecuritySettings", Model)
+
+        <section class="configuration-section" data-config-section="grid" data-search-terms="grid defaults columns row size select rows page failed task highlight status">
+            <div class="configuration-section-heading">
+                <div><h2>Grid Defaults</h2><p>Shared default behavior for MAUI data grids.</p></div>
+                <span class="configuration-state-badge live">Live Settings</span>
+            </div>
+            <div class="panel-card configuration-card">
+                <div class="configuration-card-heading"><h3>Grid Defaults</h3><p>Set shared defaults for column sizing, row height, row selection and failed Task highlighting.</p></div>
+                @if (!Model.FitColumnsToGridHidden)
+                {
+                <div class="configuration-setting-row">
+                    <div><strong>Fit Columns to Grid</strong><p>Assign unused horizontal space to the last visible column when possible.</p></div>
+                    <label class="configuration-switch"><input type="checkbox" @(Model.FitColumnsToGrid ? "checked" : null) data-setting="fitColumnsToGrid" /><span></span></label>
+                </div>
+                }
+                else { <input type="hidden" value="@(Model.FitColumnsToGrid ? "true" : "false")" data-setting="fitColumnsToGrid" /> }
+                @if (!Model.HighlightFailedTasksInGridHidden)
+                {
+                <div class="configuration-setting-row">
+                    <div><strong>Highlight Failed Tasks in Grid</strong><p>Highlight failed Task rows in red when the Status column is visible.</p></div>
+                    <label class="configuration-switch"><input type="checkbox" @(Model.HighlightFailedTasksInGrid ? "checked" : null) data-setting="highlightFailedTasksInGrid" /><span></span></label>
+                </div>
+                }
+                else { <input type="hidden" value="@(Model.HighlightFailedTasksInGrid ? "true" : "false")" data-setting="highlightFailedTasksInGrid" /> }
+                @if (!Model.DefaultRowSizeHidden)
+                {
+                <div class="configuration-setting-row">
+                    <div><strong>Default Row Size</strong><p>Rows displayed per page before a user stores a personal grid preference.</p></div>
+                    <select class="text-input configuration-number-input" data-setting="defaultRowSize">
+                        @foreach (var size in Model.DefaultRowSizeChoices)
+                        {
+                            <option value="@size" selected="@(size == Model.DefaultRowSize ? "selected" : null)">@size</option>
+                        }
+                    </select>
+                </div>
+                }
+                else { <input type="hidden" value="@Model.DefaultRowSize" data-setting="defaultRowSize" /> }
+                @if (!Model.SelectRowsBeyondGridSizeHidden)
+                {
+                <div class="configuration-setting-row">
+                    <div><strong>Select Rows Beyond Grid Size</strong><p>Header selection includes every row matching the current filters instead of only the visible page.</p></div>
+                    <label class="configuration-switch"><input type="checkbox" @(Model.SelectRowsBeyondGridSize ? "checked" : null) data-setting="selectRowsBeyondGridSize" /><span></span></label>
+                </div>
+                }
+                else { <input type="hidden" value="@(Model.SelectRowsBeyondGridSize ? "true" : "false")" data-setting="selectRowsBeyondGridSize" /> }
+            </div>
+        </section>
+
+        <section class="configuration-section" data-config-section="refresh" data-search-terms="refresh caching cache interval tasks hosts scripts date lists global parameters keys certificates reports report retrieval task run file activity audit">
+            <div class="configuration-section-heading">
+                <div><h2>Refresh &amp; Caching</h2><p>Configure backend cache age and automatic grid refresh by resource. Automatic refreshes reuse fresh cached data; Refresh Now forces a live MOVEit read.</p></div>
+                <span class="configuration-state-badge live">Live Settings</span>
+            </div>
+            <div class="panel-card configuration-card configuration-table-card">
+                <div class="configuration-card-heading"><h3>Resource Refresh Intervals</h3><p>Use <strong>0</strong> to disable the corresponding automatic behavior where supported.</p></div>
+                <div class="configuration-table-wrap">
+                    <table class="configuration-table refresh-table">
+                        <thead><tr><th>Resource</th><th>Backend Cache Max Age</th><th>UI Refresh Interval</th></tr></thead>
+                        <tbody>
+                        @foreach (var item in Model.RefreshSettings)
+                        {
+                            <tr data-refresh-row data-refresh-key="@item.Key" hidden="@(item.CacheRefreshSecondsHidden && item.UiRefreshIntervalSecondsHidden ? "hidden" : null)">
+                                <td><strong>@item.Label</strong></td>
+                                <td>
+                                    @if (!item.CacheRefreshSecondsHidden) { <div class="configuration-unit-input"><input class="text-input" type="number" min="0" max="86400" value="@item.CacheRefreshSeconds" data-refresh-field="cache" /><span>sec</span></div> }
+                                    else { <input type="hidden" value="@item.CacheRefreshSeconds" data-refresh-field="cache" /> }
+                                </td>
+                                <td>
+                                    @if (!item.UiRefreshIntervalSecondsHidden) { <div class="configuration-unit-input"><input class="text-input" type="number" min="0" max="86400" value="@item.UiRefreshIntervalSeconds" data-refresh-field="ui" /><span>sec</span></div> }
+                                    else { <input type="hidden" value="@item.UiRefreshIntervalSeconds" data-refresh-field="ui" /> }
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="configuration-warning-card">
+                <strong>Report retrieval performance</strong>
+                <p>Higher batch-result limits can increase Records page load time and make large grid updates less responsive. The recommended default is <strong>500</strong> rows per batch.</p>
+            </div>
+            <div class="panel-card configuration-card configuration-table-card">
+                <div class="configuration-card-heading"><h3>Report Retrieval</h3><p>Task Run, File Activity, and Audit load one batch at a time. Use <strong>0</strong> seconds to disable automatic refresh.</p></div>
+                <div class="configuration-table-wrap">
+                    <table class="configuration-table refresh-table">
+                        <thead><tr><th>Report</th><th>Limit single batch result entries to</th><th>UI Refresh Interval</th></tr></thead>
+                        <tbody>
+                        @foreach (var item in Model.ReportSettings)
+                        {
+                            <tr data-report-setting-row data-report-setting-key="@item.Key" hidden="@(item.BatchResultLimitHidden && item.UiRefreshIntervalSecondsHidden ? "hidden" : null)">
+                                <td><strong>@item.Label</strong></td>
+                                <td>
+                                    @if (!item.BatchResultLimitHidden)
+                                    {
+                                        <select class="text-input configuration-number-input" data-report-setting-field="batch">
+                                            @foreach (var size in item.BatchResultLimitChoices)
+                                            {
+                                                <option value="@size" selected="@(size == item.BatchResultLimit ? "selected" : null)">@size</option>
+                                            }
+                                        </select>
+                                    }
+                                    else { <input type="hidden" value="@item.BatchResultLimit" data-report-setting-field="batch" /> }
+                                </td>
+                                <td>
+                                    @if (!item.UiRefreshIntervalSecondsHidden) { <div class="configuration-unit-input"><input class="text-input" type="number" min="0" max="86400" value="@item.UiRefreshIntervalSeconds" data-report-setting-field="ui" /><span>sec</span></div> }
+                                    else { <input type="hidden" value="@item.UiRefreshIntervalSeconds" data-report-setting-field="ui" /> }
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section class="configuration-section" data-config-section="smtp" data-search-terms="smtp email outbound mail server port ssl tls certificate ignore errors username password from address test recipient">
+            <div class="configuration-section-heading">
+                <div><h2>SMTP Configuration</h2><p>Configure the SMTP connection used by MAUI for outbound email delivery.</p></div>
+                <span class="configuration-state-badge live">Live Settings</span>
+            </div>
+
+            <div class="panel-card configuration-card">
+                <div class="configuration-card-heading"><h3>Outbound Mail Server</h3><p>One SMTP connection is shared by all MAUI Reports. The password is protected with Windows DPAPI LocalMachine scope and is never returned to the browser.</p></div>
+                <div class="configuration-field-grid two-column smtp-configuration-grid">
+                    <label class="configuration-field"><span>SMTP Server</span><input class="text-input" value="@Model.SmtpHost" data-report-smtp="host" /></label>
+                    <div class="smtp-port-security">
+                        <label class="configuration-field smtp-port-field"><span>Port</span><input class="text-input" type="number" min="1" max="65535" value="@Model.SmtpPort" data-report-smtp="port" /></label>
+                        <label class="configuration-required-check smtp-ssl-check"><span>Use SSL/TLS</span><input type="checkbox" @(Model.SmtpEnableSsl ? "checked" : null) data-report-smtp="enableSsl" /></label>
+                        <label class="configuration-required-check smtp-ignore-cert-check" title="Disables SMTP server certificate validation for TLS connections. Use only for trusted internal servers with certificates that cannot be validated normally."><span>Ignore Certificate Errors</span><input type="checkbox" @(Model.SmtpIgnoreCertificateErrors ? "checked" : null) data-report-smtp="ignoreCertificateErrors" /></label>
+                    </div>
+                    <label class="configuration-field"><span>Username <em>optional</em></span><input class="text-input" value="@Model.SmtpUsername" autocomplete="off" data-report-smtp="username" /></label>
+                    <div class="smtp-password-row">
+                        <label class="configuration-field"><span>Password</span><input class="text-input" type="password" autocomplete="new-password" placeholder="@(Model.SmtpPasswordConfigured ? "Configured — leave blank to keep" : "")" data-report-smtp="password" /></label>
+                        <button type="button" class="configuration-remove-button" data-report-smtp-clear-password>Clear</button>
+                    </div>
+                    <label class="configuration-field"><span>From Address</span><input class="text-input" type="email" value="@Model.SmtpFromAddress" data-report-smtp="fromAddress" /></label>
+                    <label class="configuration-field"><span>From Name</span><input class="text-input" value="@Model.SmtpFromName" data-report-smtp="fromName" /></label>
+                    <div class="smtp-test-row full">
+                        <label class="configuration-field"><span>Test Recipient <em>not saved</em></span><input class="text-input" type="email" placeholder="you@example.com" data-report-smtp-test-recipient /></label>
+                        <button type="button" class="secondary-button" data-report-smtp-test>Send Test Email</button>
+                    </div>
+                </div>
+                <div class="configuration-operation-actions smtp-operation-status">
+                    <span class="configuration-operation-status" data-report-smtp-status></span>
+                </div>
+            </div>
+        </section>
+
+        @await Html.PartialAsync("_MetadataSettings", Model)
+
+        @await Html.PartialAsync("_TagSettings", Model)
+
+        @await Html.PartialAsync("_GridDefinitionSettings", Model)
+
+        <section class="configuration-section" data-config-section="advanced" data-search-terms="advanced logging allowed hosts application logo deployment restart application factory reset configuration erase keep alive ping interval">
+            <div class="configuration-section-heading">
+                <div><h2>Advanced</h2><p>Deployment information and administrative maintenance.</p></div>
+            </div>
+            <div class="configuration-warning-card">
+                <strong>Important</strong>
+                <p>These values are read-only here because they affect hosting, branding assets, or diagnostics. Manage them during deployment.</p>
+            </div>
+            <div class="panel-card configuration-card">
+                <div class="configuration-readonly-grid">
+                    <div><span>Application Logo</span><code>@Model.ApplicationLogo</code></div>
+                    <div><span>Allowed Hosts</span><code>@Model.AllowedHosts</code></div>
+                    <div><span>Default Log Level</span><code>@Model.DefaultLogLevel</code></div>
+                    <div><span>ASP.NET Log Level</span><code>@Model.AspNetLogLevel</code></div>
+                </div>
+            </div>
+
+            <div class="panel-card configuration-card">
+                <div class="configuration-card-heading"><h3>Keep Alive Service</h3><p>When enabled - this service keeps the app pool alive by pinging an endpoint on the server at a set interval. This is necessary to allow scheduled jobs to run when the app pool might otherwise be cold.</p></div>
+                <div class="configuration-setting-row">
+                    <div><strong>Keep Alive Service</strong><p>Runs while MAUI is already running. It cannot start a stopped application pool or recover after a server restart; configure IIS startup/preload for that.</p></div>
+                    <label class="configuration-switch"><input type="checkbox" @(Model.KeepAliveEnabled ? "checked" : null) data-setting="keepAliveEnabled" aria-label="Keep Alive Service" /><span></span></label>
+                </div>
+                <div class="configuration-setting-row">
+                    <div><strong>Ping Interval</strong><p>Minutes between requests (1–20). Choose an interval shorter than the IIS idle timeout. Changes take effect after Save Configuration without restarting MAUI.</p></div>
+                    <input type="number" class="text-input configuration-number-input" min="1" max="20" step="1" value="@Model.KeepAliveIntervalMinutes" data-setting="keepAliveIntervalMinutes" aria-label="Ping Interval in minutes" disabled="@(!Model.KeepAliveEnabled)" />
+                </div>
+            </div>
+
+            <div class="panel-card configuration-card" data-application-restart-section>
+                <div class="configuration-card-heading"><h3>Restart Application</h3><p>Stop MAUI gracefully and allow IIS to start the application again.</p></div>
+                <div class="configuration-operation-body">
+                    <div class="configuration-restart-warning">
+                        <strong>Restart MAUI to activate startup-sensitive configuration changes</strong>
+                        <p>Users may need to sign in again, and work currently in progress may be interrupted. Saved settings and local data will not be deleted.</p>
+                    </div>
+                    <div class="configuration-operation-actions">
+                        <button type="button" class="secondary-button" data-application-restart-open>Restart Application</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-card configuration-card" data-factory-reset-section>
+                <div class="configuration-card-heading"><h3>Factory Reset</h3><p>Erase MAUI's local configuration and return to Initial Setup.</p></div>
+                <div class="configuration-operation-body">
+                    <div class="configuration-destructive-warning">
+                        <strong>Permanent deletion of MAUI configuration and local data</strong>
+                        <p>Resets the <code>appsettings.json</code> and removes the installation's <code>Data</code> folder contents, including any local SQLite database, backup archives, logs, preferences, and Data Protection keys. External SQL Server databases and MOVEit Automation are not modified. SQLite files stored outside <code>Data</code> are also outside the reset scope.</p>
+                        <p>MAUI will sign you out, stop its application host, and complete deletion before the next startup. This cannot be undone.</p>
+                    </div>
+                    <div class="configuration-operation-actions">
+                        <button type="button" class="danger-button" data-factory-reset-open>Factory Reset</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="configuration-save-bar">
+            <div><strong data-configuration-save-state>No unsaved changes</strong><span>Settings are validated before <code>appsettings.json</code> is replaced.</span></div>
+            <div class="configuration-save-actions"><button type="button" class="secondary-button" data-config-discard disabled>Discard Changes</button><button type="button" class="primary-button" data-config-save disabled>Save Changes</button></div>
+        </div>
+    </main>
+</div>
+
+
+<dialog class="new-task-dialog" data-application-restart-dialog aria-labelledby="application-restart-title">
+    <div class="new-task-card configuration-import-confirm-card">
+        <div class="settings-header">
+            <div><h2 id="application-restart-title">Restart Application</h2><p>Confirm that MAUI should stop and restart.</p></div>
+            <button type="button" class="dialog-close" data-application-restart-close aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body">
+            <p>The application will be temporarily unavailable. Active users may need to sign in again, and unsaved work may be lost. IIS will start MAUI again when the browser reconnects.</p>
+            <p><strong>No configuration, databases, or files will be deleted.</strong></p>
+            <div class="inline-alert error-alert" role="alert" data-application-restart-error hidden></div>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-application-restart-cancel>Cancel</button>
+            <button type="button" class="primary-button" data-application-restart-confirm>Restart MAUI</button>
+        </div>
+    </div>
+</dialog>
+
+<dialog class="new-task-dialog" data-factory-reset-dialog aria-labelledby="factory-reset-title">
+    <div class="new-task-card configuration-import-confirm-card">
+        <div class="settings-header">
+            <div><h2 id="factory-reset-title">Factory Reset</h2><p>This action permanently erases the MAUI installation's local configuration.</p></div>
+            <button type="button" class="dialog-close" data-factory-reset-close aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body">
+            <div class="configuration-destructive-warning">
+                <strong>WARNING — This action cannot be undone.</strong>
+                <p>All contents of <code>Data</code> (including SQLite databases, backups, and encryption keys) will be deleted and the configuration will be reset. External SQL Server databases remain unchanged; SQLite files outside <code>Data</code> are not deleted.</p>
+            </div>
+            <p>Type <strong>RESET</strong> to erase the current configuration and start again.</p>
+            <label class="configuration-field"><span>Confirmation</span><input class="text-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="5" placeholder="Type RESET" data-factory-reset-confirmation /></label>
+            <div class="inline-alert error-alert" role="alert" data-factory-reset-error hidden></div>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-factory-reset-cancel>Cancel</button>
+            <button type="button" class="danger-button" data-factory-reset-execute disabled>Erase MAUI and Restart</button>
+        </div>
+    </div>
+</dialog>
+
+
+<dialog class="new-task-dialog" data-tag-editor-dialog>
+    <div class="new-task-card tag-editor-dialog-card">
+        <div class="settings-header">
+            <div><h2 data-tag-editor-title>Create Tag</h2><p>Define the Tag value and the color used for its MAUI pill.</p></div>
+            <button type="button" class="dialog-close" data-tag-editor-close aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body tag-editor-dialog-body">
+            <div class="inline-alert error-alert" data-tag-editor-error hidden></div>
+            <label class="configuration-field"><span>Tag Name</span><input class="text-input" maxlength="75" autocomplete="off" data-tag-name /></label>
+            <label class="configuration-field"><span>Color</span><div class="tag-color-editor"><input type="color" value="#3E8AC7" data-tag-color-picker aria-label="Tag color picker" /><input class="text-input" value="#3E8AC7" maxlength="7" spellcheck="false" data-tag-color /></div></label>
+            <div class="metadata-tag-preview"><span>Preview</span><span data-tag-preview></span></div>
+            <div class="inline-alert warning-alert" data-tag-color-warning hidden></div>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-tag-editor-cancel>Cancel</button>
+            <button type="button" class="primary-button" data-tag-editor-save>Create Tag</button>
+        </div>
+    </div>
+</dialog>
+
+<dialog class="new-task-dialog" data-tag-delete-dialog>
+    <div class="new-task-card tag-delete-dialog-card">
+        <div class="settings-header">
+            <div><h2>Delete Tag</h2><p>Delete an unused Tag definition.</p></div>
+            <button type="button" class="dialog-close" data-tag-delete-close aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body tag-delete-dialog-body">
+            <p>Delete Tag <strong data-tag-delete-name></strong>?</p>
+            <p>This removes the Tag definition permanently. Tags that are in use cannot be deleted.</p>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-tag-delete-cancel>Cancel</button>
+            <button type="button" class="danger-button" data-tag-delete-confirm>Delete Tag</button>
+        </div>
+    </div>
+</dialog>
+
+<dialog class="new-task-dialog" data-metadata-field-delete-dialog>
+    <div class="new-task-card configuration-import-confirm-card">
+        <div class="settings-header">
+            <div><h2>Delete Metadata Field</h2><p>Remove a persisted MAUI metadata field.</p></div>
+            <button type="button" class="dialog-close" data-metadata-field-delete-close aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body">
+            <div class="configuration-destructive-warning">
+                <strong>This permanently deletes stored metadata values when Configuration is saved.</strong>
+                <p>MAUI will remove the field definition and every stored value for this field across all configured MOVEit environments.</p>
+            </div>
+            <div class="configuration-import-confirm-file">
+                <span>Metadata field</span>
+                <strong data-metadata-field-delete-name></strong>
+            </div>
+            <p data-metadata-field-delete-message></p>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-metadata-field-delete-cancel>Cancel</button>
+            <button type="button" class="danger-button" data-metadata-field-delete-confirm>Remove Field</button>
+        </div>
+    </div>
+</dialog>
+
+
+<dialog class="new-task-dialog metadata-import-preview-dialog" data-metadata-import-preview-dialog>
+    <div class="new-task-card metadata-import-preview-card">
+        <div class="settings-header">
+            <div><h2>Import Metadata Preview</h2><p>Review the validated changes before updating MAUI metadata.</p></div>
+            <button type="button" class="dialog-close" data-metadata-import-preview-close aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body metadata-import-preview-body">
+            <div class="inline-alert error-alert" data-metadata-import-preview-error hidden></div>
+            <div class="metadata-import-file-summary">
+                <div><span>File</span><strong data-metadata-preview-file>—</strong></div>
+                <div><span>Object Type</span><strong data-metadata-preview-type>—</strong></div>
+                <div><span>Environment</span><strong data-metadata-preview-environment>—</strong></div>
+            </div>
+            <div class="metadata-import-stat-grid">
+                <div><span>Rows Read</span><strong data-metadata-preview-rows>0</strong></div>
+                <div><span>Matched</span><strong data-metadata-preview-matched>0</strong></div>
+                <div><span>Objects Changing</span><strong data-metadata-preview-objects>0</strong></div>
+                <div><span>Field Changes</span><strong data-metadata-preview-changes>0</strong></div>
+                <div><span>Unchanged</span><strong data-metadata-preview-unchanged>0</strong></div>
+            </div>
+            <div class="metadata-import-issues" data-metadata-preview-errors hidden><h3>Validation Errors</h3><div data-metadata-preview-error-list></div></div>
+            <div class="metadata-import-issues warning" data-metadata-preview-warnings hidden><h3>Warnings</h3><div data-metadata-preview-warning-list></div></div>
+            <div class="metadata-import-change-section">
+                <div class="metadata-import-change-heading"><h3>Proposed Changes</h3><span data-metadata-preview-truncated hidden></span></div>
+                <div class="metadata-import-change-wrap">
+                    <table class="metadata-import-change-table">
+                        <thead><tr><th>Object</th><th>Field</th><th>Current</th><th>New</th></tr></thead>
+                        <tbody data-metadata-preview-change-rows></tbody>
+                    </table>
+                    <div class="metadata-import-no-changes" data-metadata-preview-no-changes hidden>No metadata changes were found in this workbook.</div>
+                </div>
+            </div>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-metadata-import-preview-cancel>Cancel</button>
+            <button type="button" class="primary-button" data-metadata-import-save disabled>Save Changes</button>
+        </div>
+    </div>
+</dialog>
+
+<dialog class="new-task-dialog" data-backup-restore-dialog>
+    <div class="new-task-card backup-restore-dialog-card">
+        <div class="settings-header">
+            <div><h2>Restore MAUI Backup</h2><p>Restore application configuration and supported backup contents.</p></div>
+            <button type="button" class="dialog-close" data-backup-restore-close aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body backup-restore-dialog-body">
+            <div class="inline-alert error-alert" data-backup-restore-error hidden></div>
+            <div class="configuration-destructive-warning">
+                <strong>This restore replaces the current MAUI configuration.</strong>
+                <p><code>appsettings.json</code> is replaced. If the backup uses SQLite, <code>maui.db</code> is restored. SQL Server database restore is not supported. MAUI must restart after the restore.</p>
+            </div>
+            <div class="backup-restore-summary">
+                <div><span>Backup</span><strong data-backup-restore-date>—</strong></div>
+                <div><span>Metadata Database</span><strong data-backup-restore-database>—</strong></div>
+                <div><span>MOVEit Configurations</span><strong data-backup-restore-moveit-summary>—</strong></div>
+            </div>
+            <div class="inline-alert warning-alert" data-backup-restore-sql-warning hidden>
+                <strong>SQL Server metadata will not be restored.</strong> The SQL Server connection settings from this backup will be restored in <code>appsettings.json</code>, but the SQL Server database itself is unchanged.
+            </div>
+            <div class="backup-restore-environments">
+                <strong id="backup-restore-environments-title">Restore MOVEit Automation configurations</strong>
+                <p class="field-help">Select the configurations to restore from this backup. All are off by default. Each uses its Server-Key-protected export. Leave all unchecked to restore MAUI only.</p>
+                <div class="backup-restore-environment-options" data-backup-restore-moveit-options role="group" aria-labelledby="backup-restore-environments-title"></div>
+                <p class="field-help" data-backup-restore-multi-warning hidden>Restoring multiple MOVEit environments is not atomic. If a later restore fails, an earlier environment may already have been restored.</p>
+            </div>
+            <label class="backup-restore-option">
+                <input type="checkbox" data-backup-restore-acknowledge />
+                <span><strong>I understand the current MAUI configuration and supported metadata state will be replaced.</strong><small>A pre-restore safety copy of the current appsettings.json is created automatically.</small></span>
+            </label>
+            <label class="configuration-field">
+                <span>Type RESTORE to confirm</span>
+                <input class="text-input" autocomplete="off" spellcheck="false" data-backup-restore-confirmation />
+            </label>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-backup-restore-cancel>Cancel</button>
+            <button type="button" class="danger-button" data-backup-restore-confirm disabled>Restore Backup</button>
+        </div>
+    </div>
+</dialog>
+
+<dialog class="new-task-dialog" data-data-access-dialog>
+    <div class="new-task-card data-access-dialog-card">
+        <div class="settings-header">
+            <div><h2 data-data-access-dialog-title>Configure Data Access Credentials</h2><p data-data-access-server></p></div>
+            <button type="button" class="dialog-close" data-data-access-close aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body">
+            <div class="inline-alert error-alert" data-data-access-error hidden></div>
+
+            <div class="configuration-field-grid two-column">
+                <label class="configuration-field"><span>Server</span><input class="text-input configuration-locked-input" readonly data-data-access-server-key /></label>
+                <label class="configuration-field"><span>Username</span><input class="text-input" type="text" autocomplete="off" data-data-access-username-input /></label>
+                <label class="configuration-field full"><span>Password</span><input class="text-input" type="password" autocomplete="new-password" data-data-access-password-input /><small data-data-access-password-help>Enter the password for this MOVEit Administrator account.</small></label>
+            </div>
+
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-data-access-cancel>Cancel</button>
+            <button type="button" class="primary-button" data-data-access-save>Save Credentials</button>
+        </div>
+    </div>
+</dialog>
+
+<dialog class="new-task-dialog" data-moveit-config-import-dialog>
+    <div class="new-task-card configuration-import-confirm-card">
+        <div class="settings-header">
+            <div><h2>Import MOVEit Configuration</h2><p>This operation replaces the current Automation configuration.</p></div>
+            <button type="button" class="dialog-close" data-moveit-config-import-dialog-close aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body">
+            <div class="inline-alert error-alert" data-moveit-config-import-error hidden></div>
+
+            <div class="configuration-destructive-warning">
+                <strong>This operation cannot be undone by MAUI</strong>
+                <p>Confirm that you have a current configuration backup before importing. After import, refresh any open Task, Host, or Resource pages before making additional changes.</p>
+            </div>
+            <div class="configuration-import-confirm-file">
+                <span>Configuration file</span>
+                <strong data-moveit-config-import-confirm-file></strong>
+            </div>
+            <p>Continue and overwrite the current MOVEit Automation configuration?</p>
+
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-moveit-config-import-cancel>Cancel</button>
+            <button type="button" class="danger-button" data-moveit-config-import-confirm>Import Configuration</button>
+        </div>
+    </div>
+</dialog>
+
+
+<dialog class="new-task-dialog" data-notification-template-edit-dialog aria-labelledby="notification-template-editor-title">
+    <div class="new-task-card notification-template-edit-card">
+        <div class="settings-header"><h2 id="notification-template-editor-title" data-template-title>Add Notification Template</h2><button type="button" class="dialog-close" data-template-close aria-label="Close">×</button></div>
+        <div class="new-task-body">
+            <label class="field-block"><span>Template Name</span><input class="text-input" maxlength="100" required data-template-name /></label>
+            <label class="field-block"><span>Format</span><select class="text-input" data-template-format><option value="text">Text</option><option value="html">HTML</option></select></label>
+            <label class="field-block"><span>Subject</span><div class="task-notification-insert-row"><input class="text-input" required data-template-subject /><select class="text-input task-notification-macro" data-template-subject-macro aria-label="Insert macro into Subject"></select></div></label>
+            <div class="field-block task-notification-message-field"><span>Message Body</span>
+                <div class="task-notification-toolbar">
+                    <button type="button" data-template-command="bold" title="Bold"><strong>B</strong></button>
+                    <button type="button" data-template-command="italic" title="Italic"><em>I</em></button>
+                    <button type="button" data-template-command="underline" title="Underline"><u>U</u></button>
+                    <button type="button" data-template-command="insertUnorderedList">• List</button>
+                    <button type="button" data-template-command="insertOrderedList">1. List</button>
+                    <button type="button" data-template-source>Source</button>
+                    <select class="text-input task-notification-macro" data-template-body-macro aria-label="Insert macro into Message Body"></select>
+                </div>
+                <div class="task-notification-editor" contenteditable="true" role="textbox" aria-label="Message Body" aria-multiline="true" data-template-visual></div>
+                <textarea class="text-input task-notification-html-source" rows="10" spellcheck="false" aria-label="HTML source" data-template-source-text hidden></textarea>
+                <textarea class="text-input task-notification-textarea" rows="10" aria-label="Message Body" data-template-text hidden></textarea>
+            </div>
+        </div>
+        <div class="settings-footer new-task-footer"><span class="inline-alert error-alert" role="alert" data-template-error hidden></span><button type="button" class="secondary-button" data-template-close>Close</button><button type="button" class="primary-button" data-template-save>Add Template</button></div>
+    </div>
+</dialog>
+
+<dialog class="new-task-dialog" data-notification-template-delete-dialog>
+    <div class="new-task-card configuration-notification-template-dialog-card">
+        <div class="settings-header">
+            <div><h2>Delete Notification Template</h2><p>This removes the saved template from the MAUI database.</p></div>
+            <button type="button" class="dialog-close" data-notification-template-delete-close aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body">
+            <div class="inline-alert error-alert" data-notification-template-delete-error hidden></div>
+            <p>Remove <strong data-notification-template-delete-name></strong>?</p>
+            <p class="field-help">Existing MOVEit Task notifications that used this message body are not changed.</p>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-notification-template-delete-cancel>Close</button>
+            <button type="button" class="danger-button" data-notification-template-delete-confirm>Delete Template</button>
+        </div>
+    </div>
+</dialog>
+
+<dialog class="new-task-dialog" data-system-job-edit-dialog>
+    <div class="new-task-card system-job-edit-card">
+        <div class="settings-header">
+            <div><h2>Edit System Job</h2><p>Configure this MAUI System Job.</p></div>
+            <button type="button" class="dialog-close" data-system-job-edit-close aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body">
+            <div class="inline-alert error-alert" data-system-job-edit-error hidden></div>
+            <input type="hidden" data-system-job-edit-key />
+            <label class="configuration-field">
+                <span>Name</span>
+                <input class="text-input configuration-locked-input" data-system-job-edit-name readonly />
+            </label>
+            <label class="configuration-field">
+                <span>Job Description</span>
+                <textarea class="text-input configuration-locked-input system-job-description-input" rows="2" data-system-job-edit-description readonly></textarea>
+            </label>
+            <div class="configuration-setting-row system-job-edit-toggle-row">
+                <div><strong>Enabled</strong><p>Run this System Job automatically according to its configured schedule.</p></div>
+                <label class="configuration-switch"><input type="checkbox" data-system-job-edit-enabled /><span></span></label>
+            </div>
+            <label class="configuration-field">
+                <span>Schedule</span>
+                <input class="text-input configuration-locked-input" data-system-job-edit-schedule readonly />
+            </label>
+            <label class="configuration-field" data-system-job-edit-time-field>
+                <span>Run Daily At</span>
+                <input class="text-input configuration-number-input" type="time" step="60" data-system-job-edit-time />
+                <small>Time is interpreted in the MAUI application server's local time zone.</small>
+            </label>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-system-job-edit-cancel>Cancel</button>
+            <button type="button" class="primary-button" data-system-job-edit-save>Save</button>
+        </div>
+    </div>
+</dialog>
+
+<div class="toast" data-configuration-toast role="status" aria-live="polite"></div>
+
+<template data-server-template>
+    <div class="configuration-server-card" data-server-row>
+        <div class="configuration-server-card-header"><strong data-server-title>New MOVEit Server</strong><button type="button" class="configuration-remove-button" data-remove-server aria-label="Remove server">Remove</button></div>
+        <div class="configuration-field-grid server-grid">
+            <label class="configuration-field"><span>Key</span><input class="text-input configuration-locked-input" data-server-field="key" readonly /><small>Stable internal identifier generated by MAUI.</small></label>
+            <label class="configuration-field"><span>Environment Key</span><input class="text-input" data-server-field="environmentKey" /><small>Shared by HA nodes that use the same Automation configuration.</small></label>
+            <label class="configuration-field"><span>Display Name</span><input class="text-input" data-server-field="displayName" /></label>
+            <label class="configuration-field"><span>Web Admin URL</span><input class="text-input" placeholder="https://automation.example.com" data-server-field="webAdminUrl" /></label>
+            <label class="configuration-field full"><span>COM Server Host Override <em>optional</em></span><input class="text-input" data-server-field="serverHost" /><small>Leave blank to derive the COM host from the Web Admin URL.</small></label>
+        </div>
+        <div class="configuration-server-data-access" data-data-access-row data-server-key="" data-configured="false" data-persisted="false">
+            <div><strong>Data Access Credentials</strong><p>Optional credentials for automatic backups, scheduled Reports, and unattended System Jobs. Save the server configuration first; credentials are not required during setup.</p></div>
+            <div class="configuration-data-access-summary"><span><strong>Username:</strong> <span data-data-access-username>—</span></span><span><strong>Password:</strong> <span data-data-access-password-state>Not Configured</span></span></div>
+            <div class="configuration-inline-actions data-access-actions"><button type="button" class="secondary-button" data-data-access-configure disabled>Configure</button><button type="button" class="secondary-button" data-data-access-test disabled>Test</button><button type="button" class="configuration-remove-button" data-data-access-clear disabled>Clear</button></div>
+        </div>
+    </div>
+</template>
+
+<template data-metadata-field-template>
+    <div class="configuration-metadata-row" data-metadata-row>
+        <label class="configuration-metadata-control"><span>Name</span><input class="text-input" data-metadata-field="name" /></label>
+        <label class="configuration-metadata-control"><span>Label</span><input class="text-input" data-metadata-field="label" /></label>
+        <label class="configuration-metadata-control"><span>Type</span><select class="text-input" data-metadata-field="type"><option>String</option><option>MultilineString</option><option>Email</option><option>List</option><option>Boolean</option><option>Numeric</option><option>Date</option></select></label>
+        <label class="configuration-metadata-control"><span>Possible Values</span><input class="text-input" data-metadata-field="possibleValues" /></label>
+        <label class="configuration-required-check configuration-metadata-required"><span>Required</span><input type="checkbox" data-metadata-field="required" /></label>
+        <button type="button" class="configuration-remove-button configuration-metadata-remove" data-remove-metadata-field>Remove</button>
+        <label class="configuration-metadata-control configuration-metadata-description"><span>Description</span><input class="text-input" data-metadata-field="description" /></label>
+    </div>
+</template>
+
+<template data-security-user-template>
+    <div class="configuration-security-row" data-security-user data-security-original="false">
+        <input class="text-input" placeholder="MOVEit username" maxlength="128" data-security-field="username" />
+        <select class="text-input" data-security-field="role"><option value="User" selected>User</option><option value="Admin">Admin</option></select>
+        <span class="configuration-last-login">Never</span>
+        <button type="button" class="configuration-remove-button" data-remove-security-user>Remove</button>
+    </div>
+</template>
+
+@section Scripts {
+    <script src="~/js/configuration-moveit.js" asp-append-version="true"></script>
+    <script src="~/js/configuration-operations.js" asp-append-version="true"></script>
+    <script src="~/js/configuration-scheduler.js" asp-append-version="true"></script>
+    <script src="~/js/configuration-metadata.js" asp-append-version="true"></script>
+    <script src="~/js/configuration-tags.js" asp-append-version="true"></script>
+    <script src="~/js/shared/notification-message.js" asp-append-version="true"></script>
+    <script src="~/js/configuration-notification-templates.js" asp-append-version="true"></script>
+    <script src="~/js/configuration-ssh-algorithms.js" asp-append-version="true"></script>
+    <script src="~/js/configuration.js" asp-append-version="true"></script>
+    <script src="~/js/configuration-application-restart.js" asp-append-version="true"></script>
+    <script src="~/js/configuration-factory-reset.js" asp-append-version="true"></script>
+    <script src="~/js/smtp-settings.js" asp-append-version="true"></script>
+}
+

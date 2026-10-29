@@ -1,0 +1,235 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   This Razor file is part of the MAUI application. *@
+@model ScriptsPageViewModel
+@{
+    ViewData["Title"] = "Scripts";
+    ViewData["GridDeferInitialLoad"] = true;
+    ViewData["GridToolbarRightPrefixPartial"] = "_ScriptRefreshControls";
+    ViewData["ScriptLastRefreshUtc"] = Model.LastRefreshUtc;
+}
+<div class="page-heading compact-heading">
+    <div>
+        <h1>Scripts</h1>
+        <p>@(Model.CustomScriptsLicensed ? "Review built-in and custom MOVEit Scripts, and manage custom PowerShell and VBScript resources." : "Review the built-in Scripts provided by MOVEit Automation.")</p>
+    </div>
+</div>
+
+@if (TempData["ScriptLoadError"] is string scriptLoadError && !string.IsNullOrWhiteSpace(scriptLoadError))
+{
+    <div class="inline-alert error-alert">@scriptLoadError</div>
+}
+
+<partial name="_DataGrid" model="Model.Grid" />
+
+<form class="task-antiforgery" hidden>@Html.AntiForgeryToken()</form>
+
+<div data-script-page-config
+     data-login-url="@Url.Action("SessionExpired", "Account")"
+     data-create-script-url="@Url.Action("CreateScript", "Resources")"
+     data-audit-report-url="@Url.Action("Audit", "Records")"
+     data-script-details-url="@Url.Action("ScriptDetails", "Resources")"
+     data-save-script-details-url="@Url.Action("SaveScriptDetails", "Resources")"
+     data-export-script-url="@Url.Action("ExportScript", "Resources")"
+     data-export-scripts-url="@Url.Action("ExportScripts", "Resources")"
+     data-preflight-import-script-url="@Url.Action("PreflightImportScript", "Resources")"
+     data-import-script-url="@Url.Action("ImportScript", "Resources")"
+     data-prepare-script-edit-url="@Url.Action("PrepareScriptEdit", "Resources")"
+     data-preflight-undo-script-url="@Url.Action("PreflightUndoScript", "Resources")"
+     data-undo-script-url="@Url.Action("UndoScript", "Resources")"
+     data-preflight-delete-script-url="@Url.Action("PreflightDeleteScript", "Resources")"
+     data-delete-script-url="@Url.Action("DeleteScript", "Resources")"
+     data-preflight-delete-scripts-url="@Url.Action("PreflightDeleteScripts", "Resources")"
+     data-delete-scripts-url="@Url.Action("DeleteScripts", "Resources")"
+     data-mark-script-edited-url="@Url.Action("MarkScriptEdited", "Resources")"
+     data-initial-script-grid-url="@Url.Action("InitialScriptsGrid", "Resources")"
+     data-refresh-script-grid-url="@Url.Action("RefreshScriptsGrid", "Resources")"
+     data-ui-script-refresh-seconds="@Model.UiScriptRefreshIntervalSeconds"
+     data-native-editor-session-url="@Url.Action("Session", "NativeEditor")"
+     data-prepare-task-edit-url="@Url.Action("PrepareTaskEdit", "Tasks")"
+     data-mark-task-edited-url="@Url.Action("MarkTaskEdited", "Tasks")"></div>
+
+<div class="task-row-action-menu" data-script-row-action-menu role="menu" aria-label="Script actions" hidden>
+    <button type="button" role="menuitem" data-script-row-command="information">Script Information</button>
+    <button type="button" role="menuitem" data-script-row-command="audit">View Audit Records</button>
+    <div class="task-row-action-divider" role="separator"></div>
+    <button type="button" role="menuitem" data-script-row-command="export">Export Script</button>
+    <button type="button" role="menuitem" data-script-row-command="edit">Edit Script</button>
+    <div class="task-row-action-divider" role="separator" data-script-undo-divider></div>
+    <button type="button" role="menuitem" data-script-row-command="undo">Undo Changes</button>
+    <div class="task-row-action-divider" role="separator" data-script-delete-divider></div>
+    <button type="button" role="menuitem" class="task-row-danger-action" data-script-row-command="delete">Delete Script</button>
+</div>
+
+@if (Model.CustomScriptsLicensed)
+{
+    <dialog class="new-task-dialog" data-new-script-dialog>
+        <form class="new-task-card" data-new-script-form>
+            <div class="settings-header">
+                <div>
+                    <h2>New Script</h2>
+                    <p>Create the Script in MOVEit and continue configuration in the native Script editor.</p>
+                </div>
+                <button type="button" class="dialog-close" data-new-script-close aria-label="Close">×</button>
+            </div>
+            <div class="new-task-body">
+                <div class="inline-alert error-alert" data-new-script-error hidden></div>
+
+                <partial name="_ObjectCreationResourceGroup" model="@("Script")" />
+                <label class="field-block full-span">
+                    <span>Script Name</span>
+                    <input class="text-input" type="text" autocomplete="off" data-new-script-name />
+                </label>
+
+                <fieldset class="new-task-type-fieldset">
+                    <legend>Language</legend>
+                    <label class="new-task-type-card">
+                        <input type="radio" name="newScriptLanguage" value="PS1" checked />
+                        <span class="new-task-type-copy"><strong>PowerShell</strong><span>Create a MOVEit custom PowerShell script.</span></span>
+                    </label>
+                    <label class="new-task-type-card">
+                        <input type="radio" name="newScriptLanguage" value="VBScript" />
+                        <span class="new-task-type-copy"><strong>VBScript</strong><span>Create a MOVEit custom VBScript script.</span></span>
+                    </label>
+                </fieldset>
+
+
+            </div>
+            <div class="settings-footer new-task-footer">
+                <button type="button" class="secondary-button" data-new-script-cancel>Cancel</button>
+                <button type="submit" class="primary-button new-task-submit" data-new-script-submit>
+                    <span class="inline-spinner button-spinner" data-new-script-spinner hidden aria-hidden="true"></span>
+                    <span data-new-script-submit-label>Create Script</span>
+                </button>
+            </div>
+        </form>
+    </dialog>
+
+
+    <partial name="_ResourceImportDialog" model='new ResourceImportDialogViewModel { Key = "script", Label = "Script" }' />
+}
+
+<dialog class="new-task-dialog" data-undo-script-dialog>
+    <div class="new-task-card">
+        <div class="settings-header">
+            <div>
+                <h2>Undo Script Changes</h2>
+                <p>Select a saved version to restore.</p>
+            </div>
+            <button type="button" class="dialog-close" data-undo-script-no aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body">
+            <div class="inline-alert error-alert" data-undo-script-error hidden></div>
+
+
+            <p data-undo-script-message></p>
+            <div class="undo-history-list" data-undo-script-history></div>
+            <p><strong>The current script configuration will be replaced by the selected version.</strong></p>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-undo-script-no>Cancel</button>
+            <button type="button" class="danger-button" data-undo-script-yes>Restore Selected Version</button>
+        </div>
+    </div>
+</dialog>
+
+<dialog class="new-task-dialog" data-delete-script-dialog>
+    <div class="new-task-card">
+        <div class="settings-header">
+            <div>
+                <h2 data-delete-script-title>Delete Script</h2>
+                <p>Deletes the selected custom Script or Scripts from MOVEit Automation. When available, MAUI saves a Recycle Bin recovery copy first.</p>
+            </div>
+            <button type="button" class="dialog-close" data-delete-script-no aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body">
+            <div class="inline-alert error-alert" data-delete-script-error hidden></div>
+
+
+            <p data-delete-script-message></p>
+            <div class="delete-object-list" data-delete-script-list hidden></div>
+            <p><strong>Are you sure you want to continue?</strong></p>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-delete-script-no>Cancel</button>
+            <button type="button" class="danger-button" data-delete-script-yes>Yes, Delete</button>
+        </div>
+    </div>
+</dialog>
+
+<dialog class="task-details-dialog" data-script-details-dialog>
+    <form method="dialog" class="task-details-card" data-script-details-form>
+        <div class="settings-header">
+            <div>
+                <h2>Script Information</h2>
+                <p>MOVEit properties, MAUI metadata, and Task assignments.</p>
+            </div>
+            <button type="submit" class="dialog-close" aria-label="Close">×</button>
+        </div>
+        <div class="task-details-tabs" role="tablist" aria-label="Script information sections">
+            <button type="button" class="task-details-tab active" role="tab" aria-selected="true" data-script-details-tab="information">Information</button>
+            <button type="button" class="task-details-tab" role="tab" aria-selected="false" data-script-details-tab="tasks">Tasks</button>
+        </div>
+        <div class="task-details-body">
+            <div class="inline-alert error-alert" data-script-details-error hidden></div>
+
+            <div class="details-loading" data-script-details-loading role="status" aria-live="polite" aria-label="Loading Script information">
+                <span class="inline-spinner" aria-hidden="true"></span>
+                <span>Loading...</span>
+            </div>
+            <div data-script-details-content hidden>
+                <div data-script-details-panel="information">
+                    <section class="details-section">
+                        <div class="details-section-heading maui-object-properties-heading">
+                            <div class="task-identity-row maui-object-identity" aria-label="Script identity">
+                                <div class="task-identity-item"><span>Type</span><strong data-script-type></strong></div>
+                                <div class="task-identity-item"><span>Script ID</span><strong data-script-id></strong></div>
+                            </div>
+                            <span class="source-badge">MOVEit</span>
+                        </div>
+                        <div class="details-grid">
+                            <label class="field-block full-span"><span>Script Name</span><input class="text-input" data-script-name /></label>
+                            <label class="field-block full-span"><span>Description</span><textarea class="text-input textarea-input" rows="3" data-script-description></textarea></label>
+                            <label class="field-block full-span"><span>Language</span><input class="text-input" type="text" data-script-language readonly /></label>
+                            <label class="field-block full-span"><span>Resource Groups</span><input class="text-input" data-script-resource-groups readonly /></label>
+                        </div>
+                    </section>
+
+                    <section class="details-section">
+                        <div class="details-section-heading"><h3>Additional Information</h3><span class="source-badge local-badge">MAUI</span></div>
+                        <div class="details-grid" data-script-metadata-fields></div>
+                    </section>
+
+                    <section class="details-section audit-section">
+                        <div class="details-section-heading"><h3>Script Metadata</h3><span class="source-badge local-badge">MAUI</span></div>
+                        <div class="audit-grid" data-script-metadata-audit></div>
+                    </section>
+                </div>
+
+                <div data-script-details-panel="tasks" hidden>
+                    <section class="details-section">
+                        <div class="details-section-heading details-related-tasks-heading"><div><h3>Assigned Tasks</h3><p>Visible Tasks that reference this Script.</p></div></div>
+                        <div class="host-tasks-empty" data-script-tasks-empty hidden>No visible Tasks currently reference this Script.</div>
+                        <div class="host-tasks-list" data-script-tasks-list hidden>
+                            <div class="host-tasks-header" role="row">
+                                <div role="columnheader">Task ID</div>
+                                <div role="columnheader">Task Name</div>
+                            </div>
+                            <div data-script-tasks-rows></div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+        </div>
+        <div class="settings-footer">
+            <button type="button" class="secondary-button" data-script-details-cancel>Close</button>
+            <button type="button" class="primary-button" data-script-details-save>Save</button>
+        </div>
+    </form>
+</dialog>
+
+@section Scripts {
+    <script src="~/js/resource-portability.js" asp-append-version="true"></script>
+    <script src="~/js/scripts.js" asp-append-version="true"></script>
+}

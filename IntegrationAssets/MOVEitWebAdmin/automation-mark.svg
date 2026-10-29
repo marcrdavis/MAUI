@@ -1,0 +1,7 @@
+<!-- Author: Marc R. Davis (marcdavis@comcast.net); Project: MAUI - MOVEit Automation UI; This SVG asset is part of the MAUI application. -->
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="url(#g)"/>
+  <path d="M19 24h19.5l-5.8-5.8 3.5-3.5L48 26.5 36.2 38.3l-3.5-3.5 5.8-5.8H19v-5Z" fill="white"/>
+  <path d="M45 40H25.5l5.8 5.8-3.5 3.5L16 37.5l11.8-11.8 3.5 3.5-5.8 5.8H45v5Z" fill="white" fill-opacity=".72"/>
+  <defs><linearGradient id="g" x1="8" y1="7" x2="56" y2="58" gradientUnits="userSpaceOnUse"><stop stop-color="#5B6CFF"/><stop offset="1" stop-color="#16A6A1"/></linearGradient></defs>
+</svg>

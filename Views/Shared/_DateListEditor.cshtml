@@ -1,0 +1,88 @@
+@* Shared Date List fields with distinct New and Edit presentations. *@
+<dialog class="new-task-dialog script-editor-dialog date-list-editor-dialog" data-date-list-editor aria-labelledby="date-list-editor-title"
+        data-shell-url="@Url.Action("Shell", "DateListEditor")" data-save-url="@Url.Action("Save", "DateListEditor")"
+        data-preferences-url="@Url.Action("SavePreferences", "DateListEditor")"
+        data-undo-preflight-url="@Url.Action("PreflightUndoDateList", "Resources")" data-undo-url="@Url.Action("UndoDateList", "Resources")"
+        data-export-url="@Url.Action("ExportDateList", "Resources")" data-delete-preflight-url="@Url.Action("PreflightDeleteDateLists", "Resources")" data-delete-url="@Url.Action("DeleteDateLists", "Resources")">
+    <form class="new-task-card script-editor-card" data-date-list-editor-form novalidate>
+        <header class="script-editor-header">
+            <div class="script-editor-title-wrap">
+                <span class="script-editor-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M7 3v4m10-4v4M3 10h18m-13 4h2m4 0h2m-8 3h2m4 0h2" /></svg></span>
+                <div><div class="script-editor-kicker" data-date-list-editor-kicker hidden>NEW DATE LIST</div><h2 id="date-list-editor-title" data-date-list-editor-title>New Date List</h2><p data-date-list-editor-subtitle>Scheduled dates and recurring monthly entries</p></div>
+            </div><button type="button" class="dialog-close" data-date-list-editor-close aria-label="Close">×</button>
+        </header>
+        <div class="task-details-tabs script-editor-tabs" data-date-list-editor-tabs role="tablist" aria-label="Date List editor sections" hidden>
+            <button type="button" class="task-details-tab active" data-date-list-editor-tab="date-list" id="date-list-tab" role="tab" aria-selected="true" aria-controls="date-list-panel">Date List</button>
+            <button type="button" class="task-details-tab" data-date-list-editor-tab="properties" id="date-list-properties-tab" role="tab" aria-selected="false" aria-controls="date-list-properties-panel">Properties</button>
+            <button type="button" class="task-details-tab" data-date-list-editor-tab="tasks" id="date-list-tasks-tab" role="tab" aria-selected="false" aria-controls="date-list-tasks-panel">Tasks</button>
+            <div class="script-editor-tab-actions" data-date-list-editor-tab-actions>
+                <label class="script-editor-auto-save"><span>Auto Save</span><span class="configuration-switch"><input type="checkbox" data-date-list-editor-auto-save /><span aria-hidden="true"></span></span></label>
+                <div class="script-editor-actions-wrap"><button type="button" class="secondary-button" data-date-list-editor-actions aria-haspopup="menu" aria-expanded="false">Actions <span class="button-caret" aria-hidden="true">⌄</span></button>
+                    <div class="script-editor-actions-menu" data-date-list-editor-actions-menu role="menu" hidden>
+                        <button type="button" role="menuitem" data-date-list-editor-action="undo" disabled>Undo Last Change</button>
+                        <button type="button" role="menuitem" data-date-list-editor-action="export">Export Date List</button>
+                        <div class="task-row-action-divider" role="separator"></div>
+                        <button type="button" role="menuitem" class="danger-menu-item" data-date-list-editor-action="delete">Delete Date List</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="new-task-body script-editor-body">
+            <div data-date-list-editor-new-identity>
+                <label class="field-block" data-date-list-editor-name-field><span data-date-list-editor-name-label>Date List Name</span><input type="text" class="text-input" maxlength="255" autocomplete="off" data-date-list-editor-name required /></label>
+                <label class="field-block" data-date-list-editor-description-field><span>Description</span><textarea class="text-input textarea-input script-editor-description" rows="1" data-date-list-editor-description></textarea></label>
+            </div>
+            <section class="script-editor-panel script-editor-code-panel" id="date-list-panel" data-date-list-editor-panel="date-list" role="tabpanel" aria-labelledby="date-list-tab">
+                <div class="maui-property-card">
+                    <div class="script-editor-card-heading"><div><h3>Date Entries</h3><p>Add dates or import a text file with one YYYY-MM-DD or YYYY-*-DD entry per line.</p></div></div>
+                    <div class="date-list-entry-tools">
+                        <label class="field-block"><span>Year</span><select class="text-input" data-date-list-editor-year></select></label>
+                        <label class="field-block"><span>Month</span><select class="text-input" data-date-list-editor-month></select></label>
+                        <label class="field-block"><span>Day</span><select class="text-input" data-date-list-editor-day></select></label>
+                        <button type="button" class="secondary-button" data-date-list-editor-add>Add Entry</button>
+                        <button type="button" class="secondary-button" data-date-list-editor-import>Import Entries</button>
+                        <input type="file" accept=".txt,text/plain" data-date-list-editor-file hidden />
+                    </div>
+                    <p class="script-editor-empty" data-date-list-editor-entries-empty>No dates have been added.</p>
+                    <div class="date-list-entries" data-date-list-editor-entries></div>
+                </div>
+            </section>
+            <section class="script-editor-panel" id="date-list-properties-panel" data-date-list-editor-panel="properties" role="tabpanel" aria-labelledby="date-list-properties-tab" hidden>
+                <div class="maui-property-card script-editor-property-card">
+                    <div class="details-section-heading maui-object-properties-heading"><div class="task-identity-row maui-object-identity" aria-label="Date List identity">
+                        <div class="task-identity-item"><span>Type</span><strong data-date-list-editor-type>Date List</strong></div>
+                        <div class="task-identity-item"><span>Date List ID</span><strong data-date-list-editor-id></strong></div>
+                    </div><span class="source-badge">MOVEit</span></div>
+                    <div class="script-editor-fields" data-date-list-editor-native-fields>
+                        <label class="field-block full-span"><span>Resource Groups</span><input class="text-input" data-date-list-editor-resource-groups readonly /></label>
+                    </div>
+                </div>
+                <div class="maui-property-card script-editor-property-card">
+                    <div class="script-editor-card-heading"><div><h3>Additional Information</h3><p>MAUI-managed metadata stored separately from the MOVEit Date List definition.</p></div><span class="source-badge local-badge">MAUI</span></div>
+                    <div class="script-editor-fields" data-date-list-editor-metadata></div>
+                    <div class="script-editor-audit-section"><h4>Date List Metadata</h4><div class="script-editor-fields" data-date-list-editor-audit></div></div>
+                </div>
+            </section>
+            <section class="script-editor-panel" id="date-list-tasks-panel" data-date-list-editor-panel="tasks" role="tabpanel" aria-labelledby="date-list-tasks-tab" hidden>
+                <div class="maui-property-card script-editor-property-card">
+                    <div class="script-editor-card-heading"><div><h3>Assigned Tasks</h3><p>Visible Tasks that reference this Date List.</p></div><span class="script-editor-count" data-date-list-editor-task-count>0</span></div>
+                    <div class="script-editor-empty" data-date-list-editor-tasks-empty>No visible Tasks currently reference this Date List.</div>
+                    <div class="script-editor-task-list" data-date-list-editor-tasks hidden></div>
+                </div>
+            </section>
+        </div>
+        <div class="settings-footer script-editor-footer">
+            <div class="script-editor-status" data-date-list-editor-status role="status" aria-live="polite"></div>
+            <button type="button" class="secondary-button" data-date-list-editor-reload hidden>Reload Date List</button>
+            <button type="button" class="secondary-button" data-date-list-editor-override hidden>Override Checkout</button>
+            <button type="button" class="secondary-button" data-date-list-editor-close>Close</button><button type="submit" class="primary-button" data-date-list-editor-save>Create Date List</button>
+        </div>
+    </form>
+</dialog>
+<dialog class="new-task-dialog script-action-dialog" data-date-list-action-dialog aria-labelledby="date-list-action-title">
+    <form class="new-task-card" data-date-list-action-form>
+        <div class="settings-header"><h2 id="date-list-action-title" data-date-list-action-title>Date List Action</h2><button type="button" class="dialog-close" data-date-list-action-close aria-label="Close">×</button></div>
+        <div class="new-task-body"><p data-date-list-action-message></p><div class="undo-history-list" data-date-list-action-history hidden></div><p class="inline-alert error-alert" role="alert" data-date-list-action-error hidden></p></div>
+        <div class="settings-footer"><button type="button" class="secondary-button" data-date-list-action-close>Close</button><button type="submit" class="primary-button" data-date-list-action-confirm>Continue</button></div>
+    </form>
+</dialog>

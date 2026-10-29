@@ -1,0 +1,79 @@
+@* Experimental scalar Task JSON editing. Writes go through shared Task CRUD only after review. *@
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+<dialog class="task-details-dialog" data-task-json-dialog aria-labelledby="task-json-title"
+        data-shell-url="@Url.Action("Shell", "TaskJsonEditor")"
+        data-validate-url="@Url.Action("Validate", "TaskJsonEditor")"
+        data-save-url="@Url.Action("Save", "TaskJsonEditor")"
+        data-checkout-enabled="@(bool.TryParse(Configuration["Ui:CheckoutObjectsForDurationOfEdit:Value"], out var checkout) && checkout ? "true" : "false")">
+    <div class="task-details-card task-json-card">
+        <header class="script-editor-header">
+            <div class="script-editor-title-wrap"><span class="script-editor-icon" aria-hidden="true"><partial name="_Icon" model="@("braces")" /></span><div><h2 id="task-json-title">Task JSON Editor</h2><p>Edit Task JSON values and apply changes across selected Tasks.</p></div></div>
+            <button type="button" class="dialog-close" data-task-json-close aria-label="Close">×</button>
+        </header>
+        <div class="task-details-tabs" role="tablist" aria-label="Task JSON editor sections">
+            <button type="button" class="task-details-tab active" role="tab" id="task-json-edit-tab" aria-controls="task-json-edit-panel" aria-selected="true" data-task-json-tab="edit">Edit Values</button>
+            <button type="button" class="task-details-tab" role="tab" id="task-json-replace-tab" aria-controls="task-json-replace-panel" aria-selected="false" data-task-json-tab="replace">Find &amp; Replace</button>
+            <button type="button" class="task-details-tab" role="tab" id="task-json-review-tab" aria-controls="task-json-review-panel" aria-selected="false" data-task-json-tab="review">Review Changes</button>
+        </div>
+        <div class="task-json-body" data-task-json-body>
+            <section id="task-json-edit-panel" role="tabpanel" aria-labelledby="task-json-edit-tab" data-task-json-panel="edit" class="task-json-edit-layout">
+                <div class="panel-card configuration-card task-json-tree-panel">
+                    <div class="configuration-card-heading task-json-heading"><h3>Selected Tasks</h3><div><button type="button" class="secondary-button" data-task-json-expand>Expand All</button><button type="button" class="secondary-button" data-task-json-collapse>Collapse All</button></div></div>
+                    <label class="field-block task-json-tree-search"><span class="sr-only">Search elements or values</span><input type="search" class="text-input" placeholder="Search elements or values" data-task-json-tree-search /></label>
+                    <div class="task-json-tree" data-task-json-tree></div>
+                </div>
+                <div class="panel-card configuration-card task-json-value-panel">
+                    <div class="configuration-card-heading task-json-heading"><h3>Selected Value</h3><span class="configuration-state-badge readonly" data-task-json-type>Value</span></div>
+                    <p class="empty-state" data-task-json-pick>Expand a Task and select a value to edit.</p>
+                    <div class="task-json-value-fields" data-task-json-fields hidden>
+                        <label class="field-block"><span>Task</span><input class="text-input" readonly data-task-json-name /></label>
+                        <label class="field-block"><span>Element</span><input class="text-input" readonly data-task-json-element /></label>
+                        <label class="field-block"><span>Path</span><input class="text-input" readonly data-task-json-path /></label>
+                        <label class="field-block"><span>Current value</span><textarea class="text-input task-json-value-input" rows="1" readonly data-task-json-current></textarea></label>
+                        <label class="field-block"><span>New value</span><textarea class="text-input task-json-value-input" rows="1" spellcheck="false" data-task-json-new></textarea></label>
+                        <p class="settings-help" data-task-json-protected hidden>This is a protected, reference, runtime or null value. Edit it through the standard Task editor where supported.</p>
+                        <div class="task-json-buttons"><button type="button" class="secondary-button" data-task-json-apply disabled>Apply Value</button></div>
+                        <h3>JSON Context</h3><pre class="task-json-context task-json-code" data-task-json-json></pre>
+                    </div>
+                </div>
+            </section>
+            <section id="task-json-replace-panel" role="tabpanel" aria-labelledby="task-json-replace-tab" data-task-json-panel="replace" hidden>
+                <div class="panel-card configuration-card">
+                    <div class="configuration-card-heading"><h3>Find &amp; Replace</h3></div>
+                    <div class="task-json-find-fields">
+                        <label class="field-block"><span>Find by</span><select class="text-input" data-task-json-mode><option value="name">Element name</option><option value="path">Path (supports *)</option></select></label>
+                        <label class="field-block"><span>Find</span><input class="text-input" data-task-json-find /></label>
+                        <label class="field-block"><span>Current value (optional)</span><input class="text-input" placeholder="Any value" data-task-json-filter /></label>
+                        <label class="field-block"><span>Replace with</span><input class="text-input" data-task-json-replacement /></label>
+                    </div>
+                    <div class="task-json-buttons"><button type="button" class="secondary-button" data-task-json-find-button>Find Matches</button></div>
+                </div>
+                <div class="task-json-result-heading"><h3>Replacement Preview</h3><span data-task-json-match-count aria-live="polite" hidden></span></div>
+                <div class="table-card task-json-results">
+                    <div class="table-scroll"><table class="data-grid-table task-json-table" aria-label="Replacement preview"><thead><tr class="column-header-row"><th class="task-json-select-cell"><input type="checkbox" data-task-json-select-all aria-label="Select all editable matches" disabled /></th><th>Task / Element</th><th>Before</th><th>After</th><th>Status</th></tr></thead><tbody data-task-json-matches></tbody></table></div>
+                    <div class="grid-pager" data-task-json-pager="match" hidden>
+                        <span data-task-json-match-page aria-live="polite"></span>
+                        <div class="pager-controls"><label>Rows <select data-task-json-page-size="match" aria-label="Replacement preview rows per page"></select></label><button type="button" class="pager-button" data-page-prev data-task-json-match-prev aria-label="Previous replacement preview page" disabled>‹</button><span data-task-json-match-indicator></span><button type="button" class="pager-button" data-page-next data-task-json-match-next aria-label="Next replacement preview page" disabled>›</button></div>
+                    </div>
+                </div>
+                <div class="task-json-buttons task-json-apply-changes"><button type="button" class="secondary-button" data-task-json-replace disabled>Apply Changes</button></div>
+            </section>
+            <section id="task-json-review-panel" role="tabpanel" aria-labelledby="task-json-review-tab" data-task-json-panel="review" hidden>
+                <div class="task-json-result-heading"><h3>Pending Changes</h3></div>
+                <div class="table-card task-json-results">
+                    <div class="table-scroll"><table class="data-grid-table task-json-table" aria-label="Changes and save results"><thead><tr class="column-header-row"><th>Task / Element</th><th>Before</th><th>After</th><th>Status</th></tr></thead><tbody data-task-json-review></tbody></table></div>
+                    <div class="grid-pager" data-task-json-pager="review" hidden>
+                        <span data-task-json-review-page aria-live="polite"></span>
+                        <div class="pager-controls"><label>Rows <select data-task-json-page-size="review" aria-label="Review changes rows per page"></select></label><button type="button" class="pager-button" data-page-prev data-task-json-review-prev aria-label="Previous changes page" disabled>‹</button><span data-task-json-review-indicator></span><button type="button" class="pager-button" data-page-next data-task-json-review-next aria-label="Next changes page" disabled>›</button></div>
+                    </div>
+                </div>
+            </section>
+        </div>
+        <footer class="settings-footer new-task-footer">
+            <div class="task-json-save-progress" data-task-json-save-progress hidden><progress data-task-json-progress max="1" value="0" aria-label="Task save progress"></progress></div>
+            <p class="maui-modal-feedback" data-task-json-status data-maui-modal-feedback data-feedback-kind="default" role="status" aria-live="polite">No unsaved changes.</p>
+            <button type="button" class="secondary-button" data-task-json-close>Close</button>
+            <button type="button" class="primary-button" data-task-json-submit disabled>Review Changes</button>
+        </footer>
+    </div>
+</dialog>

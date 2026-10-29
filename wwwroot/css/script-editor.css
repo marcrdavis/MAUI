@@ -1,0 +1,97 @@
+/* Script editors reuse the Host/Task surface hierarchy, spacing and shared controls. */
+.script-editor-dialog [hidden], .script-template-dialog [hidden], .script-action-dialog [hidden], [data-script-template-settings-error][hidden] { display:none !important; }
+.script-editor-dialog { border:0; padding:0; width:min(1100px,calc(100vw - 56px)); max-width:none; max-height:none; background:transparent; color:var(--text); overflow:hidden; }
+.script-editor-dialog::backdrop { background:rgba(10,15,24,.52); backdrop-filter:blur(2px); }
+.script-editor-card { width:100%; max-height:calc(100dvh - 56px); display:flex; flex-direction:column; }
+.script-editor-dialog.is-editing { width:min(1240px,calc(100vw - 56px)); height:min(840px,calc(100dvh - 56px)); }
+.script-editor-dialog.is-editing .script-editor-card { height:100%; max-height:none; }
+.script-editor-header { height:88px; min-height:88px; box-sizing:border-box; padding:15px 22px 13px; display:flex; align-items:flex-start; justify-content:space-between; gap:18px; border-bottom:1px solid var(--border); background:var(--surface); }
+.script-editor-title-wrap { display:flex; align-items:center; gap:13px; min-width:0; flex:1; }
+.script-editor-title-wrap > div { min-width:0; }
+.script-editor-icon { width:40px; height:40px; flex:0 0 40px; display:grid; place-items:center; border-radius:11px; background:var(--accent-soft); color:var(--accent); }
+.script-editor-icon svg { width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:1.75; stroke-linecap:round; stroke-linejoin:round; }
+.script-editor-kicker { margin-bottom:2px; color:var(--text-faint); font-size:12px; font-weight:750; letter-spacing:.035em; }
+.script-editor-header h2 { margin:0; color:var(--text); font-size:21px; line-height:1.25; font-weight:730; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.script-editor-header p { margin:3px 0 0; color:var(--text-soft); font-size:12px; line-height:1.35; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.script-editor-tabs { flex-shrink:0; min-height:43px; height:43px; padding:0 22px; background:var(--surface-2); overflow:visible; }
+.script-editor-tab-actions { margin-left:auto; align-self:center; display:flex; align-items:center; gap:50px; }
+.script-editor-auto-save { display:flex; align-items:center; gap:9px; color:var(--text-soft); font-size:12px; white-space:nowrap; }
+.script-editor-actions-wrap { position:relative; }
+.script-editor-actions-menu { position:absolute; top:calc(100% + 7px); right:0; z-index:140; min-width:190px; padding:6px; border:1px solid var(--border); border-radius:10px; background:var(--surface); box-shadow:var(--shadow); }
+.script-editor-actions-menu button { display:block; width:100%; border:0; border-radius:7px; padding:8px 9px; background:transparent; color:var(--text); text-align:left; font:inherit; font-size:12px; cursor:pointer; }
+.script-editor-actions-menu button:hover:not(:disabled) { background:var(--surface-3); }
+.script-editor-actions-menu .danger-menu-item { color:var(--danger); }
+.script-editor-dialog button:disabled { opacity:.48; cursor:default; }
+.script-editor-body { display:flex; flex-direction:column; gap:14px; overflow:auto; min-height:0; flex:1; padding:18px 22px 22px; }
+.script-editor-body .field-block { margin:0; }
+[data-script-editor-new-identity] { display:grid; gap:14px; }
+.script-editor-description { min-height:42px; height:42px; }
+.is-editing .script-editor-description { min-height:72px; height:72px; }
+.script-editor-panel { display:grid; align-content:start; gap:16px; min-width:0; }
+.script-editor-code-panel { display:flex; flex-direction:column; gap:14px; min-height:0; }
+.is-editing .script-editor-code-panel { flex:1; }
+.script-editor-languages { border:0; padding:0; margin:0; min-width:0; font:inherit; }
+.script-editor-language-cards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.script-editor-languages legend, .script-editor-source-field > label { padding:0 0 8px; font-size:12px; font-weight:600; color:var(--text-soft); }
+.script-editor-languages .new-task-type-card:has(input:disabled) { cursor:default; opacity:.65; }
+.script-editor-source-field { min-height:0; display:flex; flex-direction:column; }
+.is-editing .script-editor-source-field { flex:1; min-height:220px; }
+.script-source-editor { display:flex; height:280px; flex:1; min-height:220px; border:1px solid var(--border-strong); border-radius:var(--radius-sm); overflow:hidden; background:var(--input-bg); }
+.script-source-editor:focus-within { border-color:var(--accent); outline:2px solid var(--accent-soft); }
+.script-source-editor pre, .script-source-editor textarea { box-sizing:border-box; font:13px/1.6 Consolas,"Cascadia Mono",monospace; padding:10px 12px; margin:0; }
+.script-source-editor pre { flex:0 0 58px; text-align:right; background:var(--surface-2); color:var(--text-faint); overflow:hidden; border-right:1px solid var(--border); user-select:none; }
+.script-source-editor textarea { flex:1; width:0; resize:none; border:0; outline:0; color:var(--text); background:var(--input-bg); white-space:pre; tab-size:4; }
+.script-editor-tools { display:flex; gap:12px; flex-wrap:wrap; flex-shrink:0; }
+.script-editor-template-row { display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap; flex-shrink:0; min-width:0; }
+.script-editor-template-row > .field-block { flex:1 1 260px; min-width:0; }
+.script-editor-template-row .script-editor-tools { flex-wrap:nowrap; }
+.script-editor-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 18px; }
+.script-editor-fields > [data-script-editor-name-field], .script-editor-fields > [data-script-editor-description-field], .script-editor-fields > .full-span { grid-column:1/-1; }
+.script-editor-card-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; margin-bottom:16px; }
+.script-editor-card-heading h3 { margin:0; font-size:var(--property-section-title-size,15px); color:var(--text); }
+.script-editor-card-heading p { margin:4px 0 0; font-size:12px; color:var(--text-soft); }
+.script-editor-audit-section { margin-top:18px; padding-top:16px; border-top:1px solid var(--border); }
+.script-editor-audit-section h4 { margin:0 0 12px; font-size:var(--property-section-title-size,15px); color:var(--text); }
+.script-editor-count { min-width:28px; height:26px; padding:0 8px; display:grid; place-items:center; border-radius:13px; background:var(--surface-3); color:var(--text-soft); font-size:12px; font-weight:700; }
+.script-editor-empty { border:1px dashed var(--border); border-radius:8px; padding:22px; text-align:center; color:var(--text-faint); font-size:12px; }
+.script-editor-task-list { border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+.script-editor-task-row { display:grid; grid-template-columns:120px minmax(0,1fr); gap:14px; padding:10px 12px; border-bottom:1px solid var(--border); font-size:12px; align-items:center; }
+.script-editor-task-row:last-child { border-bottom:0; }
+.script-editor-task-id { color:var(--text-faint); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+.script-editor-footer { display:flex; align-items:center; gap:12px; min-height:67px; flex-shrink:0; }
+.script-editor-status { flex:1; min-width:0; font-size:12px; color:var(--text-faint); white-space:pre-wrap; overflow-wrap:anywhere; }
+.script-editor-status.error { color:var(--danger); }
+.script-template-dialog, .script-action-dialog { width:min(900px,calc(100vw - 48px)); max-width:none; padding:0; }
+.script-template-dialog .new-task-card, .script-action-dialog .new-task-card { width:100%; max-height:calc(100dvh - 48px); overflow:auto; }
+.script-template-dialog .new-task-body { display:flex; flex-direction:column; gap:16px; }
+.script-template-source { height:350px; font:13px/1.6 Consolas,"Cascadia Mono",monospace; }
+.script-template-overwrite { display:flex; align-items:center; gap:8px; }
+@media(max-width:700px) {
+ .script-editor-dialog, .script-editor-dialog.is-editing, .script-template-dialog, .script-action-dialog { width:calc(100vw - 16px); }
+ .script-editor-tabs { height:auto; min-height:43px; flex-wrap:wrap; padding:0 14px 8px; }
+ .script-editor-tab-actions { width:100%; justify-content:flex-end; gap:50px; }
+ .script-editor-footer { flex-wrap:wrap; }
+ .script-editor-status { flex-basis:100%; }
+ .script-editor-fields { grid-template-columns:minmax(0,1fr); }
+}
+
+/* Date Lists intentionally share this editor surface rather than copying its styles. */
+.date-list-editor-dialog [hidden], [data-date-list-action-dialog] [hidden] { display:none !important; }
+[data-date-list-editor-new-identity] { display:grid; gap:14px; }
+.date-list-editor-dialog .script-editor-fields > [data-date-list-editor-name-field],
+.date-list-editor-dialog .script-editor-fields > [data-date-list-editor-description-field] { grid-column:1/-1; }
+.date-list-entry-tools { display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+.date-list-entry-tools .field-block { flex:0 1 130px; }
+.date-list-entry-tools [data-date-list-editor-import] { margin-left:auto; }
+.date-list-entries { display:grid; gap:8px; }
+.date-list-entry-row { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:var(--surface); font-size:13px; }
+.date-list-editor-dialog:not(.is-editing) .date-list-entries { max-height:260px; overflow:auto; }
+
+/* Keep the Date List ID visible even when its description fills the subtitle. */
+.date-list-editor-dialog [data-date-list-editor-subtitle] { display:flex; min-width:0; }
+.date-list-editor-subtitle-description { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.date-list-editor-subtitle-id { flex-shrink:0; }
+ .date-list-editor-subtitle-description:not(:empty) + .date-list-editor-subtitle-id { margin-left:4px; }
+
+/* Keep the three-field New Parameter form compact; Edit uses the shared resource surface. */
+.script-editor-dialog[data-new-global-parameter-dialog] { width:min(680px,calc(100vw - 32px)); }

@@ -1,0 +1,24 @@
+/* Native audit snapshots: shared modal geometry/branding, with a bounded code scroll area. */
+.audit-changes-card { width: min(1200px, calc(100vw - 40px)); height: min(800px, calc(100dvh - 40px)); max-height: calc(100dvh - 40px); }
+.audit-changes-summary { display: flex; flex: 0 0 auto; flex-wrap: wrap; align-items: center; gap: 8px 20px; padding: 12px 22px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text-soft); }
+.audit-changes-summary[hidden] { display: none; }
+.audit-changes-added { color: var(--success); }
+.audit-changes-removed { color: var(--danger); }
+.audit-changes-note { flex-basis: 100%; margin: 0; line-height: 1.45; }
+.audit-changes-body { padding: 0; overflow: auto; }
+.audit-changes-body > .empty-state { padding: 28px 22px; }
+.audit-changes-table { border-collapse: separate; border-spacing: 0; min-width: 100%; width: max-content; font-family: Consolas, "Cascadia Mono", monospace; font-size: 12px; line-height: 1.5; }
+.audit-changes-table[hidden] { display: none; }
+.audit-changes-table th { position: sticky; top: 0; z-index: 1; background: var(--surface-2); border-bottom: 1px solid var(--border); color: var(--text-soft); padding: 8px 12px; text-align: left; white-space: nowrap; font-family: var(--font-sans); font-size: 12px; font-weight: 650; }
+.audit-changes-table td { padding: 1px 12px; vertical-align: top; white-space: pre; color: var(--text); }
+.audit-changes-table td:nth-child(-n+3) { min-width: 34px; text-align: right; color: var(--text-faint); background: color-mix(in srgb, var(--surface-2) 70%, transparent); user-select: none; }
+.audit-changes-table td:nth-child(3) { min-width: 14px; text-align: center; }
+.audit-changes-table tr.audit-line-added td { background: color-mix(in srgb, var(--success) 14%, var(--surface)); }
+.audit-changes-table tr.audit-line-removed td { background: color-mix(in srgb, var(--danger) 14%, var(--surface)); }
+.audit-changes-table tr.audit-line-added td:nth-child(3) { color: var(--success); font-weight: 700; }
+.audit-changes-table tr.audit-line-removed td:nth-child(3) { color: var(--danger); font-weight: 700; }
+@media (max-width: 600px) {
+    .audit-changes-card { width: calc(100vw - 20px); height: calc(100dvh - 20px); max-height: calc(100dvh - 20px); }
+    .audit-changes-summary { padding: 10px 14px; gap: 8px 12px; }
+    .audit-changes-table td, .audit-changes-table th { padding-left: 7px; padding-right: 7px; }
+}

@@ -1,0 +1,101 @@
+@* Optional environment-copy wizard; loaded only for dual administrators when enabled. *@
+<dialog class="new-task-dialog environment-copy-dialog" data-environment-copy aria-labelledby="environment-copy-title"
+        data-endpoint="@Url.Action("Catalog", "EnvironmentCopy")" data-owner="@User.Identity?.Name">
+    <div class="new-task-card environment-copy-card">
+        <header class="script-editor-header">
+            <div class="script-editor-title-wrap">
+                <span class="script-editor-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="7" height="7" rx="1"/><rect x="15" y="14" width="7" height="7" rx="1"/><path d="M12 6h8v5m-3-3 3 3 3-3M12 18H4v-5m-3 3 3-3 3 3"/></svg></span>
+                <div><h2 id="environment-copy-title">Copy Between Environments</h2><p data-copy-route>Select source and destination environments</p></div>
+            </div>
+            <button type="button" class="dialog-close" data-copy-close aria-label="Close">×</button>
+        </header>
+        <div class="task-details-tabs environment-copy-tabs" role="tablist" aria-label="Copy stages">
+            @foreach (var stage in new[] { "Objects", "Resolve", "Review", "Results" })
+            { <button type="button" class="task-details-tab" role="tab" data-copy-tab="@stage.ToLowerInvariant()" aria-controls="copy-panel-@stage.ToLowerInvariant()" aria-selected="false">@stage</button> }
+        </div>
+        <div class="new-task-body environment-copy-body">
+            <section id="copy-panel-objects" class="environment-copy-panel" role="tabpanel" data-copy-panel="objects">
+                <div class="maui-property-card">
+                    <div class="environment-copy-two">
+                        <label class="field-block"><span>Copy from</span><select class="text-input" data-copy-source disabled></select><small data-copy-source-status>Data Access account required</small></label>
+                        <label class="field-block"><span>Copy to</span><select class="text-input" data-copy-destination></select><small data-copy-destination-status>Data Access account required</small></label>
+                    </div>
+                </div>
+                <div class="environment-copy-tools">
+                    <select class="text-input" data-copy-filter aria-label="Object Type"><option value="">All object types</option><option value="Task">Tasks</option><option value="Host">Hosts</option><option value="Script">Scripts</option><option value="DateList">Date Lists</option><option value="KeyCertificate">Keys and Certificates</option></select>
+                    <input type="search" class="text-input" data-copy-search placeholder="Search source objects" aria-label="Search source objects" />
+                    <span class="selection-count" data-copy-selection-count></span>
+                    <button type="button" class="secondary-button" data-copy-refresh>Refresh</button>
+                    <button type="button" class="secondary-button" data-copy-previous hidden>Previous Results</button>
+                </div>
+                <div class="environment-copy-table-wrap">
+                    <table class="data-grid-table"><colgroup><col class="environment-copy-check-column" /><col /><col class="environment-copy-type-column" /><col class="environment-copy-id-column" /><col class="environment-copy-inclusion-column" /></colgroup><thead><tr class="column-header-row"><th class="environment-copy-check"><input type="checkbox" data-copy-select-all aria-label="Select all visible source objects" /></th><th>Name</th><th>Type</th><th>Source ID</th><th>Inclusion</th></tr></thead><tbody data-copy-objects></tbody></table>
+                    <p class="field-help" data-copy-empty hidden>No matching source objects.</p>
+                </div>
+                <label class="checkbox-inline"><input type="checkbox" data-copy-dependencies checked /><span>Include dependencies</span></label>
+                <p class="field-help">Data Access credentials are required for both environments. Required dependencies must be copied or mapped to existing destination objects. Automatically included dependencies are checked and cannot be deselected. Built-in Scripts and Local File System are reused when required.</p>
+            </section>
+            <section id="copy-panel-resolve" class="environment-copy-panel" role="tabpanel" data-copy-panel="resolve" hidden>
+                <div class="maui-property-card environment-copy-naming">
+                    <label class="field-block"><span>Prefix</span><input class="text-input" maxlength="100" data-copy-prefix /></label>
+                    <label class="field-block"><span>Suffix</span><input class="text-input" maxlength="100" data-copy-suffix /></label>
+                    <label class="field-block"><span>Apply prefix / suffix to</span><select class="text-input" data-copy-name-scope><option value="tasks">New Task names</option><option value="tasks-hosts">New Tasks and Host Names</option><option value="all">All new object names</option></select></label>
+                    <button type="button" class="secondary-button" data-copy-apply-names>Apply Naming</button>
+                    <label class="checkbox-inline environment-copy-unique"><input type="checkbox" data-copy-unique checked /><span>Generate unique names when needed</span></label>
+                </div>
+                <div class="details-section-heading"><h3>Destination Plan</h3><span class="selection-count" data-copy-plan-count></span></div>
+                <div class="environment-copy-plan-head" aria-hidden="true"><span>Source object</span><span>Destination match</span><span>Action</span><span>Destination name</span></div>
+                <div class="environment-copy-plan" data-copy-plan></div>
+            </section>
+            <section id="copy-panel-review" class="environment-copy-panel" role="tabpanel" data-copy-panel="review" hidden>
+                <div class="maui-property-card"><div class="details-section-heading"><h3>Copy Summary</h3><span class="source-badge">MAUI</span></div><p data-copy-summary></p><p class="field-help">New and overwritten Tasks remain disabled. Reused objects retain all destination settings. Global Parameters and IDs in custom Scripts or free-form macros require manual review at the destination.</p></div>
+                <div class="maui-property-card"><div class="details-section-heading"><h3>Destination Placement</h3></div>
+                    <div class="environment-copy-two">
+                        <label class="field-block"><span>Destination Resource Group</span><select class="text-input" data-copy-group-mode><option value="none">None</option><option value="source">Retain matching source groups</option><option value="create-source">Create groups as needed</option><option value="one">Assign one destination group</option></select></label>
+                        <label class="field-block" data-copy-group-field hidden><span>Resource Group</span><select class="text-input" data-copy-group></select></label>
+                    </div>
+                    <div class="environment-copy-two" data-copy-folder-controls>
+                        <label class="field-block"><span>New Tasks Folder</span><select class="text-input" data-copy-folder-mode><option value="root">Root</option><option value="existing">Existing folder</option><option value="new">Create new folder</option></select></label>
+                        <label class="field-block" data-copy-folder-existing hidden><span>Destination folder</span><select class="text-input" data-copy-folder-id></select></label>
+                        <div class="field-block" data-copy-folder-new hidden><label for="copy-folder-path">Folder path</label><input id="copy-folder-path" class="text-input" placeholder="Operations/Daily" data-copy-folder-path /><label class="checkbox-inline"><input type="checkbox" data-copy-create-folder checked /><span>Create folder if it does not exist</span></label></div>
+                    </div>
+                    <p class="field-help">Placement applies to new objects. Overwritten Tasks keep their destination folder. Matching source groups that are absent at the destination are skipped and reported.</p>
+                    <p class="field-help" data-copy-group-creation hidden></p>
+                    <div class="environment-copy-results" data-copy-placement></div>
+                </div>
+                <div class="maui-property-card"><div class="details-section-heading"><h3>Copy Options</h3></div>
+                    <div class="environment-copy-options">
+                        <label class="checkbox-inline"><input type="checkbox" data-copy-metadata checked /><span>Copy compatible MAUI metadata and Tags</span></label>
+                        <label class="checkbox-inline"><input type="checkbox" data-copy-preserve-metadata checked /><span>Preserve destination metadata on overwrite</span></label>
+                        <label class="checkbox-inline"><input type="checkbox" data-copy-preserve-groups checked /><span>Preserve destination Resource Groups on overwrite</span></label>
+                        <label class="checkbox-inline"><input type="checkbox" data-copy-preserve-credentials checked /><span>Preserve destination Host credentials on overwrite</span></label>
+                        <label class="checkbox-inline"><input type="checkbox" data-copy-recovery checked /><span>Capture protected recovery definitions before overwriting</span></label>
+                        <label class="checkbox-inline"><input type="checkbox" data-copy-tls-private checked /><span>Include private keys for standalone TLS certificate copies</span></label>
+                        <label class="checkbox-inline"><input type="checkbox" data-copy-incomplete /><span>Accept manual credential completion when copying a public-only TLS certificate dependency</span></label>
+                    </div>
+                    <p class="field-help">Missing or incompatible metadata fields are reported for information; they do not make the copy a warning or error. Empty source values retain destination metadata, and Tags are merged.</p>
+                    <div class="environment-copy-skips" data-copy-skips></div>
+                    <label class="checkbox-inline" data-copy-overwrite-field hidden><input type="checkbox" data-copy-confirm-overwrite /><span>I confirm the reviewed overwrites and their destination impact.</span></label>
+                </div>
+            </section>
+            <section id="copy-panel-results" class="environment-copy-panel" role="tabpanel" data-copy-panel="results" hidden>
+                <div class="maui-property-card"><div class="details-section-heading"><h3 data-copy-result-title>Copy Progress</h3><a class="text-link" data-copy-report hidden>Download Operation Report</a></div><div class="task-import-validation-progress environment-copy-status" data-copy-status role="status" aria-live="polite"><span class="inline-spinner" data-copy-activity aria-hidden="true" hidden></span><span data-copy-phase></span><span data-copy-counts></span><span data-copy-phase-age aria-live="off"></span></div><progress data-copy-progress value="0" max="1" aria-label="Verified copy objects"></progress><p class="field-help" data-copy-result-message hidden></p><p class="field-help">The copy continues if this modal is closed. Stop Copy stops before the next object write; completed objects are retained.</p></div>
+                <div class="environment-copy-results" data-copy-results></div>
+            </section>
+        </div>
+        <footer class="settings-footer">
+            <div class="environment-copy-feedback" data-copy-feedback role="status" aria-live="polite"></div>
+            <button type="button" class="secondary-button" data-copy-back hidden>Back</button>
+            <button type="button" class="secondary-button" data-copy-stop hidden>Stop Copy</button>
+            <button type="button" class="secondary-button" data-copy-close>Close</button>
+            <button type="button" class="primary-button" data-copy-next disabled>Analyze</button>
+        </footer>
+    </div>
+</dialog>
+<dialog class="new-task-dialog environment-copy-differences" data-copy-differences aria-labelledby="copy-differences-title">
+    <div class="new-task-card environment-copy-difference-card">
+        <header class="script-editor-header"><div class="script-editor-title-wrap"><span class="script-editor-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 4h7v16H3zM14 4h7v16h-7zM6 8h1m10 0h1M6 12h1m10 0h1"/></svg></span><div><h2 id="copy-differences-title">Review differences</h2><p data-copy-difference-subtitle></p></div></div><button type="button" class="dialog-close" data-copy-difference-close aria-label="Close">×</button></header>
+        <div class="new-task-body environment-copy-body"><div class="inline-alert error-alert" data-copy-difference-error hidden></div><p data-copy-difference-identity></p><p data-copy-difference-impact></p><div class="environment-copy-comparison" data-copy-comparison></div></div>
+        <footer class="settings-footer"><button type="button" class="secondary-button" data-copy-difference-close>Close</button></footer>
+    </div>
+</dialog>

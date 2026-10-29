@@ -1,0 +1,39 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   Type scope filter for the combined Keys and Certificates grid. *@
+<div class="menu-control task-folder-tree-select key-certificate-type-filter"
+     data-menu
+     data-grid-scope-filter
+     data-filter-column="Type"
+     data-filter-value="">
+    <button type="button"
+            class="task-folder-tree-button"
+            data-menu-button
+            aria-label="Key or certificate type"
+            aria-haspopup="menu">
+        <span class="task-folder-tree-button-icon icon"><partial name="_Icon" model="@("key")" /></span>
+        <span class="task-folder-tree-button-text" data-grid-scope-filter-label>All</span>
+        <span class="task-folder-tree-caret" aria-hidden="true">⌄</span>
+    </button>
+    <div class="dropdown-menu task-folder-tree-menu dropdown-left" data-menu-panel role="menu" aria-label="Key and certificate types">
+        <button type="button" class="task-folder-tree-option root-option selected" data-grid-scope-filter-option data-value="" data-label="All" role="menuitemradio" aria-checked="true">
+            <span class="task-folder-tree-option-icon icon"><partial name="_Icon" model="@("key")" /></span>
+            <span class="task-folder-tree-option-label">All</span>
+        </button>
+        <button type="button" class="task-folder-tree-option" data-grid-scope-filter-option data-value="SSH Client Key" data-label="SSH Client Key" role="menuitemradio" aria-checked="false">
+            <span class="task-folder-tree-option-icon icon"><partial name="_Icon" model="@("key")" /></span>
+            <span class="task-folder-tree-option-label">SSH Client Key</span>
+        </button>
+        <button type="button" class="task-folder-tree-option" data-grid-scope-filter-option data-value="TLS Certificate" data-label="TLS Certificate" role="menuitemradio" aria-checked="false">
+            <span class="task-folder-tree-option-icon icon"><partial name="_Icon" model="@("key")" /></span>
+            <span class="task-folder-tree-option-label">TLS Certificate</span>
+        </button>
+        @if (ViewData["PgpLicensed"] is not false)
+        {
+            <button type="button" class="task-folder-tree-option" data-grid-scope-filter-option data-value="PGP Key" data-label="PGP Key" role="menuitemradio" aria-checked="false">
+                <span class="task-folder-tree-option-icon icon"><partial name="_Icon" model="@("key")" /></span>
+                <span class="task-folder-tree-option-label">PGP Key</span>
+            </button>
+        }
+    </div>
+</div>

@@ -1,0 +1,23 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   Shared confirmation dialog for deleting one or more saved MAUI Reports. *@
+
+<dialog class="new-task-dialog" data-delete-reports-dialog>
+    <div class="new-task-card">
+        <div class="settings-header">
+            <div><h2 data-delete-reports-title>Delete Reports</h2><p>Deleting a Report stops future scheduled deliveries. This action cannot be undone.</p></div>
+            <button type="button" class="dialog-close" data-delete-reports-cancel aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body">
+            <div class="inline-alert error-alert" data-delete-reports-error hidden></div>
+
+            <p data-delete-reports-message></p>
+            <div class="delete-object-list" data-delete-reports-list hidden></div>
+            <p><strong>Are you sure you want to continue?</strong></p>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-delete-reports-cancel>Cancel</button>
+            <button type="button" class="danger-button" data-delete-reports-confirm>Yes, Delete</button>
+        </div>
+    </div>
+</dialog>

@@ -1,0 +1,161 @@
+/* MAUI Host Editor - isolated editor shell; controls backed by shared Host profiles. */
+/* Host Editor owns several flex/grid display rules; always honor the HTML hidden contract. */
+.maui-host-editor-dialog [hidden] { display: none !important; }
+.maui-host-editor-dialog { --host-editor-rail-size:285px; border: 0; padding: 0; width: min(1240px, calc(100vw - 56px)); height: min(840px, calc(100vh - 56px)); background: transparent; color: var(--text); max-width: none; max-height: none; overflow: hidden; }
+.maui-host-editor-dialog::backdrop { background: rgba(10, 15, 24, .52); backdrop-filter: blur(2px); }
+.maui-host-editor-shell { width:100%; height:100%; max-height:none; background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; display:grid; grid-template-rows:88px 43px minmax(0, 1fr) 67px; color:var(--text); }
+.maui-host-editor-header { height:88px; min-height:88px; box-sizing:border-box; padding:15px 22px 13px; display:flex; align-items:flex-start; justify-content:space-between; gap:18px; border-bottom:1px solid var(--border); background:var(--surface); }
+.maui-host-editor-title-wrap { display:flex; align-items:center; gap:13px; min-width:0; flex:1 1 auto; }
+.maui-host-editor-icon { width:40px; height:40px; flex:0 0 40px; display:inline-flex; align-items:center; justify-content:center; border-radius:11px; background:var(--accent-soft); color:var(--accent); font-weight:800; font-size:16px; }
+.maui-host-editor-kicker { display:block; margin-bottom:2px; color:var(--text-faint); font-size:12px; font-weight:750; letter-spacing:.035em; text-transform:uppercase; }
+.maui-host-editor-header h2 { margin:0; max-width:650px; color:var(--text); font-size:21px; line-height:1.25; font-weight:730; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.maui-host-editor-header p { margin:3px 0 0; max-width:700px; color:var(--text-soft); font-size:12px; line-height:1.35; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.maui-host-editor-close { flex:0 0 auto; }
+.maui-host-editor-tabs-row { width:100%; height:43px; min-width:0; min-height:43px; padding-left:22px; padding-right:22px; background:var(--surface-2); }
+.maui-host-editor-tab-actions { margin-left:auto; align-self:center; display:flex; align-items:center; gap:50px; }
+.maui-host-editor-actions-wrap { position:relative; }
+.maui-host-editor-actions { min-height:38px; }
+/* Match the Traditional Task Editor Actions menu exactly while keeping the Host Editor asset isolated. */
+.maui-host-editor-actions-menu { position:absolute; top:calc(100% + 7px); right:0; z-index:140; min-width:190px; padding:6px; border:1px solid var(--border); border-radius:10px; background:var(--surface); box-shadow:var(--shadow); }
+.maui-host-editor-actions-menu[hidden] { display:none; }
+.maui-host-editor-actions-menu button { display:block; width:100%; border:0; border-radius:7px; padding:8px 9px; background:transparent; color:var(--text); text-align:left; font:inherit; font-size:12px; cursor:pointer; }
+.maui-host-editor-actions-menu button:hover:not(:disabled) { background:var(--surface-3); }
+.maui-host-editor-actions-menu button:disabled { opacity:.48; cursor:default; }
+.maui-host-editor-actions-menu button:hover:disabled { background:transparent; }
+.maui-host-editor-actions-menu .danger-menu-item { color:var(--danger); }
+.maui-host-editor-actions-menu .danger-menu-item:hover:not(:disabled) { background:var(--danger-soft, var(--surface-3)); }
+
+.maui-host-editor-workspace { width:100%; height:100%; min-width:0; min-height:0; overflow:hidden; display:flex; flex-direction:column; background:var(--surface); }
+
+.maui-host-editor-loading { flex:1 1 auto; display:flex; align-items:center; justify-content:center; gap:10px; min-height:240px; color:var(--text-faint); font-size:13px; }
+.maui-host-editor-dirty-state { color:var(--text-faint); font-size:12px; line-height:1.35; overflow-wrap:anywhere; min-width:0; }
+.maui-host-editor-dialog.has-unsaved-changes .maui-host-editor-dirty-state { color:var(--warning); }
+.maui-host-editor-dirty-state.error { color:var(--danger) !important; font-weight:700; }
+.maui-host-editor-error { margin:0; color:var(--danger); font-size:12px; font-weight:700; line-height:1.35; overflow-wrap:anywhere; min-width:0; }
+/* Match the Traditional Task Editor surface hierarchy: white/main surface workspace,
+   shaded form cards, and normal input-background controls. */
+.maui-host-editor-body { flex:1 1 auto; min-height:0; overflow:hidden; padding:0; background:var(--surface); }
+.maui-host-editor-panel { display:grid; align-content:start; gap:16px; height:100%; min-height:0; box-sizing:border-box; overflow:auto; padding:18px 22px 22px; }
+.maui-host-editor-panel[data-host-editor-panel="configuration"] { grid-template-columns:var(--host-editor-rail-size) minmax(0,1fr); align-content:stretch; gap:0; padding:0; overflow:hidden; }
+.maui-host-editor-rail { min-width:0; overflow:auto; background:var(--surface-2); border-right:1px solid var(--border); }
+.maui-host-editor-properties { container-type:inline-size; min-width:0; overflow:auto; padding:20px 22px; }
+.maui-host-editor-card { box-shadow:none; }
+.maui-host-editor-card-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; margin-bottom:16px; }
+.maui-host-editor-card-heading h3 { margin:0; font-size:var(--property-section-title-size,15px); color:var(--text); }
+.maui-host-editor-card-heading p { margin:4px 0 0; font-size:12px; color:var(--text-soft); }
+.maui-host-editor-form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 18px; align-items:start; }
+.maui-host-editor-field { display:grid; align-content:start; gap:5px; min-width:0; }
+.maui-host-editor-field-body { display:grid; align-content:start; gap:5px; min-width:0; }
+/* Share caption rows so wrapped labels align controls without stretching fields with help text. */
+@supports (grid-template-rows:subgrid) {
+  .maui-host-editor-form-grid { row-gap:5px; }
+  .maui-host-editor-form-grid > .maui-host-editor-field { grid-row:span 2; grid-template-rows:subgrid; padding-bottom:9px; }
+}
+.maui-host-editor-field.full { grid-column:1 / -1; }
+.maui-host-editor-field > span,
+.maui-host-editor-field > label { font-size:12px; font-weight:700; color:var(--text-soft); }
+.maui-host-editor-value { min-height:42px; border:1px solid var(--border-strong); border-radius:9px; background:var(--input-bg); color:var(--text); padding:9px 10px; font-size:12px; line-height:22px; overflow-wrap:anywhere; white-space:pre-wrap; }
+.maui-host-editor-value.empty { color:var(--text-faint); font-style:italic; }
+.maui-host-editor-value.multiline { min-height:72px; }
+.maui-host-editor-subtabs { display:grid; }
+.maui-host-editor-subtab { width:100%; min-height:52px; display:grid; grid-template-columns:22px minmax(0,1fr); align-items:center; gap:9px; border:0; border-bottom:1px solid var(--border); background:transparent; color:var(--text); padding:12px 14px; border-radius:0; font:inherit; font-size:12px; font-weight:720; text-align:left; cursor:pointer; overflow-wrap:anywhere; }
+.maui-host-editor-subtab .icon, .maui-host-editor-subtab .icon svg { width:18px; height:18px; color:var(--accent); }
+.maui-host-editor-subtab:hover:not(:disabled) { background:var(--surface-3); }
+.maui-host-editor-subtab.active { background:var(--surface); color:var(--accent); box-shadow:inset 3px 0 var(--accent); }
+@media (max-width:940px) { .maui-host-editor-dialog { --host-editor-rail-size:240px; } }
+@media (max-width:700px) {
+  .maui-host-editor-panel[data-host-editor-panel="configuration"] { grid-template-columns:minmax(0,1fr); grid-template-rows:auto minmax(0,1fr); }
+  .maui-host-editor-rail { border-right:0; border-bottom:1px solid var(--border); }
+  .maui-host-editor-subtabs { display:flex; overflow:auto; }
+  .maui-host-editor-subtab { width:auto; flex:0 0 auto; min-height:44px; padding:10px 14px; border-bottom:0; }
+  .maui-host-editor-subtab.active { box-shadow:inset 0 -3px var(--accent); }
+}
+.maui-host-editor-empty { border:1px dashed var(--border); border-radius:8px; padding:22px; text-align:center; color:var(--text-faint); font-size:12px; }
+.maui-host-editor-task-list { border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+.maui-host-editor-task-row { display:grid; grid-template-columns:120px minmax(0,1fr); gap:14px; padding:10px 12px; border-bottom:1px solid var(--border); font-size:12px; align-items:center; }
+.maui-host-editor-task-row:last-child { border-bottom:0; }
+.maui-host-editor-task-id { color:var(--text-faint); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+.maui-host-editor-count { min-width:28px; height:26px; padding:0 8px; display:grid; place-items:center; border-radius:13px; background:var(--surface-3); color:var(--text-soft); font-size:12px; font-weight:700; }
+.maui-host-editor-audit-section { margin-top:18px; padding-top:16px; border-top:1px solid var(--border); }
+.maui-host-editor-audit-heading { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.maui-host-editor-audit-heading h4 { margin:0; color:var(--text); font-size:var(--property-section-title-size,15px); }
+.maui-host-editor-audit-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.maui-host-editor-footer { height:67px; min-height:0; justify-content:space-between; gap:18px; }
+.maui-host-editor-footer-left,
+.maui-host-editor-footer-actions { display:flex; align-items:center; gap:12px; }
+@media (max-width:780px) {
+  .maui-host-editor-dialog { width:calc(100vw - 20px); height:calc(100vh - 20px); }
+  .maui-host-editor-header, .maui-host-editor-tabs-row, .maui-host-editor-footer { padding-left:16px; padding-right:16px; }
+  .maui-host-editor-panel:not([data-host-editor-panel="configuration"]), .maui-host-editor-properties { padding:14px 16px; }
+  .maui-host-editor-form-grid, .maui-host-editor-audit-grid { grid-template-columns:1fr; }
+}
+
+/* Editable Host Editor controls reuse the Task Editor/input visual contract. */
+.maui-host-editor-control { width:100%; box-sizing:border-box; background:var(--input-bg); color:var(--text); border-color:var(--border-strong); border-radius:9px; font:inherit; font-size:12px; }
+.maui-host-editor-field textarea.maui-host-editor-control { min-height:82px; resize:vertical; }
+.maui-host-editor-field select.maui-host-editor-control { min-height:38px; }
+.maui-host-editor-field input.maui-host-editor-control { min-height:38px; }
+.maui-host-editor-control:disabled { opacity:.68; cursor:not-allowed; background:var(--surface-3); }
+.maui-host-editor-control-note { color:var(--text-faint); font-size:12px; line-height:1.35; }
+.maui-host-editor-field-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+
+/* Algorithm ordering and Host lookups use the existing MAUI surfaces and controls. */
+.maui-host-picker-dialog { border:0; padding:0; width:min(680px,calc(100vw - 40px)); height:min(600px,calc(100vh - 40px)); max-width:none; max-height:none; background:transparent; color:var(--text); }
+.maui-host-picker-dialog::backdrop { background:rgba(10,15,24,.52); backdrop-filter:blur(2px); }
+.maui-host-picker-dialog [hidden] { display:none !important; }
+.maui-host-picker-card { display:flex; flex-direction:column; width:100%; height:100%; border:1px solid var(--border); border-radius:14px; overflow:hidden; background:var(--surface); box-shadow:var(--shadow); }
+.maui-host-picker-header { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; padding:18px 22px; border-bottom:1px solid var(--border); }
+.maui-host-picker-header h3 { margin:0; font-size:18px; }
+.maui-host-picker-body { flex:1; min-height:0; display:flex; flex-direction:column; gap:12px; padding:18px 22px; }
+.maui-host-picker-loading { display:flex; align-items:center; gap:10px; color:var(--text-soft); font-size:12px; }
+.maui-host-picker-list { flex:1; min-height:0; overflow:auto; border:1px solid var(--border); border-radius:9px; background:var(--input-bg); }
+.maui-host-picker-row { display:grid; gap:3px; width:100%; padding:10px 12px; border:0; border-bottom:1px solid var(--border); background:transparent; color:var(--text); font:inherit; font-size:12px; text-align:left; cursor:pointer; }
+.maui-host-picker-row:last-child { border-bottom:0; }
+.maui-host-picker-row:hover:not(:disabled), .maui-host-picker-row:focus-visible { background:var(--surface-2); }
+.maui-host-picker-row[aria-selected="true"] { background:var(--accent-soft); box-shadow:inset 3px 0 0 var(--accent); }
+.maui-host-picker-row small { color:var(--text-soft); overflow-wrap:anywhere; }
+.maui-host-picker-empty { padding:20px 12px; color:var(--text-faint); font-size:12px; }
+.maui-host-picker-footer { justify-content:space-between; }
+.maui-host-picker-footer > div { display:flex; gap:12px; }
+
+/* State-cache choices match the Traditional Task Editor and the native Host contract. */
+.maui-host-editor-form-grid > .maui-host-editor-state-cache { grid-row:auto; grid-template-rows:none; gap:12px; }
+.maui-host-editor-state-cache .maui-host-state-cache-check,
+.maui-host-state-cache-row label { display:flex; align-items:center; gap:9px; font-size:12px; color:var(--text); font-weight:400; }
+.maui-host-editor-state-cache input[type="checkbox"],
+.maui-host-editor-state-cache input[type="radio"] { accent-color:var(--accent); flex:0 0 auto; }
+.maui-host-state-cache-choices { display:grid; gap:12px; min-width:0; margin:0 0 0 24px; padding:0; border:0; }
+.maui-host-state-cache-choices legend { padding:0 0 12px; font-size:12px; font-weight:700; color:var(--text-soft); }
+.maui-host-state-cache-row { display:flex; flex-wrap:wrap; align-items:center; gap:9px; font-size:12px; color:var(--text-soft); }
+.maui-host-state-cache-row .maui-host-editor-control { width:110px; max-width:100%; }
+.maui-host-state-cache-row select.maui-host-editor-control { width:120px; }
+.maui-host-state-cache-choices:disabled { opacity:.68; }
+
+/* FTP parsing follows the native three-mode form using the shared Host controls. */
+.maui-host-editor-form-grid > .maui-host-ftp-directory { grid-row:auto; grid-template-rows:none; gap:14px; border:0; margin:0; padding:0; font:inherit; font-size:12px; }
+.maui-host-ftp-directory > .maui-host-state-cache-check { display:flex; align-items:center; gap:9px; color:var(--text); font-size:12px; font-weight:400; }
+.maui-host-state-cache-check input { flex:0 0 auto; accent-color:var(--accent); }
+.maui-host-ftp-directory-columns { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 18px; margin:0 0 0 24px; padding:0; min-width:0; border:0; }
+.maui-host-ftp-directory-columns legend { padding:0 0 10px; color:var(--text-soft); font-size:12px; }
+.maui-host-ftp-directory-script { min-width:0; margin:0 0 0 24px; padding:0; border:0; }
+.maui-host-ftp-directory-columns:disabled,
+.maui-host-ftp-directory-script:disabled { opacity:.68; }
+@media (max-width:500px) { .maui-host-ftp-directory-columns { grid-template-columns:minmax(0,1fr); } }
+
+.maui-host-editor-footer-left { min-width:0; flex:1; }
+.maui-host-editor-footer-left > button { flex-shrink:0; }
+.maui-host-editor-footer:has([data-host-editor-error]:not([hidden])) { height:auto; min-height:67px; padding-top:12px; padding-bottom:12px; }
+
+@media (max-width:600px) {
+  .maui-host-editor-shell { grid-template-rows:88px auto minmax(0,1fr) 67px; }
+  .maui-host-editor-tabs-row { height:auto; flex-wrap:wrap; }
+  .maui-host-editor-tab-actions { flex-basis:100%; justify-content:flex-end; padding:8px 0; }
+}
+
+/* Form columns follow the available properties width after reserving the navigation rail. */
+@container (max-width:600px) {
+  .maui-host-editor-config-card .maui-host-editor-form-grid { grid-template-columns:1fr; }
+}
+
+.maui-host-editor-auto-save { display:inline-flex; align-items:center; gap:8px; min-height:32px; padding:0 2px; color:var(--text-soft); font-size:12px; font-weight:700; white-space:nowrap; }
+.maui-host-editor-auto-save .configuration-switch { margin:0; }

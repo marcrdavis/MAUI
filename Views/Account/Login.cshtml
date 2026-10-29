@@ -1,0 +1,93 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   This Razor file is part of the MAUI application. *@
+@using MoveItAutomationUI.Models
+@{
+    ViewData["Title"] = "Sign In";
+    var ui = UiOptionsAccessor.Value;
+    var servers = ViewBag.Servers as IReadOnlyList<MoveItServerDefinition> ?? Array.Empty<MoveItServerDefinition>();
+    var defaultServer = ViewBag.DefaultServer as string ?? string.Empty;
+    var loginError = ViewBag.LoginError as string ?? string.Empty;
+    var sessionExpiredMessage = ViewBag.SessionExpiredMessage as string ?? string.Empty;
+    var usernameValue = ViewBag.Username as string ?? string.Empty;
+}
+<div class="login-page">
+    <section class="login-visual" aria-hidden="true">
+        <div class="login-visual-grid"></div>
+        <div class="login-visual-content">
+            <div class="login-brand-lockup">
+                <div class="login-logo-mark"><img src="@(ui.ApplicationLogo?.StartsWith("/", StringComparison.Ordinal) == true && ui.ApplicationLogo?.StartsWith("//", StringComparison.Ordinal) != true ? Url.Content("~" + ui.ApplicationLogo) : ui.ApplicationLogo)" alt="" /></div>
+                <div class="login-product-name">@ui.ApplicationName</div>
+            </div>
+            <div class="login-kicker">Automation administration, redesigned.</div>
+            <h1>Your Tasks Evolved. The Interface Should Too.</h1>
+            <p>A clearer management experience layered over MOVEit Automation.</p>
+            <div class="login-version">Version @ui.Version &middot; Build @MauiReleaseInfo.Build</div>
+        </div>
+    </section>
+    <section class="login-panel">
+        <div class="login-card">
+            <h2>@ui.ApplicationName</h2>
+            <p class="muted">Sign in with your MOVEit Automation credentials.</p>
+
+            @* Keep the login POST on its canonical route so lifecycle access gates can identify it reliably. *@
+            <form action="@Url.Content("~/Account/Login")" method="post" class="login-form" data-login-form>
+                @Html.AntiForgeryToken()
+                @if (!string.IsNullOrWhiteSpace(loginError))
+                {
+                    <div class="login-error" role="alert">@loginError</div>
+                }
+                else
+                {
+                    @if (!string.IsNullOrWhiteSpace(sessionExpiredMessage))
+                    {
+                        <div class="login-notice" role="status">@sessionExpiredMessage</div>
+                    }
+                    <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+                }
+                <label class="field-label" for="username">Username</label>
+                <input class="text-input" id="username" name="username" value="@usernameValue" autocomplete="username" autofocus />
+
+                <label class="field-label" for="password">Password</label>
+                <input class="text-input" id="password" name="password" type="password" autocomplete="current-password" />
+
+                <label class="field-label" for="server">Automation server</label>
+                @if (servers.Count == 0)
+                {
+                    <select class="text-input" id="server" name="server" disabled>
+                        <option>No servers configured</option>
+                    </select>
+                    <div class="validation-summary">No MOVEit servers are configured. Add at least one entry under <code>MoveIt:Servers</code> in appsettings.json.</div>
+                    <button class="primary-button login-button" type="submit" data-login-submit disabled>
+                        <span class="login-button-spinner" aria-hidden="true"></span>
+                        <span data-login-button-label>Sign In</span>
+                    </button>
+                }
+                else
+                {
+                    <select class="text-input" id="server" name="server">
+                        @foreach (var server in servers)
+                        {
+                            if (server.Key == defaultServer)
+                            {
+                                <option value="@server.Key" selected>@(string.IsNullOrWhiteSpace(server.DisplayName) ? server.Key : server.DisplayName)</option>
+                            }
+                            else
+                            {
+                                <option value="@server.Key">@(string.IsNullOrWhiteSpace(server.DisplayName) ? server.Key : server.DisplayName)</option>
+                            }
+                        }
+                    </select>
+                    <button class="primary-button login-button" type="submit" data-login-submit>
+                        <span class="login-button-spinner" aria-hidden="true"></span>
+                        <span data-login-button-label>Sign In</span>
+                    </button>
+                }
+            </form>
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+    <script src="~/js/login.js" asp-append-version="true"></script>
+}

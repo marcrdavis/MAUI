@@ -1,0 +1,86 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI *@
+@model GlobalParametersPageViewModel
+@{
+    ViewData["Title"] = "Global Parameters";
+    ViewData["GridDeferInitialLoad"] = true;
+    ViewData["GridToolbarRightPrefixPartial"] = "_GlobalParameterRefreshControls";
+    ViewData["GlobalParameterLastRefreshUtc"] = Model.LastRefreshUtc;
+}
+<div class="page-heading compact-heading"><div><h1>Global Parameters</h1><p>Reusable values available across MOVEit Automation Tasks and Scripts.</p></div></div>
+@if (TempData["GlobalParameterLoadError"] is string loadError && !string.IsNullOrWhiteSpace(loadError)) { <div class="inline-alert error-alert">@loadError</div> }
+<partial name="_DataGrid" model="Model.Grid" />
+<form class="task-antiforgery" hidden>@Html.AntiForgeryToken()</form>
+<div data-global-parameter-page-config
+     data-login-url="@Url.Action("SessionExpired", "Account")"
+     data-create-url="@Url.Action("CreateGlobalParameter", "Resources")"
+     data-details-url="@Url.Action("GlobalParameterDetails", "Resources")"
+     data-save-details-url="@Url.Action("SaveGlobalParameterDetails", "Resources")"
+     data-preflight-delete-url="@Url.Action("PreflightDeleteGlobalParameter", "Resources")"
+     data-delete-url="@Url.Action("DeleteGlobalParameter", "Resources")"
+     data-preflight-delete-bulk-url="@Url.Action("PreflightDeleteGlobalParameters", "Resources")"
+     data-delete-bulk-url="@Url.Action("DeleteGlobalParameters", "Resources")"
+     data-initial-grid-url="@Url.Action("InitialGlobalParametersGrid", "Resources")"
+     data-refresh-url="@Url.Action("RefreshGlobalParametersGrid", "Resources")"
+     data-ui-refresh-seconds="@Model.UiGlobalParameterRefreshIntervalSeconds"></div>
+
+<div class="task-row-action-menu" data-global-parameter-row-action-menu role="menu" aria-label="Global Parameter actions" hidden>
+    <button type="button" role="menuitem" data-global-parameter-row-command="information">Parameter Information</button>
+    <div class="task-row-action-divider" role="separator"></div>
+    <button type="button" role="menuitem" class="task-row-danger-action" data-global-parameter-row-command="delete">Delete Parameter</button>
+</div>
+
+<dialog class="new-task-dialog script-editor-dialog" data-new-global-parameter-dialog aria-labelledby="new-parameter-title">
+    <form class="new-task-card script-editor-card" data-new-global-parameter-form novalidate>
+        <header class="script-editor-header"><div class="script-editor-title-wrap"><span class="script-editor-icon" aria-hidden="true"><partial name="_Icon" model="@("braces")" /></span><div><h2 id="new-parameter-title">New Parameter</h2><p>Create a MOVEit Global Parameter.</p></div></div><button type="button" class="dialog-close" data-new-global-parameter-close aria-label="Close">×</button></header>
+        <div class="new-task-body script-editor-body">
+            <div class="inline-alert error-alert" data-new-global-parameter-error role="alert" hidden></div>
+            <label class="field-block"><span>Parameter Name</span><input class="text-input" type="text" autocomplete="off" data-new-global-parameter-name required /></label>
+            <label class="field-block"><span>Parameter Value</span><input class="text-input" type="text" autocomplete="new-password" data-new-global-parameter-value /></label>
+            <label class="checkbox-row"><input type="checkbox" data-new-global-parameter-secure /><span>Secure parameter value</span></label>
+        </div>
+        <div class="settings-footer"><button type="button" class="secondary-button" data-new-global-parameter-close>Close</button><button type="submit" class="primary-button" data-new-global-parameter-submit>Create Parameter</button></div>
+    </form>
+</dialog>
+
+<dialog class="new-task-dialog" data-delete-global-parameter-dialog><div class="new-task-card">
+<div class="settings-header"><div><h2 data-delete-global-parameter-title>Delete Parameter</h2><p>This action permanently deletes the selected MOVEit Global Parameter or Parameters.</p></div><button type="button" class="dialog-close" data-delete-global-parameter-no aria-label="Close">×</button></div>
+<div class="new-task-body">
+    <div class="inline-alert error-alert" data-delete-global-parameter-error hidden></div>
+<p data-delete-global-parameter-message></p><p><strong>This action cannot be undone.</strong></p></div>
+<div class="settings-footer new-task-footer"><button type="button" class="secondary-button" data-delete-global-parameter-no>Cancel</button><button type="button" class="danger-button" data-delete-global-parameter-yes>Yes, Delete</button></div>
+</div></dialog>
+
+<dialog class="task-details-dialog" data-global-parameter-details-dialog>
+<form class="task-details-card" data-global-parameter-details-form novalidate>
+<div class="settings-header"><div><h2>Parameter Information</h2><p>MOVEit properties, MAUI metadata, and Task assignments.</p></div><button type="button" class="dialog-close" data-global-parameter-details-close aria-label="Close">×</button></div>
+<div class="task-details-tabs" role="tablist" aria-label="Parameter information sections"><button type="button" class="task-details-tab active" role="tab" aria-selected="true" data-global-parameter-details-tab="information">Information</button><button type="button" class="task-details-tab" role="tab" aria-selected="false" data-global-parameter-details-tab="tasks">Tasks</button></div>
+<div class="task-details-body">
+    <div class="inline-alert error-alert" data-global-parameter-details-error hidden></div>
+
+<div class="details-loading" data-global-parameter-details-loading role="status" aria-live="polite" aria-label="Loading Global Parameter information"><span class="inline-spinner" aria-hidden="true"></span><span>Loading...</span></div>
+<div data-global-parameter-details-content hidden>
+<div data-global-parameter-details-panel="information">
+<section class="details-section">
+<div class="details-section-heading maui-object-properties-heading"><div class="task-identity-row maui-object-identity" aria-label="Global Parameter identity"><div class="task-identity-item"><span>Type</span><strong>Global Parameter</strong></div><div class="task-identity-item"><span>Parameter Name</span><strong data-global-parameter-identity></strong></div></div><span class="source-badge">MOVEit</span></div>
+<div class="details-grid">
+<label class="field-block full-span"><span>Parameter Name</span><input class="text-input" type="text" autocomplete="off" data-global-parameter-name required /></label>
+<label class="field-block full-span"><span>Parameter Value</span><input class="text-input" type="text" autocomplete="new-password" data-global-parameter-value /></label>
+<label class="checkbox-row full-span"><input type="checkbox" data-global-parameter-secure /><span>Secure parameter value</span></label>
+<div class="inline-alert full-span global-parameter-secure-note" data-global-parameter-secure-existing-note hidden><span>Parameter value is secured. It cannot be viewed or edited.</span><a href="#" class="global-parameter-reset-link" data-global-parameter-reset-value>Reset Value</a></div>
+<div class="field-block full-span"><span>Resource Groups</span><input class="text-input" data-global-parameter-resource-groups readonly /></div>
+</div>
+</section>
+<section class="details-section" data-global-parameter-metadata-section hidden><div class="details-section-heading"><h3>Additional Information</h3><span class="source-badge local-badge">MAUI</span></div><div class="details-grid" data-global-parameter-metadata-fields></div></section>
+<section class="details-section audit-section"><div class="details-section-heading"><h3>Parameter Metadata</h3><span class="source-badge local-badge">MAUI</span></div><div class="audit-grid" data-global-parameter-metadata-audit></div></section>
+</div>
+<div data-global-parameter-details-panel="tasks" hidden><section class="details-section"><div class="details-section-heading details-related-tasks-heading"><div><h3>Assigned Tasks</h3><p>Visible Tasks that reference this Global Parameter.</p></div></div><div data-global-parameter-details-task-content></div></section></div>
+</div>
+
+</div>
+<div class="settings-footer"><button type="button" class="secondary-button" data-global-parameter-details-cancel>Close</button><button type="button" class="primary-button" data-global-parameter-details-save>Save</button></div>
+</form></dialog>
+
+@section Scripts {
+<script src="~/js/globalparameters.js" asp-append-version="true"></script>
+}

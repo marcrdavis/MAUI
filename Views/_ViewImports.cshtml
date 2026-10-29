@@ -1,0 +1,18 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   This Razor file is part of the MAUI application. *@
+@using MoveItAutomationUI
+@using MoveItAutomationUI.Models
+@using Microsoft.Extensions.Options
+@using Microsoft.Extensions.DependencyInjection
+@using MoveItAutomationUI.Services.Security
+@using MoveItAutomationUI.Services.Metadata
+@using MoveItAutomationUI.Services.Authentication
+@using MoveItAutomationUI.Services.MoveIt
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@inject IOptionsSnapshot<UiOptions> UiOptionsAccessor
+@inject IOptionsSnapshot<RecycleBinOptions> RecycleBinOptionsAccessor
+@inject IOptionsSnapshot<SystemMessageOptions> SystemMessageOptionsAccessor
+@inject IMauiSecurityService MauiSecurityService
+@inject IUserPreferencesService UserPreferencesService
+@inject ISavedViewService SavedViewService

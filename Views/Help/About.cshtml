@@ -1,0 +1,137 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   This Razor file is part of the MAUI application. *@
+@model AboutViewModel
+@{
+    ViewData["Title"] = "About";
+    var info = Model.MoveIt;
+    var license = info?.License;
+
+    // Purpose: Formats Boolean values for About-page Yes/No fields.
+    static string YesNo(bool value) => value ? "Yes" : "No";
+    // Purpose: Formats Boolean values for About-page enabled/disabled fields.
+    static string EnabledDisabled(bool value) => value ? "Enabled" : "Disabled";
+    // Purpose: Formats Boolean values for About-page license-state fields.
+    static string LicenseState(bool value) => value ? "Licensed" : "Not Licensed";
+    // Purpose: Formats nullable license limits, including the unlimited sentinel.
+    static string LimitText(int? value)
+    {
+        if (!value.HasValue) return "—";
+        return value.Value >= int.MaxValue ? "Unlimited" : value.Value.ToString("N0");
+    }
+}
+
+<div class="page-heading">
+    <div>
+        <h1>About</h1>
+        <p>MAUI project and connected MOVEit Automation information.</p>
+    </div>
+</div>
+
+<section class="panel-card about-hero">
+    <div class="about-logo-wrap">
+        <img src="@(Model.ApplicationLogo?.StartsWith("/", StringComparison.Ordinal) == true && Model.ApplicationLogo?.StartsWith("//", StringComparison.Ordinal) != true ? Url.Content("~" + Model.ApplicationLogo) : Model.ApplicationLogo)" alt="" class="about-logo" />
+    </div>
+    <div class="about-hero-copy">
+        <h2>@Model.ApplicationName</h2>
+        <div class="about-subtitle">MOVEit Automation User Interface</div>
+        <div class="about-version">Version @Model.ApplicationVersion &middot; Build @MauiReleaseInfo.Build</div>
+        <div class="about-author">Designed by Marc R. Davis (marcdavis@comcast.net)</div>
+        <div class="about-project-description">
+            <p>MAUI is a source-available community project providing a modern user interface for the on-premises version of MOVEit Automation. Copyright (C) 2026 Marc R. Davis. MAUI is distributed under the MAUI Community Source License 1.0. It is an independent project and is not affiliated with, endorsed by, sponsored by, or supported by Progress Software Corporation. Progress, MOVEit, and related Progress product names and marks are trademarks or registered trademarks of Progress Software Corporation and/or its subsidiaries or affiliates. Their referential use in MAUI does not imply endorsement or sponsorship.</p>
+            <h3>Disclaimer</h3>
+            <p>This software is provided &quot;as is,&quot; without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and noninfringement. In no event shall the author(s) or contributors be liable for any claim, damages, data loss, service interruption, or other liability arising from, out of, or in connection with the software or its use, to the extent permitted by applicable law.</p>
+            <p>Administrators are responsible for validating MAUI in their environment, maintaining backups, protecting credentials and configuration, and complying with applicable MOVEit licensing and organizational security/change-management requirements. Use at your own risk.</p>
+        </div>
+    </div>
+</section>
+
+<div class="about-card-grid">
+    <section class="panel-card">
+        <div class="panel-header">
+            <div>
+                <h2>MAUI</h2>
+                <p>Application and active connection information.</p>
+            </div>
+        </div>
+        <dl class="about-detail-list">
+            <div><dt>Version</dt><dd>@Model.ApplicationVersion</dd></div>
+            <div><dt>Build</dt><dd>@MauiReleaseInfo.Build</dd></div>
+            <div><dt>Connected Server</dt><dd>@(string.IsNullOrWhiteSpace(Model.ServerDisplayName) ? "—" : Model.ServerDisplayName)</dd></div>
+            <div><dt>Web Admin</dt><dd class="about-break-value">@(string.IsNullOrWhiteSpace(Model.WebAdminUrl) ? "—" : Model.WebAdminUrl)</dd></div>
+        </dl>
+    </section>
+
+    <section class="panel-card">
+        <div class="panel-header">
+            <div>
+                <h2>MOVEit Automation</h2>
+                <p>Information reported by the connected Web Admin session.</p>
+            </div>
+        </div>
+        @if (info is null)
+        {
+            <div class="inline-alert warning-alert">MOVEit server information was not available for this login session. Sign out and sign in again to retry the native information request.</div>
+        }
+        else
+        {
+            <dl class="about-detail-list">
+                <div><dt>Application Version</dt><dd>@(info.AppVersion.Length == 0 ? "—" : info.AppVersion)</dd></div>
+                <div><dt>Build Number</dt><dd>@(info.AppBuildNumber.Length == 0 ? "—" : info.AppBuildNumber)</dd></div>
+                <div><dt>Build Timestamp</dt><dd>@(info.AppBuildTimestamp.Length == 0 ? "—" : info.AppBuildTimestamp)</dd></div>
+                <div><dt>Central Version</dt><dd>@(info.CentralVersion.Length == 0 ? "—" : info.CentralVersion)</dd></div>
+                <div><dt>Central API Version</dt><dd>@(info.CentralApiVersion.Length == 0 ? "—" : info.CentralApiVersion)</dd></div>
+                <div><dt>Central Host</dt><dd>@(info.CentralHost.Length == 0 ? "—" : info.CentralHost)</dd></div>
+                <div><dt>Connected User</dt><dd>@(info.Username.Length == 0 ? "—" : info.Username)</dd></div>
+                <div><dt>Domain</dt><dd>@(info.Domain.Length == 0 ? "—" : info.Domain)</dd></div>
+                <div><dt>MOVEit Administrator</dt><dd>@YesNo(info.IsAdmin)</dd></div>
+            </dl>
+        }
+    </section>
+</div>
+
+@if (info is not null)
+{
+    <div class="about-card-grid about-card-grid-wide">
+        <section class="panel-card">
+            <div class="panel-header">
+                <div>
+                    <h2>MOVEit Licensing</h2>
+                    <p>Capabilities reported by the current Automation license.</p>
+                </div>
+            </div>
+            <div class="about-license-grid">
+                <div><span>Advanced Tasks</span><strong class="@(license?.AdvancedTasksLicensed == true ? "about-positive" : "about-muted")">@LicenseState(license?.AdvancedTasksLicensed == true)</strong></div>
+                <div><span>Custom Scripts</span><strong class="@(license?.CustomScriptsLicensed == true ? "about-positive" : "about-muted")">@LicenseState(license?.CustomScriptsLicensed == true)</strong></div>
+                <div><span>API</span><strong class="@(license?.ApiLicensed == true ? "about-positive" : "about-muted")">@LicenseState(license?.ApiLicensed == true)</strong></div>
+                <div><span>PGP</span><strong class="@(license?.PgpLicensed == true ? "about-positive" : "about-muted")">@LicenseState(license?.PgpLicensed == true)</strong></div>
+                <div><span>Account Management</span><strong class="@(license?.AccountManagementLicensed == true ? "about-positive" : "about-muted")">@LicenseState(license?.AccountManagementLicensed == true)</strong></div>
+                <div><span>Backup Hosts</span><strong class="@(license?.BackupHostsLicensed == true ? "about-positive" : "about-muted")">@LicenseState(license?.BackupHostsLicensed == true)</strong></div>
+                <div><span>AS2</span><strong class="@(license?.As2Licensed == true ? "about-positive" : "about-muted")">@LicenseState(license?.As2Licensed == true)</strong></div>
+                <div><span>Resiliency</span><strong>@EnabledDisabled(license?.ResilEnabled == true)</strong></div>
+                <div><span>Resiliency Role</span><strong>@(string.IsNullOrWhiteSpace(license?.ResilRole) ? "—" : license!.ResilRole)</strong></div>
+                <div><span>Maximum Tasks</span><strong>@LimitText(license?.MaxTasks)</strong></div>
+                <div><span>Maximum Hosts</span><strong>@LimitText(license?.MaxHosts)</strong></div>
+                <div><span>License Version</span><strong>@(string.IsNullOrWhiteSpace(license?.Version) ? "—" : license!.Version)</strong></div>
+            </div>
+        </section>
+
+        <section class="panel-card">
+            <div class="panel-header">
+                <div>
+                    <h2>Server Information</h2>
+                    <p>Runtime information reported by MOVEit Web Admin.</p>
+                </div>
+            </div>
+            <dl class="about-detail-list">
+                <div><dt>Server Time Zone</dt><dd>@(string.IsNullOrWhiteSpace(info.ServerTimezoneInfo.TimeZoneName) ? "—" : info.ServerTimezoneInfo.TimeZoneName)</dd></div>
+                <div><dt>Time Zone Bias</dt><dd>@(string.IsNullOrWhiteSpace(info.ServerTimezoneInfo.TimeZoneBias) ? "—" : info.ServerTimezoneInfo.TimeZoneBias + " minutes")</dd></div>
+                <div><dt>Daylight Bias</dt><dd>@(string.IsNullOrWhiteSpace(info.ServerTimezoneInfo.DaylightBias) ? "—" : info.ServerTimezoneInfo.DaylightBias + " minutes")</dd></div>
+                <div><dt>Server Certificate</dt><dd>@(info.ServerCertificateDaysValid.HasValue ? $"{info.ServerCertificateDaysValid.Value:N0} days remaining" : "—")</dd></div>
+                <div><dt>Inactive Session Interval</dt><dd>@(info.MaxInactiveSessionInterval.HasValue ? $"{info.MaxInactiveSessionInterval.Value:N0} seconds" : "—")</dd></div>
+                <div><dt>SFTP FIPS Mode</dt><dd>@EnabledDisabled(info.SftpFipsModeEnabled)</dd></div>
+                <div><dt>Custom Scripting</dt><dd>@(info.CustomScriptingDisabled ? "Disabled" : "Enabled")</dd></div>
+            </dl>
+        </section>
+    </div>
+}

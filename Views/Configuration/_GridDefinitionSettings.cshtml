@@ -1,0 +1,93 @@
+@model ConfigurationSettingsViewModel
+
+<section class="configuration-section" data-config-section="grids" data-search-terms="grid definitions columns default search actions bulk add tasks hosts scripts date lists parameters keys certificates">
+    <div class="configuration-section-heading">
+        <div><h2>Grid Definitions</h2><p>Configure application-wide default and searchable columns. Available columns and actions are defined by MAUI.</p></div>
+        <span class="configuration-state-badge live">Live Settings</span>
+    </div>
+    <div class="panel-card configuration-card">
+        <div class="configuration-card-heading row-heading">
+            <div><h3>Grid Configuration</h3><p>Available columns and actions are read-only here; default and search selections may be changed.</p></div>
+            <select class="text-input configuration-resource-select" data-grid-resource-select>
+                @foreach (var grid in Model.GridDefinitions)
+                {
+                    <option value="@grid.Key">@grid.Label</option>
+                }
+            </select>
+        </div>
+        @foreach (var grid in Model.GridDefinitions)
+        {
+            <div class="configuration-resource-panel grid-definition-panel" data-grid-resource="@grid.Key">
+                <div class="configuration-grid-editor-columns">
+                    <div>
+                        <h4>Default columns</h4>
+                        <p>Initial visible columns for users who have not stored a personal layout.</p>
+                        <div class="configuration-default-column-list" data-default-column-list>
+                            @foreach (var column in grid.DefaultColumns)
+                            {
+                                <div class="configuration-default-column" data-default-column="@column"><span>@column</span><div><button type="button" data-column-up title="Move up">↑</button><button type="button" data-column-down title="Move down">↓</button><button type="button" data-column-remove title="Remove">×</button></div></div>
+                            }
+                        </div>
+                        <div class="configuration-column-add">
+                            <select class="text-input" data-default-column-add-select>
+                                <option value="">Add column…</option>
+                                @foreach (var column in grid.AvailableColumns.Where(c => !grid.DefaultColumns.Contains(c, StringComparer.OrdinalIgnoreCase)))
+                                {
+                                    <option value="@column">@column</option>
+                                }
+                            </select>
+                            <button type="button" class="secondary-button" data-default-column-add>Add</button>
+                        </div>
+                    </div>
+                    <div>
+                        <h4>Search columns</h4>
+                        <p>Base columns included in global search. Configured metadata fields remain searchable automatically.</p>
+                        <div class="configuration-column-checks" data-search-column-list>
+                            @foreach (var column in grid.SearchableColumns)
+                            {
+                                <label><input type="checkbox" value="@column" checked="@(grid.SearchColumns.Contains(column, StringComparer.OrdinalIgnoreCase) ? "checked" : null)" /> <span>@column</span></label>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="configuration-readonly-definition">
+                    <div>
+                        <h4>Available columns</h4>
+                        <div class="configuration-chip-list">
+                            @foreach (var column in grid.AvailableColumns)
+                            {
+                                <span>@column</span>
+                            }
+                        </div>
+                    </div>
+                    <div>
+                        <h4>Add actions <small>code-backed</small></h4>
+                        <div class="configuration-chip-list">
+                            @foreach (var actionName in grid.AddActions)
+                            {
+                                <span>@actionName</span>
+                            }
+                            @if (grid.AddActions.Count == 0)
+                            {
+                                <em>None</em>
+                            }
+                        </div>
+                    </div>
+                    <div>
+                        <h4>Bulk actions <small>code-backed</small></h4>
+                        <div class="configuration-chip-list">
+                            @foreach (var actionName in grid.BulkActions)
+                            {
+                                <span>@actionName</span>
+                            }
+                            @if (grid.BulkActions.Count == 0)
+                            {
+                                <em>None</em>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</section>

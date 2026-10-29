@@ -1,0 +1,100 @@
+@* Shared Script fields with distinct New and Edit presentations. *@
+<dialog class="new-task-dialog script-editor-dialog" data-script-editor aria-labelledby="script-editor-title"
+        data-shell-url="@Url.Action("Shell", "ScriptEditor")" data-save-url="@Url.Action("Save", "ScriptEditor")"
+        data-templates-url="@Url.Action("Templates", "ScriptEditor")" data-save-template-url="@Url.Action("SaveTemplate", "ScriptEditor")"
+        data-delete-template-url="@Url.Action("DeleteTemplate", "ScriptEditor")"
+        data-preferences-url="@Url.Action("SavePreferences", "ScriptEditor")"
+        data-undo-preflight-url="@Url.Action("PreflightUndoScript", "Resources")" data-undo-url="@Url.Action("UndoScript", "Resources")"
+        data-export-url="@Url.Action("ExportScript", "Resources")" data-delete-preflight-url="@Url.Action("PreflightDeleteScript", "Resources")" data-delete-url="@Url.Action("DeleteScript", "Resources")">
+    <form class="new-task-card script-editor-card" data-script-editor-form novalidate>
+        <header class="script-editor-header">
+            <div class="script-editor-title-wrap">
+                <span class="script-editor-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m8 9-3 3 3 3M16 9l3 3-3 3M14 5l-4 14" /></svg></span>
+                <div><div class="script-editor-kicker" data-script-editor-kicker hidden>NEW SCRIPT</div><h2 id="script-editor-title" data-script-editor-title>New Script</h2><p data-script-editor-subtitle>PowerShell and VBScript</p></div>
+            </div><button type="button" class="dialog-close" data-script-editor-close aria-label="Close">×</button>
+        </header>
+        <div class="task-details-tabs script-editor-tabs" data-script-editor-tabs role="tablist" aria-label="Script editor sections" hidden>
+            <button type="button" class="task-details-tab active" data-script-editor-tab="script" id="script-tab" role="tab" aria-selected="true" aria-controls="script-panel">Script</button>
+            <button type="button" class="task-details-tab" data-script-editor-tab="properties" id="script-properties-tab" role="tab" aria-selected="false" aria-controls="script-properties-panel">Properties</button>
+            <button type="button" class="task-details-tab" data-script-editor-tab="tasks" id="script-tasks-tab" role="tab" aria-selected="false" aria-controls="script-tasks-panel">Tasks</button>
+            <div class="script-editor-tab-actions" data-script-editor-tab-actions>
+                <label class="script-editor-auto-save"><span>Auto Save</span><span class="configuration-switch"><input type="checkbox" data-script-editor-auto-save /><span aria-hidden="true"></span></span></label>
+                <div class="script-editor-actions-wrap"><button type="button" class="secondary-button" data-script-editor-actions aria-haspopup="menu" aria-expanded="false">Actions <span class="button-caret" aria-hidden="true">⌄</span></button>
+                    <div class="script-editor-actions-menu" data-script-editor-actions-menu role="menu" hidden>
+                        <button type="button" role="menuitem" data-script-editor-action="undo" disabled>Undo Last Change</button>
+                        <button type="button" role="menuitem" data-script-editor-action="export">Export Script</button>
+                        <div class="task-row-action-divider" role="separator"></div>
+                        <button type="button" role="menuitem" class="danger-menu-item" data-script-editor-action="delete">Delete Script</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="new-task-body script-editor-body">
+            <div data-script-editor-new-identity>
+                <partial name="_ObjectCreationResourceGroup" model="@("Script")" />
+                <label class="field-block" data-script-editor-name-field><span data-script-editor-name-label>Script Name</span><input type="text" class="text-input" maxlength="255" autocomplete="off" data-script-editor-name required /></label>
+                <label class="field-block" data-script-editor-description-field><span>Description</span><textarea class="text-input textarea-input script-editor-description" rows="1" data-script-editor-description></textarea></label>
+            </div>
+            <section class="script-editor-panel script-editor-code-panel" id="script-panel" data-script-editor-panel="script" role="tabpanel" aria-labelledby="script-tab">
+            <fieldset class="script-editor-languages"><legend>Script Type</legend><div class="script-editor-language-cards">
+                <label class="new-task-type-card"><input type="radio" name="mauiScriptLanguage" value="VBScript" /><span class="new-task-type-copy"><strong>VBScript</strong><span>Visual Basic scripting language</span></span></label>
+                <label class="new-task-type-card"><input type="radio" name="mauiScriptLanguage" value="PS1" checked /><span class="new-task-type-copy"><strong>PowerShell</strong><span>PowerShell scripting language</span></span></label>
+            </div></fieldset>
+            <div class="script-editor-template-row" data-script-editor-template-row>
+                <label class="field-block" data-script-editor-template-field><span>Script Template</span><select class="text-input" data-script-editor-template><option value="">None</option></select></label>
+            </div>
+            <p class="inline-alert error-alert" data-script-editor-template-error role="alert" hidden></p>
+            <div class="field-block script-editor-source-field"><label for="script-editor-source">Script Source</label><div class="script-source-editor"><pre data-script-editor-lines aria-hidden="true">1</pre><textarea id="script-editor-source" data-script-editor-source spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="Script Source"></textarea></div></div>
+            <div class="script-editor-tools" data-script-editor-tools><button type="button" class="secondary-button" data-script-editor-import>Import Script File</button><input type="file" accept=".txt,.ps1" data-script-editor-file hidden /><button type="button" class="secondary-button" data-script-editor-save-template>Save as Template</button></div>
+            </section>
+            <section class="script-editor-panel" id="script-properties-panel" data-script-editor-panel="properties" role="tabpanel" aria-labelledby="script-properties-tab" hidden>
+                <div class="maui-property-card script-editor-property-card">
+                    <div class="details-section-heading maui-object-properties-heading"><div class="task-identity-row maui-object-identity" aria-label="Script identity">
+                        <div class="task-identity-item"><span>Type</span><strong data-script-editor-type>Custom</strong></div>
+                        <div class="task-identity-item"><span>Script ID</span><strong data-script-editor-id></strong></div>
+                    </div><span class="source-badge">MOVEit</span></div>
+                    <div class="script-editor-fields" data-script-editor-native-fields>
+                        <label class="field-block full-span"><span>Resource Groups</span><input class="text-input" data-script-editor-resource-groups readonly /></label>
+                    </div>
+                </div>
+                <div class="maui-property-card script-editor-property-card">
+                    <div class="script-editor-card-heading"><div><h3>Additional Information</h3><p>MAUI-managed metadata stored separately from the MOVEit Script definition.</p></div><span class="source-badge local-badge">MAUI</span></div>
+                    <div class="script-editor-fields" data-script-editor-metadata></div>
+                    <div class="script-editor-audit-section"><h4>Script Metadata</h4><div class="script-editor-fields" data-script-editor-audit></div></div>
+                </div>
+            </section>
+            <section class="script-editor-panel" id="script-tasks-panel" data-script-editor-panel="tasks" role="tabpanel" aria-labelledby="script-tasks-tab" hidden>
+                <div class="maui-property-card script-editor-property-card">
+                    <div class="script-editor-card-heading"><div><h3>Assigned Tasks</h3><p>Visible Tasks that reference this Script.</p></div><span class="script-editor-count" data-script-editor-task-count>0</span></div>
+                    <div class="script-editor-empty" data-script-editor-tasks-empty>No visible Tasks currently reference this Script.</div>
+                    <div class="script-editor-task-list" data-script-editor-tasks hidden></div>
+                </div>
+            </section>
+        </div>
+        <div class="settings-footer script-editor-footer">
+            <div class="script-editor-status" data-script-editor-status role="status" aria-live="polite"></div>
+            <button type="button" class="secondary-button" data-script-editor-reload hidden>Reload Script</button>
+            <button type="button" class="secondary-button" data-script-editor-override hidden>Override Checkout</button>
+            <button type="button" class="secondary-button" data-script-editor-close>Close</button><button type="submit" class="primary-button" data-script-editor-save>Create Script</button>
+        </div>
+    </form>
+</dialog>
+<dialog class="new-task-dialog script-action-dialog" data-script-action-dialog aria-labelledby="script-action-title">
+    <form class="new-task-card" data-script-action-form>
+        <div class="settings-header"><h2 id="script-action-title" data-script-action-title>Script Action</h2><button type="button" class="dialog-close" data-script-action-close aria-label="Close">×</button></div>
+        <div class="new-task-body"><p data-script-action-message></p><div class="undo-history-list" data-script-action-history hidden></div><p class="inline-alert error-alert" role="alert" data-script-action-error hidden></p></div>
+        <div class="settings-footer"><button type="button" class="secondary-button" data-script-action-close>Close</button><button type="submit" class="primary-button" data-script-action-confirm>Continue</button></div>
+    </form>
+</dialog>
+<dialog class="new-task-dialog script-template-dialog" data-script-template-dialog aria-labelledby="script-template-title">
+    <form class="new-task-card" data-script-template-form>
+        <div class="settings-header"><h2 id="script-template-title" data-script-template-title>Save as Template</h2><button type="button" class="dialog-close" data-script-template-close aria-label="Close">×</button></div>
+        <div class="new-task-body">
+            <label class="field-block"><span>Template Name</span><input class="text-input" type="text" maxlength="100" autocomplete="off" data-script-template-name required /></label>
+            <label class="script-template-overwrite" data-script-template-overwrite-field><input type="checkbox" data-script-template-overwrite /> Overwrite existing template if present</label>
+            <label class="field-block" data-script-template-source-field hidden><span>PowerShell Source</span><textarea class="text-input script-template-source" rows="14" data-script-template-source spellcheck="false" wrap="off"></textarea></label>
+            <p class="inline-alert error-alert" data-script-template-error role="alert" hidden></p>
+        </div>
+        <div class="settings-footer"><button type="button" class="secondary-button" data-script-template-close>Close</button><button type="submit" class="primary-button" data-script-template-save>Save</button></div>
+    </form>
+</dialog>

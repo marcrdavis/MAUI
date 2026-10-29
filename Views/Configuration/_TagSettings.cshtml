@@ -1,0 +1,22 @@
+@model ConfigurationSettingsViewModel
+
+<section class="configuration-section" data-config-section="tags" data-search-terms="tags labels colors metadata pills classification environment">
+    <div class="configuration-section-heading">
+        <div><h2>Tags</h2><p>Create and maintain the centrally managed Tags available to MAUI metadata fields.</p></div>
+        <span class="configuration-state-badge live">Live Settings</span>
+    </div>
+    <div class="panel-card configuration-card">
+        <div class="configuration-card-heading row-heading">
+            <div><h3>Tag Definitions</h3><p>Tags are shared by all supported resource types. Names must be unique. A Tag cannot be deleted while it is assigned to any item.</p></div>
+            <button type="button" class="primary-button" data-tag-create>+ Create Tag</button>
+        </div>
+        <div class="inline-alert error-alert" data-tag-error hidden></div>
+        <div class="configuration-table-wrap">
+            <table class="configuration-table tags-table">
+                <thead><tr><th>Tag</th><th>Color</th><th>Use Count</th><th>Actions</th></tr></thead>
+                <tbody data-tag-rows><tr data-tag-loading-row><td colspan="4">Loading Tags...</td></tr></tbody>
+            </table>
+        </div>
+        <div class="configuration-empty-state" data-tag-empty hidden>No Tags have been created for this MOVEit environment.</div>
+    </div>
+</section>

@@ -1,0 +1,108 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   Shared administration dialogs for saved MAUI Reports. *@
+
+<dialog class="settings-dialog outbound-report-run-dialog" data-report-run-dialog>
+    <div class="settings-card outbound-report-run-shell">
+        <div class="settings-header">
+            <div><h2 data-report-run-heading>Run Report</h2><p data-report-run-description>Generate the saved Report using current data and email it immediately.</p></div>
+            <button type="button" class="dialog-close" data-report-run-close aria-label="Close">×</button>
+        </div>
+        <div class="settings-body outbound-report-run-body">
+            <div class="inline-alert error-alert" data-report-run-error hidden></div>
+
+            <div class="configuration-table-wrap outbound-report-run-table-wrap">
+                <table class="configuration-table outbound-report-run-table">
+                    <thead><tr><th>Report</th><th>Run Status</th><th>Last Message</th></tr></thead>
+                    <tbody data-report-run-list></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="settings-footer">
+            <button type="button" class="secondary-button" data-report-run-cancel>Cancel</button>
+            <button type="button" class="primary-button" data-report-run-confirm>Run Now</button>
+        </div>
+    </div>
+</dialog>
+
+<dialog class="settings-dialog outbound-report-dialog" data-report-history-dialog>
+    <div class="settings-card outbound-report-shell">
+        <div class="settings-header"><div><h2>Report History</h2><p data-report-history-title></p></div><button type="button" class="dialog-close" data-report-history-close aria-label="Close">×</button></div>
+        <div class="outbound-report-body"><div class="configuration-table-wrap"><table class="configuration-table"><thead><tr><th>Started</th><th>Status</th><th>Rows</th><th>Recipients</th><th>Message</th></tr></thead><tbody data-report-history-list></tbody></table></div></div>
+        <div class="settings-footer"><button type="button" class="secondary-button" data-report-history-close>Close</button></div>
+    </div>
+</dialog>
+
+<dialog class="settings-dialog outbound-report-dialog" data-report-edit-dialog>
+    <div class="settings-card outbound-report-shell">
+        <div class="settings-header"><div><h2>Edit Report Information</h2><p>Update Report title, delivery, scheduling, and enabled state without changing the saved grid view.</p></div><button type="button" class="dialog-close" data-report-edit-close aria-label="Close">×</button></div>
+        <div class="outbound-report-body">
+            <div class="inline-alert error-alert" data-report-edit-error hidden></div>
+
+            <section class="maui-property-card">
+                <div class="details-section-heading maui-object-properties-heading"><div class="task-identity-row maui-object-identity" aria-label="Report identity"><div class="task-identity-item"><span>Type</span><strong>Report</strong></div><div class="task-identity-item"><span>Report ID</span><strong data-report-edit-id></strong></div></div><span class="source-badge local-badge">MAUI</span></div>
+            <div class="configuration-field-grid two-column">
+                <label class="configuration-field full"><span>Report Title</span><input class="text-input" maxlength="200" data-report-edit-title /></label>
+                <label class="configuration-field full"><span>Description</span><textarea class="text-input outbound-report-description" rows="3" maxlength="1000" data-report-edit-description></textarea></label>
+            </div>
+            </section>
+            <section class="maui-property-card">
+                <div class="details-section-heading"><h3>Delivery and Schedule</h3><span class="source-badge local-badge">MAUI</span></div>
+            <div class="configuration-field-grid two-column">
+                <label class="configuration-field full"><span>Recipients</span><input class="text-input" data-report-edit-recipients /></label>
+                <label class="configuration-field"><span>Delivery</span><select class="text-input" data-report-edit-delivery><option value="Once">One Time</option><option value="Recurring">Recurring</option></select></label>
+                <label class="configuration-field"><span>Time</span><select class="text-input" data-report-edit-time></select><small>5-minute increments.</small></label>
+                <label class="configuration-field" data-report-edit-frequency-field><span>Repeat</span><select class="text-input" data-report-edit-frequency><option value="Daily">Daily</option><option value="Weekly">Weekly</option><option value="Monthly">Monthly</option></select></label>
+            </div>
+            <div data-report-edit-once>
+                <div class="configuration-card-heading"><h3>Delivery Date(s)</h3><p>Add one or more specific dates.</p></div>
+                <div class="outbound-report-date-entry"><input class="text-input" type="date" data-report-edit-date /><button type="button" class="secondary-button" data-report-edit-add-date>Add Date</button></div>
+                <div class="outbound-report-date-chips" data-report-edit-date-chips></div>
+            </div>
+            <div data-report-edit-weekly hidden><div class="outbound-report-day-picker" data-report-edit-weekdays></div></div>
+            <div data-report-edit-monthly hidden><div class="outbound-report-monthday-picker" data-report-edit-monthdays></div></div>
+
+            </section>
+
+            <section class="maui-property-card">
+                <div class="details-section-heading"><h3>Report Metadata</h3><span class="source-badge local-badge">MAUI</span></div>
+            <div class="configuration-field-grid three-column outbound-report-audit-fields">
+                <label class="configuration-field"><span>Owner</span><input class="text-input" readonly data-report-edit-owner /></label>
+                <label class="configuration-field"><span>Created Date</span><input class="text-input" readonly data-report-edit-created /></label>
+                <label class="configuration-field"><span>Last Modified Date</span><input class="text-input" readonly data-report-edit-modified /></label>
+            </div>
+            </section>
+        </div>
+        <div class="settings-footer outbound-report-edit-footer">
+            <div class="outbound-report-enabled-toggle">
+                <label class="configuration-switch" title="Enable or disable this Report"><input type="checkbox" aria-label="Enabled" data-report-edit-enabled /><span></span></label>
+                <span>Enabled</span>
+            </div>
+            <button type="button" class="secondary-button" data-report-edit-close>Close</button>
+            <button type="button" class="primary-button" data-report-edit-save>Save Report</button>
+        </div>
+    </div>
+</dialog>
+
+<dialog class="new-task-dialog task-import-dialog" data-report-import-dialog>
+    <form class="new-task-card task-import-card" data-report-import-form>
+        <div class="settings-header">
+            <div><h2>Import Reports</h2><p>Import one or more saved Report definitions previously exported from MAUI.</p></div>
+            <button type="button" class="dialog-close" data-report-import-close aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body">
+            <div class="inline-alert error-alert" data-report-import-error hidden></div>
+
+            <label class="field-block full-span"><span>MAUI Export File</span><input class="text-input task-import-file" type="file" accept=".maui,application/zip,application/octet-stream" data-report-import-file /><small>Select a .maui Report export file. Maximum size: 50 MB.</small></label>
+            <div class="inline-alert info-alert"><strong>Imported Reports are created disabled.</strong> Review each schedule, recipients, environment, and Data Access readiness before enabling delivery.</div>
+            <div class="task-import-validation" data-report-import-validation hidden><strong>Validation</strong><div class="task-import-validation-list" data-report-import-validation-list></div></div>
+
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-report-import-cancel>Cancel</button>
+            <button type="submit" class="primary-button" data-report-import-submit disabled><span class="inline-spinner button-spinner" data-report-import-spinner hidden aria-hidden="true"></span><span data-report-import-submit-label>Import Reports</span></button>
+        </div>
+    </form>
+</dialog>
+
+<partial name="_ReportDeleteDialog" />

@@ -1,0 +1,23 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   This Razor file is part of the MAUI application. *@
+@{
+    var lastRefreshUtc = ViewData["HostLastRefreshUtc"] is System.DateTimeOffset value ? value.ToString("O") : string.Empty;
+}
+<div class="task-refresh-control" data-host-refresh-control data-last-refresh-utc="@lastRefreshUtc">
+    <span class="task-last-refresh" data-host-last-refresh aria-live="polite">Last Refresh: --:--:--</span>
+    <div class="menu-control task-refresh-menu" data-menu>
+        <button type="button"
+                class="task-refresh-clock-button"
+                data-menu-button
+                data-host-refresh-clock
+                aria-label="Host refresh options"
+                title="Host refresh options">
+            <span class="icon"><partial name="_Icon" model="@("clock")" /></span>
+        </button>
+        <div class="dropdown-menu dropdown-right task-refresh-menu-panel" data-menu-panel>
+            <button type="button" data-host-refresh-toggle>Pause Refresh</button>
+            <button type="button" data-host-refresh-now>Refresh Now</button>
+        </div>
+    </div>
+</div>

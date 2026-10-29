@@ -1,0 +1,187 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI *@
+@model KeysAndCertificatesPageViewModel
+@{
+    ViewData["Title"] = "Keys and Certificates";
+    ViewData["GridDeferInitialLoad"] = true;
+    ViewData["GridSearchPrefixPartial"] = "_KeyCertificateTypeFilter";
+    ViewData["GridToolbarRightPrefixPartial"] = "_KeyCertificateRefreshControls";
+    ViewData["KeyCertificateLastRefreshUtc"] = Model.LastRefreshUtc;
+}
+<div class="page-heading compact-heading"><div><h1>Keys and Certificates</h1><p>@(Model.PgpLicensed ? "Review and manage MOVEit SSH keys, PGP keys, and TLS certificates." : "Review and manage MOVEit SSH keys and TLS certificates.")</p></div></div>
+@if (TempData["KeyCertificateLoadError"] is string loadError && !string.IsNullOrWhiteSpace(loadError)) { <div class="inline-alert error-alert">@loadError</div> }
+<partial name="_DataGrid" model="Model.Grid" />
+<form class="task-antiforgery" hidden>@Html.AntiForgeryToken()</form>
+<div data-key-certificate-page-config
+     data-login-url="@Url.Action("SessionExpired", "Account")"
+     data-create-ssh-key-url="@Url.Action("CreateSshKey", "Resources")"
+     data-audit-report-url="@Url.Action("Audit", "Records")"
+     data-create-tls-certificate-url="@Url.Action("CreateTlsCertificate", "Resources")"
+     data-create-pgp-key-url="@Url.Action("CreatePgpKey", "Resources")"
+     data-import-key-certificate-url="@Url.Action("ImportKeyCertificate", "Resources")"
+     data-key-certificate-export-options-url="@Url.Action("KeyCertificateExportOptions", "Resources")"
+     data-export-key-certificate-url="@Url.Action("ExportKeyCertificate", "Resources")"
+     data-key-certificate-details-url="@Url.Action("KeyCertificateDetails", "Resources")"
+     data-save-key-certificate-metadata-url="@Url.Action("SaveKeyCertificateMetadata", "Resources")"
+     data-preflight-delete-key-certificate-url="@Url.Action("PreflightDeleteKeyCertificate", "Resources")"
+     data-delete-key-certificate-url="@Url.Action("DeleteKeyCertificate", "Resources")"
+     data-preflight-delete-key-certificates-url="@Url.Action("PreflightDeleteKeyCertificates", "Resources")"
+     data-delete-key-certificates-url="@Url.Action("DeleteKeyCertificates", "Resources")"
+     data-initial-key-certificate-grid-url="@Url.Action("InitialKeysAndCertificatesGrid", "Resources")"
+     data-refresh-key-certificate-grid-url="@Url.Action("RefreshKeysAndCertificatesGrid", "Resources")"
+     data-ui-key-certificate-refresh-seconds="@Model.UiKeyCertificateRefreshIntervalSeconds"
+     data-pgp-licensed="@Model.PgpLicensed.ToString().ToLowerInvariant()"
+     data-prepare-task-edit-url="@Url.Action("PrepareTaskEdit", "Tasks")"
+     data-mark-task-edited-url="@Url.Action("MarkTaskEdited", "Tasks")"
+     data-prepare-host-edit-url="@Url.Action("PrepareHostEdit", "Hosts")"
+     data-mark-host-edited-url="@Url.Action("MarkHostEdited", "Hosts")"></div>
+
+<div class="task-row-action-menu" data-key-certificate-row-action-menu role="menu" aria-label="Key or Certificate actions" hidden>
+    <button type="button" role="menuitem" data-key-certificate-row-command="information" data-key-certificate-information-command>Key Information</button>
+    <button type="button" role="menuitem" data-key-certificate-row-command="export" data-key-certificate-export-command>Export</button>
+    <button type="button" role="menuitem" data-key-certificate-row-command="audit">View Audit Records</button>
+    <div class="task-row-action-divider" role="separator"></div>
+    <button type="button" role="menuitem" class="task-row-danger-action" data-key-certificate-row-command="delete">Delete Key/Certificate</button>
+</div>
+
+<dialog class="new-task-dialog" data-new-ssh-key-dialog>
+<form class="new-task-card" data-new-ssh-key-form>
+<header class="script-editor-header"><div class="script-editor-title-wrap"><span class="script-editor-icon" aria-hidden="true"><partial name="_Icon" model="@("key")" /></span><div><h2>New SSH Key</h2><p>Create a new MOVEit SSH Client Key.</p></div></div><button type="button" class="dialog-close" data-new-ssh-key-close aria-label="Close">×</button></header>
+<div class="new-task-body">
+    <div class="inline-alert error-alert full-span" data-new-ssh-key-error hidden></div>
+
+<partial name="_ObjectCreationResourceGroup" model="@("SSH")" />
+<label class="field-block full-span"><span>Name</span><input class="text-input" type="text" autocomplete="off" data-new-ssh-key-name /></label>
+<label class="field-block"><span>Key Type</span><select class="text-input" data-new-ssh-key-type><option value="RSA">RSA</option><option value="DSA">DSA</option><option value="ECDSA">ECDSA</option><option value="Ed25519">Ed25519</option></select></label>
+<label class="field-block"><span>Key Size</span><select class="text-input" data-new-ssh-key-size></select></label>
+
+</div>
+<div class="settings-footer new-task-footer"><button type="button" class="secondary-button" data-new-ssh-key-cancel>Close</button><button type="submit" class="primary-button new-task-submit" data-new-ssh-key-submit><span class="inline-spinner button-spinner" data-new-ssh-key-spinner hidden></span><span data-new-ssh-key-submit-label>Create SSH Key</span></button></div>
+</form></dialog>
+
+<dialog class="new-task-dialog" data-new-tls-certificate-dialog>
+<form class="new-task-card" data-new-tls-certificate-form novalidate>
+<header class="script-editor-header"><div class="script-editor-title-wrap"><span class="script-editor-icon" aria-hidden="true"><partial name="_Icon" model="@("certificate")" /></span><div><h2>New TLS Certificate</h2><p>Create a new MOVEit TLS Certificate.</p></div></div><button type="button" class="dialog-close" data-new-tls-certificate-close aria-label="Close">×</button></header>
+<div class="new-task-body new-tls-certificate-body">
+    <div class="inline-alert error-alert full-span" data-new-tls-certificate-error hidden></div>
+
+<partial name="_ObjectCreationResourceGroup" model="@("TLS")" />
+<label class="field-block full-span"><span>Name</span><input class="text-input" type="text" maxlength="254" autocomplete="off" required data-new-tls-certificate-name /></label>
+<label class="field-block full-span"><span>Email Address (optional)</span><input class="text-input" type="email" maxlength="254" autocomplete="off" data-new-tls-certificate-email /></label>
+<label class="field-block"><span>Country (optional)</span><input class="text-input" type="text" maxlength="254" autocomplete="off" data-new-tls-certificate-country /></label>
+<label class="field-block"><span>State (optional)</span><input class="text-input" type="text" maxlength="254" autocomplete="off" data-new-tls-certificate-state /></label>
+<label class="field-block"><span>Organization (optional)</span><input class="text-input" type="text" maxlength="254" autocomplete="off" data-new-tls-certificate-organization /></label>
+<label class="field-block"><span>Organizational Unit (optional)</span><input class="text-input" type="text" maxlength="254" autocomplete="off" data-new-tls-certificate-organizational-unit /></label>
+<label class="field-block"><span>Expires After</span><select class="text-input" required data-new-tls-certificate-expires-after><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option></select></label>
+<label class="field-block"><span>Expiration Unit</span><select class="text-input" required data-new-tls-certificate-expire-unit><option value="Years" selected>Years</option><option value="Months">Months</option></select></label>
+<label class="field-block"><span>Key Size</span><select class="text-input" required data-new-tls-certificate-key-size><option value="1024" selected>1024</option><option value="2048">2048</option><option value="3072">3072</option><option value="4096">4096</option></select></label>
+
+</div>
+<div class="settings-footer new-task-footer"><button type="button" class="secondary-button" data-new-tls-certificate-cancel>Close</button><button type="submit" class="primary-button new-task-submit" data-new-tls-certificate-submit><span class="inline-spinner button-spinner" data-new-tls-certificate-spinner hidden></span><span data-new-tls-certificate-submit-label>Create TLS Certificate</span></button></div>
+</form></dialog>
+
+@if (Model.PgpLicensed)
+{
+    <dialog class="new-task-dialog" data-new-pgp-key-dialog>
+    <form class="new-task-card" data-new-pgp-key-form novalidate>
+    <header class="script-editor-header"><div class="script-editor-title-wrap"><span class="script-editor-icon" aria-hidden="true"><partial name="_Icon" model="@("key")" /></span><div><h2>New PGP Key</h2><p>Create a new MOVEit PGP private/public key pair.</p></div></div><button type="button" class="dialog-close" data-new-pgp-key-close aria-label="Close">×</button></header>
+    <div class="new-task-body new-pgp-key-body">
+        <div class="inline-alert error-alert full-span" data-new-pgp-key-error hidden></div>
+
+    <partial name="_ObjectCreationResourceGroup" model="@("PGP")" />
+    <label class="field-block full-span"><span>Name</span><input class="text-input" type="text" maxlength="254" autocomplete="off" required data-new-pgp-key-name /></label>
+    <label class="field-block full-span"><span>Email Address (optional)</span><input class="text-input" type="email" maxlength="254" autocomplete="off" data-new-pgp-key-email /></label>
+    <div class="new-pgp-key-control-row new-pgp-key-control-row-three">
+    <label class="field-block"><span>Format</span><select class="text-input" required data-new-pgp-key-type><option value="RSA" selected>RSA</option><option value="DSS">DSS</option></select></label>
+    <label class="field-block"><span>Length</span><select class="text-input" required data-new-pgp-key-length><option value="1024" selected>1024</option><option value="2048">2048</option><option value="4096">4096</option></select></label>
+    <label class="field-block"><span>Signing Algorithm</span><select class="text-input" required data-new-pgp-key-hash-algorithm><option value="SHA256" selected>SHA256</option><option value="SHA512">SHA512</option></select></label>
+    </div>
+    <div class="new-pgp-key-control-row new-pgp-key-control-row-two">
+    <label class="field-block"><span>Expires After</span><select class="text-input" required data-new-pgp-key-expires-after><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option></select></label>
+    <label class="field-block"><span>Expiration Unit</span><select class="text-input" required data-new-pgp-key-expire-unit><option value="Years" selected>Years</option><option value="Months">Months</option></select></label>
+    </div>
+    <label class="field-block full-span"><span>Password (optional)</span><input class="text-input" type="password" autocomplete="new-password" data-new-pgp-key-password /></label>
+    <label class="field-block full-span"><span>Confirm Password</span><input class="text-input" type="password" autocomplete="new-password" data-new-pgp-key-confirm-password /></label>
+
+    </div>
+    <div class="settings-footer new-task-footer"><button type="button" class="secondary-button" data-new-pgp-key-cancel>Close</button><button type="submit" class="primary-button new-task-submit" data-new-pgp-key-submit><span class="inline-spinner button-spinner" data-new-pgp-key-spinner hidden></span><span data-new-pgp-key-submit-label>Create PGP Key</span></button></div>
+    </form></dialog>
+}
+
+
+<dialog class="new-task-dialog" data-import-key-certificate-dialog>
+<form class="new-task-card" data-import-key-certificate-form novalidate enctype="multipart/form-data">
+<div class="settings-header"><div><h2>Import Key or Certificate</h2><p>@(Model.PgpLicensed ? "Import an existing SSH key, TLS certificate, or PGP key into MOVEit." : "Import an existing SSH key or TLS certificate into MOVEit.")</p></div><button type="button" class="dialog-close" data-import-key-certificate-close aria-label="Close">×</button></div>
+<div class="new-task-body">
+    <div class="inline-alert error-alert full-span" data-import-key-certificate-error hidden></div>
+
+<label class="field-block full-span">
+    <span>Type</span>
+    <select class="text-input" required data-import-key-certificate-type>
+        <option value="SSH" selected>SSH Key</option>
+        <option value="TLS">TLS Certificate</option>
+        @if (Model.PgpLicensed)
+        {
+            <option value="PGP">PGP Key</option>
+        }
+    </select>
+</label>
+<label class="field-block full-span" data-import-key-certificate-name-field><span>Name</span><input class="text-input" type="text" maxlength="254" autocomplete="off" data-import-key-certificate-name /></label>
+<partial name="_ObjectCreationResourceGroup" model="@("KeyImport")" />
+<label class="field-block full-span"><span>File</span><input class="text-input" type="file" accept=".key" required data-import-key-certificate-file /><small class="field-help" data-import-key-certificate-file-help>Select a .key SSH private key file.</small></label>
+<label class="field-block full-span"><span>Password (optional)</span><input class="text-input" type="password" autocomplete="current-password" data-import-key-certificate-password /><small class="field-help">Enter the existing file/key password when required. MAUI does not store this value.</small></label>
+
+</div>
+<div class="settings-footer new-task-footer"><button type="button" class="secondary-button" data-import-key-certificate-cancel>Cancel</button><button type="submit" class="primary-button new-task-submit" data-import-key-certificate-submit><span class="inline-spinner button-spinner" data-import-key-certificate-spinner hidden></span><span data-import-key-certificate-submit-label>Import</span></button></div>
+</form></dialog>
+
+<dialog class="new-task-dialog" data-export-key-certificate-dialog aria-labelledby="export-key-certificate-title">
+<form class="new-task-card" data-export-key-certificate-form novalidate>
+<header class="script-editor-header"><div class="script-editor-title-wrap"><span class="script-editor-icon" aria-hidden="true"><partial name="_Icon" model="@("certificate")" /></span><div><h2 id="export-key-certificate-title" data-export-key-certificate-title>Export Key/Certificate</h2><p data-export-key-certificate-name></p></div></div><button type="button" class="dialog-close" data-export-key-certificate-close aria-label="Close">×</button></header>
+<div class="new-task-body">
+    <div class="inline-alert error-alert" data-export-key-certificate-error role="alert" hidden></div>
+    <div class="details-loading" data-export-key-certificate-loading role="status"><span class="inline-spinner" aria-hidden="true"></span><span>Loading...</span></div>
+    <div class="key-certificate-export-fields" data-export-key-certificate-fields hidden>
+        <label class="native-portability-option"><input type="checkbox" data-export-key-certificate-private /><span>Include Private Key</span></label>
+        <small class="field-help" data-export-key-certificate-public-only hidden>This is a public-only PGP key. No private key is available to export.</small>
+        <div class="key-certificate-export-password-fields" data-export-key-certificate-password-fields hidden>
+            <label class="field-block"><span>Export Password</span><input class="text-input" type="password" autocomplete="new-password" data-export-key-certificate-password /></label>
+            <label class="field-block"><span>Confirm Export Password</span><input class="text-input" type="password" autocomplete="new-password" data-export-key-certificate-confirm /></label>
+        </div>
+    </div>
+</div>
+<div class="settings-footer new-task-footer"><button type="button" class="secondary-button" data-export-key-certificate-close>Close</button><button type="submit" class="primary-button new-task-submit" data-export-key-certificate-submit disabled><span class="inline-spinner button-spinner" data-export-key-certificate-spinner hidden></span><span data-export-key-certificate-submit-label>Export</span></button></div>
+</form></dialog>
+
+<dialog class="new-task-dialog" data-delete-key-certificate-dialog><div class="new-task-card">
+<div class="settings-header"><div><h2 data-delete-key-certificate-title>Delete Key/Certificate</h2><p>Permanently removes the selected MOVEit resource or resources.</p></div><button type="button" class="dialog-close" data-delete-key-certificate-no aria-label="Close">×</button></div>
+<div class="new-task-body">
+    <div class="inline-alert error-alert" data-delete-key-certificate-error hidden></div>
+<p data-delete-key-certificate-message></p><p><strong>This action cannot be undone.</strong></p></div>
+<div class="settings-footer new-task-footer"><button type="button" class="secondary-button" data-delete-key-certificate-no>Cancel</button><button type="button" class="danger-button" data-delete-key-certificate-yes>Yes, Delete</button></div>
+</div></dialog>
+
+<dialog class="task-details-dialog" data-key-certificate-details-dialog>
+<form method="dialog" class="task-details-card" data-key-certificate-details-form>
+<div class="settings-header"><div><h2 data-key-certificate-details-title>Key Information</h2><p data-key-certificate-details-subtitle>MOVEit identity, MAUI metadata, and Task/Host usage.</p></div><button type="submit" class="dialog-close" aria-label="Close">×</button></div>
+<div class="task-details-tabs" role="tablist"><button type="button" class="task-details-tab active" data-key-certificate-details-tab="information">Information</button><button type="button" class="task-details-tab" data-key-certificate-details-tab="dependencies" data-key-certificate-dependencies-tab-label>Tasks &amp; Hosts</button></div>
+<div class="task-details-body">
+    <div class="inline-alert error-alert" data-key-certificate-details-error hidden></div>
+<div class="details-loading" data-key-certificate-details-loading role="status" aria-live="polite" aria-label="Loading key or certificate information"><span class="inline-spinner" aria-hidden="true"></span><span>Loading...</span></div><div data-key-certificate-details-content hidden>
+<div data-key-certificate-details-panel="information">
+<section class="details-section"><div class="details-section-heading maui-object-properties-heading"><div class="task-identity-row maui-object-identity key-certificate-identity" aria-label="Key or certificate identity"><div class="task-identity-item"><span>Type</span><strong data-key-certificate-type></strong></div><div class="task-identity-item"><span>ID</span><strong data-key-certificate-id></strong></div><div class="task-identity-item" data-key-certificate-key-type-field hidden><span>Key Type</span><strong data-key-certificate-key-type></strong></div></div><span class="source-badge">MOVEit</span></div><div class="details-grid"><label class="field-block full-span"><span>Name</span><input class="text-input" type="text" data-key-certificate-name readonly /></label><label class="field-block full-span"><span>Resource Groups</span><input class="text-input" data-key-certificate-resource-groups readonly /></label></div></section>
+<section class="details-section" data-key-certificate-native-details hidden><div class="details-section-heading"><h3 data-key-certificate-native-title>Key Details</h3><span class="source-badge">MOVEit</span></div><div class="details-grid" data-key-certificate-native-fields></div></section>
+<section class="details-section"><div class="details-section-heading"><h3>Additional Information</h3><span class="source-badge local-badge">MAUI</span></div><div class="details-grid" data-key-certificate-metadata-fields></div></section>
+<section class="details-section audit-section"><div class="details-section-heading"><h3>Key Metadata</h3><span class="source-badge local-badge">MAUI</span></div><div class="audit-grid" data-key-certificate-metadata-audit></div></section>
+</div>
+<div data-key-certificate-details-panel="dependencies" hidden>
+<section class="details-section"><div class="details-section-heading details-related-tasks-heading"><div><h3>Assigned Tasks</h3><p>Visible Tasks that reference this Key/Certificate.</p></div></div><div class="host-tasks-empty" data-key-certificate-tasks-empty hidden>No visible Tasks currently reference this Key/Certificate.</div><div class="host-tasks-list" data-key-certificate-tasks-list hidden><div class="host-tasks-header"><div>Task ID</div><div>Task Name</div></div><div data-key-certificate-tasks-rows></div></div></section>
+<section class="details-section" data-key-certificate-hosts-section><div class="details-section-heading"><h3>Hosts</h3></div><div class="host-tasks-empty" data-key-certificate-hosts-empty hidden>No visible hosts currently reference this key or certificate.</div><div class="host-tasks-list" data-key-certificate-hosts-list hidden><div class="host-tasks-header"><div>Host ID</div><div>Host Name</div></div><div data-key-certificate-hosts-rows></div></div></section>
+</div>
+</div></div>
+<div class="settings-footer"><button type="button" class="secondary-button" data-key-certificate-details-cancel>Close</button><button type="button" class="primary-button" data-key-certificate-details-save>Save</button></div>
+</form></dialog>
+
+@section Scripts {
+<script src="~/js/keys-certificates.js" asp-append-version="true"></script>
+}

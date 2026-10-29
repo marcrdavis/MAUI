@@ -1,0 +1,27 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.9.12120.119
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MoveItAutomationUI", "MoveItAutomationUI.csproj", "{8B6D1F68-6A93-49F6-95EC-6A5A47201C21}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MoveItAutomationUI.Tests", "MoveItAutomationUI.Tests\MoveItAutomationUI.Tests.csproj", "{B3AF4E87-65CE-43DA-BE7E-C56C95EF4077}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8B6D1F68-6A93-49F6-95EC-6A5A47201C21}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8B6D1F68-6A93-49F6-95EC-6A5A47201C21}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8B6D1F68-6A93-49F6-95EC-6A5A47201C21}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8B6D1F68-6A93-49F6-95EC-6A5A47201C21}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B3AF4E87-65CE-43DA-BE7E-C56C95EF4077}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B3AF4E87-65CE-43DA-BE7E-C56C95EF4077}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B3AF4E87-65CE-43DA-BE7E-C56C95EF4077}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B3AF4E87-65CE-43DA-BE7E-C56C95EF4077}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

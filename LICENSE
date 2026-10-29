@@ -1,0 +1,190 @@
+MAUI Community Source License 1.0
+
+Copyright (C) 2026 Marc R. Davis
+
+1. Purpose
+
+The MAUI Community Source License is intended to allow individuals and organizations to use, study, modify, and share MAUI while ensuring that:
+
+(a) MAUI and distributed derivative works remain source-available;
+(b) modifications shared with others remain available under the same terms;
+(c) MAUI is not converted into proprietary software; and
+(d) MAUI or a derivative work is not sold or commercially licensed as a software product or paid hosted service without separate permission from the copyright holder.
+
+This is a source-available software license. Because it restricts certain commercial uses, it is not an Open Source Initiative approved open-source license.
+
+2. Definitions
+
+"Software" means the MAUI software, Source Code, documentation, scripts, configuration templates, integration assets, and other materials distributed with this license.
+
+"Licensor" means Marc R. Davis or any successor copyright holder authorized to offer the Software under this license.
+
+"You" means the individual or legal entity exercising rights granted by this license.
+
+"Source Code" means the preferred form of the Software for making modifications.
+
+"Modified Work" means any modification, adaptation, enhancement, derivative work, or other software incorporating a material portion of the Software or its Source Code.
+
+A work that merely communicates with an unmodified copy of the Software through a documented interface or protocol, without incorporating or adapting Software Source Code, is not a Modified Work solely because of that communication.
+
+"Complete Corresponding Source" means all Source Code reasonably necessary to build, install, run, and modify the version of the Software or Modified Work being provided, excluding generally available operating-system components, development tools, and third-party dependencies that are independently obtainable.
+
+"Internal Use" means use within an individual or organization for its own operations, employees, contractors, systems, or infrastructure, where access to the Software itself is not being sold or commercially provided to third parties.
+
+"Commercial Software Offering" means providing the Software or a Modified Work in exchange for money or other commercial consideration, including selling it, licensing it for a fee, renting or leasing it, including it as a paid software product, charging for access to it as a hosted or subscription service, or incorporating it into a commercial product whose value materially includes the Software.
+
+3. License Grant
+
+Subject to compliance with this license, the Licensor grants You a worldwide, royalty-free, non-exclusive copyright license to use, copy, run, study, modify, create Modified Works from, distribute, and redistribute the Software for the purposes permitted by this license.
+
+No rights are granted except those expressly stated in this license or otherwise provided by applicable law.
+
+4. Permitted Internal Business Use
+
+Commercial businesses, governmental entities, nonprofit organizations, educational institutions, and other organizations may use the Software and Modified Works for Internal Use.
+
+Internal business use is permitted even when the organization itself operates for profit. For example, an organization may use MAUI internally to administer or operate its own MOVEit Automation environment without paying a software license fee to the Licensor.
+
+Internal Use does not permit an organization to sell access to MAUI, resell MAUI, commercially license MAUI, or provide MAUI itself to customers as a paid product or hosted service.
+
+5. Modification
+
+You may modify the Software and create Modified Works for any use permitted by this license.
+
+You must preserve all copyright, attribution, license, disclaimer, and third-party notices included with the Software.
+
+A Modified Work that is distributed or made available to third parties must clearly identify that it has been modified and must not falsely represent itself as an official release of MAUI or as having been approved by the original project unless such approval has been given in writing.
+
+6. Reciprocal Source Requirement
+
+If You distribute a Modified Work to another person or organization, You must:
+
+(a) make its Complete Corresponding Source available to every recipient at no additional software-license charge;
+(b) license the Modified Work in its entirety under this same MAUI Community Source License;
+(c) provide a copy of this license with the Modified Work;
+(d) preserve applicable copyright, attribution, and disclaimer notices; and
+(e) clearly identify material changes You made.
+
+You may not impose additional terms that prevent recipients from exercising the rights granted by this license.
+
+You may charge reasonable costs associated with physical media, copying, delivery, or professional services, but You may not charge a software license fee for MAUI or a Modified Work.
+
+7. Network Use of Modified Works
+
+If You operate a Modified Work in a manner that allows third parties outside Your organization to interact with or receive functionality from the Modified Work over a computer network, You must make the Complete Corresponding Source of that Modified Work available to those users under this license.
+
+Providing such source through a clearly visible link within the application, its documentation, or another readily accessible location satisfies this requirement.
+
+This section does not require publication of modifications used exclusively for Internal Use.
+
+8. Commercial Software Restrictions
+
+You may not, without separate written permission from the Licensor:
+
+(a) sell the Software or a Modified Work as a software product;
+(b) charge a software license fee for the Software or a Modified Work;
+(c) rent, lease, sublicense for a fee, or commercially resell the Software or a Modified Work;
+(d) offer the Software or a Modified Work as a paid hosted service, SaaS offering, subscription product, or managed software product;
+(e) bundle the Software or a Modified Work into another commercial software product where access to the Software forms a material part of what customers purchase;
+(f) offer a proprietary or closed-source Modified Work;
+(g) use the Software primarily as the basis of a competing commercial software product; or
+(h) remove or circumvent the source-availability requirements of this license.
+
+A separate commercial license may be granted by the Licensor at the Licensor's discretion.
+
+9. Professional Services
+
+This license does not prohibit charging reasonable fees for professional services relating to the Software.
+
+Permitted professional services include installation, configuration, integration, migration, customization, training, troubleshooting, maintenance, consulting, and technical support.
+
+A service provider may perform such services for a customer for a fee provided that:
+
+(a) the fee is for professional services and not for the right to use the Software;
+(b) the customer receives the Software under this license;
+(c) any Modified Work distributed to or operated for the customer complies with the reciprocal Source Code requirements of this license; and
+(d) the service provider does not represent itself as the Licensor or an official MAUI vendor unless separately authorized.
+
+This permission does not authorize a paid hosted MAUI service or commercial software subscription.
+
+10. Redistribution of Unmodified Software
+
+You may redistribute unmodified copies of the Software without charge, provided that this license remains included, all copyright/attribution/disclaimer/third-party notices remain intact, Source Code remains available, and You do not represent the redistributed copy as Your proprietary software.
+
+Reasonable charges for physical media or delivery costs are permitted.
+
+11. Contributions
+
+Unless otherwise agreed in writing, if You intentionally submit Source Code or other material to the MAUI project for inclusion in the Software, You agree that Your contribution may be distributed under this license.
+
+By submitting a contribution, You represent that You have the legal right to provide that contribution under these terms.
+
+Submission of a contribution does not transfer copyright ownership unless separately agreed in writing.
+
+12. Patent License
+
+To the extent the Licensor owns or controls patent claims that would necessarily be infringed solely by exercising the rights granted under this license, the Licensor grants You a worldwide, royalty-free, non-exclusive patent license for those claims for uses permitted under this license.
+
+If You initiate a patent infringement claim alleging that the Software or a contribution to the Software infringes a patent, any patent license granted to You under this section terminates as of the date that claim is initiated.
+
+13. Trademarks and Names
+
+This license does not grant permission to use any trademark, service mark, logo, product name, or trade name of the Licensor except as reasonably necessary to describe the origin of the Software, comply with attribution requirements, or state truthfully that a work is based on or derived from MAUI.
+
+Modified versions must not imply sponsorship, certification, endorsement, or approval by the Licensor without written permission.
+
+MOVEit, MOVEit Automation, Progress, and other third-party names or marks referenced by the Software remain the property of their respective owners. No rights to third-party trademarks are granted by this license.
+
+14. Third-Party Components
+
+The Software may depend upon or interact with third-party software that is distributed under separate license terms.
+
+This license applies only to material for which the Licensor has authority to grant rights. Nothing in this license changes, replaces, or overrides the applicable license terms of third-party software. You are responsible for complying with applicable third-party licenses.
+
+15. Compliance and Termination
+
+Your rights under this license are conditioned upon compliance with its terms. If You violate this license, Your rights under it terminate.
+
+For a first violation capable of correction, Your rights will be reinstated if You correct the violation, cease any prohibited activity, and take reasonable steps to remedy prior noncompliance within 30 days after receiving written notice of the violation.
+
+Reinstatement following repeated violations is at the discretion of the Licensor.
+
+Termination does not affect licenses previously and validly granted to recipients who remain in compliance with this license.
+
+16. No Warranty
+
+THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE," WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE LICENSOR DISCLAIMS ALL WARRANTIES, INCLUDING WITHOUT LIMITATION WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, NON-INFRINGEMENT, ACCURACY, RELIABILITY, SECURITY, AVAILABILITY, AND FITNESS FOR PRODUCTION USE.
+
+YOU ARE SOLELY RESPONSIBLE FOR EVALUATING, TESTING, DEPLOYING, SECURING, BACKING UP, AND OPERATING THE SOFTWARE.
+
+17. Limitation of Liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE LICENSOR, CONTRIBUTORS, AND COPYRIGHT HOLDERS WILL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR FOR ANY LOSS OF DATA, REVENUE, PROFITS, BUSINESS, SERVICE, GOODWILL, OR SYSTEM AVAILABILITY, ARISING FROM OR RELATED TO THE SOFTWARE OR THIS LICENSE, REGARDLESS OF THE THEORY OF LIABILITY AND EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+18. No Affiliation or Endorsement
+
+MAUI is an independent project.
+
+Unless expressly stated otherwise, MAUI and its Licensor are not affiliated with, sponsored by, endorsed by, or officially supported by Progress Software Corporation.
+
+References to Progress Software products are provided solely to describe interoperability and intended use.
+
+19. No Additional Rights
+
+This license does not require the Licensor to provide support, maintenance, updates, corrections, compatibility with any third-party product, or acceptance of contributions.
+
+The Licensor may distribute the Software under additional or different license terms, including commercial terms.
+
+20. Severability
+
+If any provision of this license is determined to be unenforceable, that provision will be enforced to the maximum extent permitted by law, and the remaining provisions will continue in effect.
+
+21. Entire License
+
+This license states the terms under which the Licensor grants rights to the Software.
+
+No waiver or modification of these terms is effective unless made in writing by the Licensor.
+
+MAUI Community Source License 1.0

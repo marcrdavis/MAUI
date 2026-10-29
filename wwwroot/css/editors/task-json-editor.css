@@ -1,0 +1,71 @@
+/* Reuse shared modal, header, tab, form, table and footer branding. Only the JSON workspace adds layout. */
+.task-json-card { width: min(1440px, calc(100vw - 40px)); height: min(880px, calc(100dvh - 40px)); max-height: calc(100dvh - 40px); display: flex; flex-direction: column; }
+.task-json-card > header, .task-json-card > .task-details-tabs, .task-json-card > footer { flex: 0 0 auto; }
+.task-json-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 18px 22px; }
+.task-json-body > [hidden], .task-json-card [hidden] { display: none; }
+.task-json-edit-layout { display: grid; grid-template-columns: minmax(260px, .9fr) minmax(0, 1.3fr); gap: 18px; height: 100%; min-height: 0; }
+.task-json-tree-panel, .task-json-value-panel { min-width: 0; overflow: auto; margin: 0; }
+.task-json-tree-panel { display: flex; flex-direction: column; }
+.task-json-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.task-json-heading > div { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.task-json-card .secondary-button, .task-json-card .primary-button { white-space: nowrap; }
+.task-json-heading h3, .task-json-result-heading h3, .task-json-value-fields h3 { margin: 0; font-size: 15px; }
+.task-json-tree-search { margin: 12px 14px 8px; }
+.task-json-tree { overflow: auto; padding: 0 14px 14px; min-height: 0; flex: 1; font-size: 12px; }
+.task-json-tree details { margin: 5px 0; }
+.task-json-tree summary { padding: 7px 4px; overflow-wrap: anywhere; }
+.task-json-tree summary > span { display: inline; margin-left: 8px; color: var(--text-soft); font-size: 11px; }
+.task-json-branch { margin: 0 0 4px 8px; padding-left: 12px; border-left: 1px solid var(--border); }
+.task-json-leaf { display: block; width: 100%; text-align: left; border: 0; border-radius: 4px; background: transparent; color: var(--text); padding: 7px 8px; overflow-wrap: anywhere; }
+.task-json-leaf[aria-pressed="true"] { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); box-shadow: inset 3px 0 var(--accent); }
+.task-json-leaf[data-readonly="true"] { color: var(--text-soft); }
+.task-json-task-tools { display: flex; flex-wrap: wrap; gap: 10px; padding: 5px 4px; }
+.task-json-task-message { margin: 4px 0 8px; color: var(--danger); overflow-wrap: anywhere; }
+.task-json-value-fields { display: grid; gap: 12px; padding: 16px; }
+.task-json-value-fields .field-block, .task-json-find-fields .field-block { margin: 0; min-width: 0; }
+.task-json-card .text-input { font: inherit; font-size: 12px; }
+/* A single-line scalar uses the same centered 42px geometry as the other MAUI fields.
+   Keep real multiline strings editable without trimming or changing their contents. */
+.task-json-card .task-json-value-input { height: 42px; min-height: 42px; padding: 10px 11px; line-height: 20px; resize: vertical; }
+.task-json-card .task-json-value-input.is-multiline { height: 100px; }
+.task-json-code { font-family: Consolas, "Cascadia Mono", monospace; font-size: 12px; }
+.task-json-context { margin: 0; padding: 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 200px; overflow: auto; }
+.task-json-buttons { display: flex; justify-content: flex-end; padding: 0; }
+.task-json-find-fields { padding: 16px; display: grid; grid-template-columns: minmax(160px,.75fr) minmax(220px,1.4fr) minmax(150px,.8fr) minmax(150px,.8fr); gap: 14px; }
+.task-json-find-fields + .task-json-buttons { padding: 0 16px 16px; }
+.task-json-body > [data-task-json-panel="replace"]:not([hidden]),
+.task-json-body > [data-task-json-panel="review"]:not([hidden]) { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.task-json-body > [data-task-json-panel] > .configuration-card { flex: 0 0 auto; }
+.task-json-result-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 18px 0 12px; }
+.task-json-result-heading, .task-json-apply-changes { flex: 0 0 auto; }
+[data-task-json-panel="review"] > .task-json-result-heading { margin-top: 0; }
+.task-json-result-heading > span { color: var(--text-soft); font-size: 12px; }
+.task-json-card .task-json-results.table-card { display: flex; flex-direction: column; flex: 1 1 180px; min-height: 180px; }
+.task-json-card .task-json-results > .table-scroll { flex: 1 1 auto; min-height: 100px; overflow: auto; }
+.task-json-table.data-grid-table { width: 100%; table-layout: fixed; }
+.task-json-table th { width: auto; white-space: nowrap; vertical-align: middle; position: sticky; top: 0; z-index: 1; }
+.task-json-table td { width: auto; vertical-align: middle; overflow-wrap: anywhere; white-space: pre-wrap; padding: 10px; line-height: 1.45; }
+.task-json-table th:first-child { width: 40%; }
+.task-json-table:has(.task-json-select-cell) th:first-child { width: 34px; }
+.task-json-table:has(.task-json-select-cell) th:nth-child(2) { width: 38%; }
+.task-json-table .task-json-select-cell { width: 34px; text-align: center; padding-left: 8px; padding-right: 8px; }
+.task-json-table input[type="checkbox"] { margin: 0; vertical-align: middle; }
+.task-json-path { display: block; color: var(--text-soft); font-size: 11px; margin-top: 4px; }
+.task-json-table .task-json-row-error td { background: color-mix(in srgb, var(--danger) 9%, var(--surface)); }
+.task-json-table .task-json-row-warning td { background: color-mix(in srgb, var(--warning) 9%, var(--surface)); }
+.task-json-table .task-json-row-unchanged td { color: var(--text-soft); background: var(--surface-2); }
+.task-json-results > .grid-pager { flex: 0 0 auto; flex-wrap: wrap; gap: 8px; }
+.task-json-apply-changes { margin-top: 12px; }
+.task-json-card > footer > .maui-modal-feedback { max-width: none; }
+.task-json-save-progress { flex: 0 1 180px; min-width: 80px; }
+.task-json-save-progress progress { width: 100%; height: 12px; accent-color: var(--accent); }
+.task-json-card > footer > .maui-modal-feedback[data-task-json-saving="true"][data-feedback-kind="default"] { color: var(--text-soft); font-size: 11px; line-height: 1.45; }
+@media(max-width: 1050px) { .task-json-find-fields { grid-template-columns: 1fr 1fr; } }
+@media(max-width: 720px) {
+    .task-json-card { width: calc(100vw - 20px); height: calc(100dvh - 20px); max-height: calc(100dvh - 20px); }
+    .task-json-body { padding: 12px; }
+    .task-json-edit-layout { grid-template-columns: 1fr; height: auto; }
+    .task-json-tree-panel { max-height: 300px; }
+    .task-json-find-fields { grid-template-columns: 1fr; }
+    .task-json-table { min-width: 640px; }
+}

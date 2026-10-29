@@ -1,0 +1,164 @@
+@model MoveItAutomationUI.Models.NativePortabilityDialogViewModel
+@{
+    var objectType = string.IsNullOrWhiteSpace(Model.ObjectType) ? "Object" : Model.ObjectType;
+    var plural = string.IsNullOrWhiteSpace(Model.PluralLabel) ? objectType + "s" : Model.PluralLabel;
+    var hasSpreadsheetImport = Model.ShowLeaveTasksDisabled || Model.ShowHostSpreadsheetImport;
+}
+
+<partial name="_NativePortabilityExportDialog" model="Model" />
+
+<dialog class="new-task-dialog task-import-dialog" data-native-portability-import-dialog>
+    <form class="new-task-card task-import-card native-portability-import-card @(hasSpreadsheetImport ? "task-spreadsheet-import-card" : string.Empty)" data-native-portability-import-form>
+        <div class="settings-header">
+            @if (Model.ShowLeaveTasksDisabled)
+            {
+                <div><h2>Import @plural</h2><p>Import Tasks from a MAUI portability package or build Traditional Tasks from CSV/Excel.</p></div>
+            }
+            else if (Model.ShowHostSpreadsheetImport)
+            {
+                <div><h2>Import @plural</h2><p>Import Hosts from a MAUI portability package or create or update Hosts from CSV/Excel.</p></div>
+            }
+            else
+            {
+                <div><h2>Import @plural</h2><p>Decode the native MOVEit package, resolve conflicts, and restore compatible MAUI metadata.</p></div>
+            }
+            <button type="button" class="dialog-close" data-native-portability-import-close aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body task-import-body">
+            <div class="inline-alert error-alert" data-native-portability-import-error hidden></div>
+
+            @if (hasSpreadsheetImport)
+            {
+                <fieldset class="new-task-type-fieldset task-import-mode-fieldset task-import-source-fieldset">
+                    <legend>Import Source</legend>
+                    <label class="new-task-type-card">
+                        <input type="radio" name="@(Model.ShowHostSpreadsheetImport ? "hostImportMode" : "taskImportMode")" value="portability" checked />
+                        <span class="new-task-type-copy"><strong>MAUI Portability Package</strong><span>Import @plural and dependencies from an existing MAUI .maui package.</span></span>
+                    </label>
+                    <label class="new-task-type-card">
+                        <input type="radio" name="@(Model.ShowHostSpreadsheetImport ? "hostImportMode" : "taskImportMode")" value="spreadsheet" />
+                        <span class="new-task-type-copy"><strong>CSV / Excel</strong><span>@(Model.ShowHostSpreadsheetImport ? "Analyze CSV or XLSX data and create or update Hosts." : "Analyze CSV or XLSX data and create or update Traditional Tasks.")</span></span>
+                    </label>
+                </fieldset>
+            }
+
+            <div data-native-portability-import-panel>
+                <label class="field-block full-span">
+                    <span>MAUI Portability Package</span>
+                    <input class="text-input task-import-file" type="file" accept=".maui,application/octet-stream,application/zip" data-native-portability-import-file />
+                    <small>Select a current MAUI @objectType portability package. Maximum size: 50 MB.</small>
+                </label>
+                <label class="field-block full-span">
+                    <span>Passphrase <small>(Portable packages only)</small></span>
+                    <input class="text-input" type="password" minlength="16" autocomplete="off" data-native-portability-import-passphrase />
+                    <small>Portable package passphrases must be at least 16 characters and contain at least 1 uppercase letter, 1 lowercase letter, 1 digit, and 1 special character.</small>
+                </label>
+
+                @if (Model.ShowLeaveTasksDisabled)
+                {
+                    <label class="configuration-import-acknowledgement native-portability-option">
+                        <input type="checkbox" data-native-portability-leave-disabled checked />
+                        <span>Leave imported Tasks disabled</span>
+                    </label>
+                }
+
+                <div class="task-import-validation" data-native-portability-validation hidden>
+                    <h3>Import Preview</h3>
+                    <div class="task-import-validation-list" data-native-portability-summary></div>
+                    <div class="native-portability-conflicts" data-native-portability-conflicts></div>
+                </div>
+
+                <label class="configuration-import-acknowledgement task-import-missing-ack" data-native-portability-metadata-ack-row hidden>
+                    <input type="checkbox" data-native-portability-metadata-ack />
+                    <span>I understand that one or more MAUI metadata fields are not supported by this environment and will be ignored.</span>
+                </label>
+
+                <div class="inline-alert info-alert">
+                    MOVEit performs native credential decryption/re-encryption and dependency import. MAUI never asks for or exposes the plaintext Host password. MOVEit's successful native import response is discarded server-side and is not returned to the browser.
+                </div>
+            </div>
+
+            @if (Model.ShowLeaveTasksDisabled)
+            {
+                <div class="task-spreadsheet-import-panel" data-task-spreadsheet-import-panel hidden>
+                    <label class="field-block full-span">
+                        <span>CSV / Excel File</span>
+                        <input class="text-input task-import-file" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" data-task-spreadsheet-file />
+                        <small>Select a CSV or XLSX file. XLSX imports use the first worksheet. Maximum size: 50 MB.</small>
+                    </label>
+
+                    <div class="task-spreadsheet-options">
+                        <label class="field-block">
+                            <span>Task Name Prefix (optional)</span>
+                            <input class="text-input" type="text" maxlength="60" autocomplete="off" data-task-spreadsheet-prefix placeholder="e.g. PROD_" />
+                        </label>
+                        <div class="task-spreadsheet-checkboxes">
+                            <label class="configuration-import-acknowledgement native-portability-option">
+                                <input type="checkbox" data-task-spreadsheet-update-existing />
+                                <span>Update existing task if name already exists</span>
+                            </label>
+                            <label class="configuration-import-acknowledgement native-portability-option">
+                                <input type="checkbox" data-task-spreadsheet-leave-disabled checked />
+                                <span>Leave imported Tasks disabled</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="task-spreadsheet-analysis" data-task-spreadsheet-analysis hidden>
+                        <div class="task-spreadsheet-summary" data-task-spreadsheet-summary></div>
+                        <div class="task-spreadsheet-grid-frame">
+                            <table class="task-spreadsheet-grid" data-task-spreadsheet-grid>
+                                <thead data-task-spreadsheet-grid-head></thead>
+                                <tbody data-task-spreadsheet-grid-body></tbody>
+                            </table>
+                        </div>
+                        <div class="task-spreadsheet-grid-pagination" data-task-spreadsheet-grid-pagination hidden>
+                            <span data-task-spreadsheet-page-label></span>
+                            <div class="task-spreadsheet-page-controls">
+                                <button type="button" class="secondary-button" data-task-spreadsheet-page-prev>Previous</button>
+                                <button type="button" class="secondary-button" data-task-spreadsheet-page-next>Next</button>
+                            </div>
+                        </div>
+                        <section class="task-spreadsheet-results-panel" data-task-spreadsheet-results-panel hidden>
+                            <h3>Results</h3>
+                            <div class="task-spreadsheet-results-scroll" data-task-spreadsheet-results></div>
+                        </section>
+                    </div>
+                </div>
+            }
+            @if (Model.ShowHostSpreadsheetImport)
+            {
+                <partial name="_HostSpreadsheetImportPanel" />
+            }
+        </div>
+        <div class="settings-footer new-task-footer">
+            @if (Model.ShowLeaveTasksDisabled)
+            {
+                <div class="task-spreadsheet-footer-progress" data-task-spreadsheet-progress hidden>
+                    <span data-task-spreadsheet-progress-text>Import Progress</span>
+                    <div class="task-spreadsheet-progress-track"><div class="task-spreadsheet-progress-fill" data-task-spreadsheet-progress-fill></div></div>
+                </div>
+            }
+            @if (Model.ShowHostSpreadsheetImport)
+            {
+                <div class="task-spreadsheet-footer-progress" data-host-spreadsheet-progress hidden>
+                    <span data-host-spreadsheet-progress-text>Import Progress</span>
+                    <div class="task-spreadsheet-progress-track"><div class="task-spreadsheet-progress-fill" data-host-spreadsheet-progress-fill></div></div>
+                </div>
+            }
+            <button type="button" class="secondary-button" data-native-portability-import-cancel>Cancel</button>
+            <button type="submit" class="primary-button" data-native-portability-import-submit disabled data-native-portability-import-action>
+                <span data-native-portability-import-submit-label>Analyze Package</span>
+            </button>
+            @if (Model.ShowLeaveTasksDisabled)
+            {
+                <button type="button" class="primary-button" data-task-spreadsheet-action hidden disabled>Analyze File</button>
+            }
+            @if (Model.ShowHostSpreadsheetImport)
+            {
+                <button type="button" class="primary-button" data-host-spreadsheet-action hidden disabled>Analyze File</button>
+            }
+        </div>
+    </form>
+</dialog>
+

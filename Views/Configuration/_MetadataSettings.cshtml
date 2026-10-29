@@ -1,0 +1,93 @@
+@model ConfigurationSettingsViewModel
+
+<section class="configuration-section" data-config-section="metadata" data-search-terms="metadata custom fields import export excel xlsx tasks hosts scripts date lists global parameters keys certificates notes contact company reference">
+    <div class="configuration-section-heading">
+        <div><h2>Metadata</h2><p>Define MAUI-only metadata fields and maintain supported object metadata in bulk using Excel.</p></div>
+        <span class="configuration-state-badge live">Live Settings</span>
+    </div>
+    <div class="panel-card configuration-card">
+        <div class="configuration-card-heading row-heading">
+            <div><h3>Metadata Fields</h3><p>Choose a resource type, then add or modify the metadata fields shown in its information dialog and grid. Name is the stable identifier and becomes read-only after saving. MAUI-managed fields are shown read-only.</p></div>
+            <select class="text-input configuration-resource-select" data-metadata-resource-select>
+                @foreach (var resource in Model.MetadataResources)
+                {
+                    <option value="@resource.Key">@resource.Label</option>
+                }
+            </select>
+        </div>
+        @foreach (var resource in Model.MetadataResources)
+        {
+            <div class="configuration-resource-panel" data-metadata-resource="@resource.Key" data-metadata-allowed-types="@string.Join(",", resource.AllowedTypes)">
+                <div class="configuration-metadata-fields" data-metadata-fields>
+                    @foreach (var field in resource.Fields)
+                    {
+                        var isManagedTagsField = field.Type.Equals("Tags", StringComparison.OrdinalIgnoreCase);
+                        var managedTitle = isManagedTagsField ? "This Tags field is managed by MAUI and cannot be modified." : null;
+                        <div class="configuration-metadata-row" data-metadata-row data-metadata-persisted="true" data-metadata-system-managed="@(isManagedTagsField ? "true" : "false")" title="@managedTitle">
+                            <label class="configuration-metadata-control">
+                                <span>
+                                    Name
+                                    @if (isManagedTagsField)
+                                    {
+                                        <em class="configuration-metadata-managed-label">MAUI Managed</em>
+                                    }
+                                </span>
+                                <input class="text-input configuration-locked-input" value="@field.Name" readonly disabled="@(isManagedTagsField ? "disabled" : null)" data-metadata-field="name" />
+                            </label>
+                            <label class="configuration-metadata-control"><span>Label</span><input class="text-input" value="@field.Label" disabled="@(isManagedTagsField ? "disabled" : null)" data-metadata-field="label" /></label>
+                            <label class="configuration-metadata-control"><span>Type</span><select class="text-input" data-metadata-field="type" disabled="@(isManagedTagsField ? "disabled" : null)">
+                                @if (isManagedTagsField)
+                                {
+                                    <option value="Tags" selected>Tags</option>
+                                }
+                                else
+                                {
+                                    @foreach (var type in resource.AllowedTypes)
+                                    {
+                                        <option value="@type" selected="@(field.Type.Equals(type, StringComparison.OrdinalIgnoreCase) ? "selected" : null)">@type</option>
+                                    }
+                                }
+                            </select></label>
+                            <label class="configuration-metadata-control"><span>Possible Values</span><input class="text-input" value="@string.Join(", ", field.PossibleValues)" disabled="@(isManagedTagsField ? "disabled" : null)" data-metadata-field="possibleValues" /></label>
+                            <label class="configuration-required-check configuration-metadata-required"><span>Required</span><input type="checkbox" @(field.Required ? "checked" : null) disabled="@(isManagedTagsField ? "disabled" : null)" data-metadata-field="required" /></label>
+                            <button type="button" class="configuration-remove-button configuration-metadata-remove" data-remove-metadata-field disabled="@(isManagedTagsField ? "disabled" : null)" title="@managedTitle">Remove</button>
+                            <label class="configuration-metadata-control configuration-metadata-description"><span>Description</span><input class="text-input" value="@field.Description" disabled="@(isManagedTagsField ? "disabled" : null)" data-metadata-field="description" /></label>
+                        </div>
+                    }
+                </div>
+                <button type="button" class="secondary-button configuration-add-field" data-add-metadata-field>+ Add Metadata Field</button>
+            </div>
+        }
+    </div>
+
+    <div class="configuration-operation-grid metadata-operation-grid">
+        <div class="panel-card configuration-card configuration-operation-card">
+            <div class="configuration-card-heading"><h3>Export Metadata</h3><p>Create the MAUI Excel template containing the current objects and their existing custom metadata.</p></div>
+            <div class="configuration-operation-body">
+                <label class="configuration-field"><span>Object Type</span><select class="text-input" data-metadata-export-type>
+                    @foreach (var resource in Model.MetadataResources)
+                    {
+                        <option value="@resource.ObjectType">@resource.Label</option>
+                    }
+                </select><small>Each workbook contains one object type only. MOVEit ID and Name are included as identity columns.</small></label>
+                <p class="metadata-operation-note">Use the exported workbook as the source for future imports. The workbook contains internal MAUI identity information used to validate the file and environment.</p>
+                <div class="configuration-operation-actions metadata-operation-actions">
+                    <span class="configuration-operation-status" data-metadata-export-status></span>
+                    <button type="button" class="secondary-button" data-metadata-export-button>Export Metadata</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-card configuration-card configuration-operation-card">
+            <div class="configuration-card-heading"><h3>Import Metadata</h3><p>Validate a MAUI-exported workbook, review every proposed change, then save the complete change set.</p></div>
+            <div class="configuration-operation-body">
+                <label class="configuration-field"><span>Metadata Workbook</span><input class="text-input metadata-workbook-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" data-metadata-import-file /><small>Blank metadata cells mean no change. Enter <strong>&lt;CLEAR&gt;</strong> to explicitly clear a non-required value.</small></label>
+                <p class="metadata-operation-note">MAUI validates the embedded object type and MOVEit environment, then compares imported values with current metadata. No changes are written until Save Changes is selected in the preview.</p>
+                <div class="configuration-operation-actions metadata-operation-actions">
+                    <span class="configuration-operation-status" data-metadata-import-status></span>
+                    <button type="button" class="primary-button" data-metadata-import-preview disabled>Preview Import</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

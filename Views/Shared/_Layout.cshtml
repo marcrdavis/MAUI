@@ -1,0 +1,799 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   This Razor file is part of the MAUI application. *@
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+@using MoveItAutomationUI.Services.Lifecycle
+@{
+    var ui = UiOptionsAccessor.Value;
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
+    var action = ViewContext.RouteData.Values["action"]?.ToString() ?? string.Empty;
+    var isLogin = controller.Equals("Account", StringComparison.OrdinalIgnoreCase) && action.Equals("Login", StringComparison.OrdinalIgnoreCase);
+    var isSetup = controller.Equals("Setup", StringComparison.OrdinalIgnoreCase);
+    var isUpgrade = controller.Equals("Upgrade", StringComparison.OrdinalIgnoreCase);
+    var isPublicShell = isLogin || isSetup || isUpgrade;
+    // Only highlight a child filter when that filter is explicitly present in the URL.
+    // Opening the Tasks/Hosts parent itself should expand the menu without visually selecting All.
+    var taskFilter = controller.Equals("Tasks", StringComparison.OrdinalIgnoreCase)
+        ? Context.Request.Query["filter"].ToString().ToLowerInvariant()
+        : string.Empty;
+    var hostFilter = controller.Equals("Hosts", StringComparison.OrdinalIgnoreCase)
+        ? Context.Request.Query["filter"].ToString().ToLowerInvariant()
+        : string.Empty;
+    var currentUser = User.Identity?.Name ?? Context.Request.Cookies[MauiAuthenticationDefaults.UserDisplayCookieName] ?? "—";
+    var currentServer = User.FindFirst(MauiAuthenticationDefaults.ServerNameClaimType)?.Value
+        ?? Context.Request.Cookies[MauiAuthenticationDefaults.ServerDisplayCookieName]
+        ?? ui.DefaultServer;
+    // Match browser idle warnings to the effective startup policy, not the unswitched
+    // settings document. Ordinary Settings changes take effect after application restart.
+    // A digest scopes the tab's grid warning to this login, environment, and IIS application;
+    // the actual server-side session identifier is never exposed to browser storage.
+    var moveItGridScope = isPublicShell || User.Identity?.IsAuthenticated != true ? string.Empty
+        : Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(
+            $"{Context.Request.PathBase}|{User.FindFirst(MoveItAutomationUI.Services.MoveIt.MoveItSessionService.SessionIdClaimType)?.Value}|{User.FindFirst(MauiAuthenticationDefaults.ServerKeyClaimType)?.Value}")));
+    var idleSessionTimeoutMinutes = Context.RequestServices
+        .GetRequiredService<MoveItAutomationUI.Services.Configuration.ConfigurationStartupState>()
+        .IdleSessionTimeoutMinutes;
+    // Public lifecycle pages must not query normal database-backed MAUI authorization. Initial Setup can
+    // render before the metadata schema exists, and Login/Upgrade already use their own lifecycle authorization.
+    var isAdmin = isPublicShell
+        ? User.IsInRole(MauiSecurityRoles.Admin)
+        : User.Identity?.IsAuthenticated == true && MauiSecurityService.IsAdmin(User.Identity.Name);
+    // Defer session-service resolution during Setup; it must not capture pre-Setup MOVEit settings.
+    var activeMoveItSession = isPublicShell ? null : Context.RequestServices.GetRequiredService<IMoveItSessionService>().Get();
+    var isMoveItAdmin = activeMoveItSession?.Info?.IsAdmin == true;
+    var environmentCopyEnabled = !isPublicShell && isAdmin && isMoveItAdmin
+        && Context.RequestServices.GetRequiredService<MoveItAutomationUI.Features.EnvironmentCopy.EnvironmentCopyCoordinator>().Enabled;
+    MoveItAutomationUI.Services.MoveIt.MoveItCreationAccess? objectCreationAccess = null;
+    if (activeMoveItSession is not null)
+    {
+        try { objectCreationAccess = await Context.RequestServices.GetRequiredService<IMoveItObjectAccessService>().GetCreationAsync(); }
+        catch (Exception ex) when (ex is MoveItApiException or InvalidOperationException or HttpRequestException
+            || (ex is OperationCanceledException && !Context.RequestAborted.IsCancellationRequested))
+        { objectCreationAccess = new(false, new Dictionary<string, string[]>()); }
+    }
+
+    var reportReturnScope = Context.Request.Query["reportReturn"].ToString();
+    var returnToMyReports = (controller.Equals("Reports", StringComparison.OrdinalIgnoreCase)
+        && action.Equals("My", StringComparison.OrdinalIgnoreCase))
+        || reportReturnScope.Equals("mine", StringComparison.OrdinalIgnoreCase);
+    var requestedReportsReturnUrl = Context.Request.Query["reportReturnUrl"].ToString();
+    // Url.IsLocalUrl only checks the website origin; also require the active IIS application prefix.
+    var reportsWorkspaceUrl = !string.IsNullOrWhiteSpace(requestedReportsReturnUrl)
+        && Url.IsLocalUrl(requestedReportsReturnUrl)
+        && MauiApplicationReturnUrls.IsWithinApplication(requestedReportsReturnUrl, Context.Request.PathBase)
+        ? requestedReportsReturnUrl
+        : returnToMyReports
+            ? Url.Action("My", "Reports")
+            : isAdmin ? Url.Action("Index", "Reports") : Url.Action("My", "Reports");
+    var recycleBinEnabled = RecycleBinOptionsAccessor.Value.Enabled.Value;
+    var useMauiTaskEditor = !bool.TryParse(Configuration["Editors:UseMauiTaskEditor:Value"], out var enabledTaskEditor) || enabledTaskEditor;
+    var useMauiScriptEditor = bool.TryParse(Configuration["Editors:UseMauiScriptEditor:Value"], out var enabledScriptEditor) && enabledScriptEditor;
+    var useMauiDateListEditor = bool.TryParse(Configuration["Editors:UseMauiDateListEditor:Value"], out var enabledDateListEditor) && enabledDateListEditor;
+    var useMauiGroupsAndPermissionsEditor = bool.TryParse(Configuration["Editors:UseMauiGroupsAndPermissionsEditor:Value"], out var enabledGroupsAndPermissionsEditor) && enabledGroupsAndPermissionsEditor;
+    var useMauiSystemSettingsEditor = bool.TryParse(Configuration["Editors:UseMauiSystemSettingsEditor:Value"], out var enabledSystemSettingsEditor) && enabledSystemSettingsEditor;
+    var useMauiHostEditor = bool.TryParse(Configuration["Editors:UseMauiHostEditor:Value"], out var enabledHostEditor) && enabledHostEditor;
+    var systemMessageOptions = SystemMessageOptionsAccessor.Value;
+    var systemMessageType = SystemMessageOptions.SupportedMessageTypes.FirstOrDefault(type => type.Equals(systemMessageOptions.MessageType.Value, StringComparison.OrdinalIgnoreCase)) ?? "Information";
+    var systemMessageBody = systemMessageOptions.MessageBody.Value?.Trim() ?? string.Empty;
+    var systemMessageDismissed = activeMoveItSession?.SystemMessageDismissed ?? false;
+    var showSystemMessage = !isPublicShell && systemMessageOptions.Enabled.Value && systemMessageBody.Length > 0 && !systemMessageDismissed;
+    var systemMessageCssType = systemMessageType.ToLowerInvariant();
+    var systemMessageIcon = systemMessageType switch
+    {
+        "Important" => "warning",
+        "Critical" => "critical",
+        _ => "info"
+    };
+    var userPreferences = isPublicShell ? UserPreferencesService.GetDefaults() : await UserPreferencesService.GetCurrentAsync();
+    IReadOnlyList<SavedViewSummary> savedViews = isPublicShell ? Array.Empty<SavedViewSummary>() : await SavedViewService.GetCurrentAsync();
+    var activeSavedViewId = Context.Request.Query["savedView"].ToString();
+    var activeReportEditId = Context.Request.Query["reportEdit"].ToString();
+    var activeSavedView = savedViews.FirstOrDefault(view => view.Id.Equals(activeSavedViewId, StringComparison.OrdinalIgnoreCase));
+    var hasActiveSavedView = activeSavedView is not null;
+}
+<!DOCTYPE html>
+<html lang="en"
+      data-object-access-url="@Url.Action("Object", "ObjectAccess")"
+      data-object-access-batch-url="@Url.Action("Objects", "ObjectAccess")"
+      data-object-creation-access-url="@Url.Action("Creation", "ObjectAccess")"
+      data-host-editor-preferences-url="@Url.Action("SavePreferences", "HostEditor")"
+      data-object-edit-lease-open-url="@Url.Action("Open", "ObjectEditLease")"
+      data-object-edit-lease-override-url="@Url.Action("Override", "ObjectEditLease")"
+      data-object-edit-lease-heartbeat-url="@Url.Action("Heartbeat", "ObjectEditLease")"
+      data-object-edit-lease-close-url="@Url.Action("Close", "ObjectEditLease")"
+      data-moveit-grid-scope="@moveItGridScope"
+      data-app-base-url="@Url.Content("~/")"
+      data-use-maui-task-editor="@(useMauiTaskEditor ? "true" : "false")"
+      data-host-browse-url="@Url.Action("Browse", "HostEditor")"
+      data-use-maui-system-settings-editor="@(useMauiSystemSettingsEditor ? "true" : "false")"
+      data-use-maui-host-editor="@(useMauiHostEditor ? "true" : "false")"
+      data-use-maui-date-list-editor="@(useMauiDateListEditor ? "true" : "false")"
+      data-editor-prepare-date-list-edit-url="@Url.Action("PrepareDateListEdit", "Resources")"
+      data-editor-mark-date-list-edited-url="@Url.Action("MarkDateListEdited", "Resources")"
+      data-use-maui-script-editor="@(useMauiScriptEditor ? "true" : "false")"
+      data-editor-prepare-script-edit-url="@Url.Action("PrepareScriptEdit", "Resources")"
+      data-editor-mark-script-edited-url="@Url.Action("MarkScriptEdited", "Resources")"
+      data-moveit-admin="@(isMoveItAdmin ? "true" : "false")"
+      data-can-save-templates="@((isMoveItAdmin || isAdmin) ? "true" : "false")"
+      data-editor-tasks-index-url="@Url.Action("Index", "Tasks")"
+      data-editor-task-details-url="@Url.Action("Details", "Tasks")"
+      data-editor-hosts-index-url="@Url.Action("Index", "Hosts")"
+      data-editor-login-url="@Url.Action("SessionExpired", "Account")"
+      data-editor-prepare-task-edit-url="@Url.Action("PrepareTaskEdit", "Tasks")"
+      data-editor-mark-task-edited-url="@Url.Action("MarkTaskEdited", "Tasks")"
+      data-editor-prepare-host-edit-url="@Url.Action("PrepareHostEdit", "Hosts")"
+      data-editor-mark-host-edited-url="@Url.Action("MarkHostEdited", "Hosts")"
+      data-editor-native-session-url="@Url.Action("Session", "NativeEditor")"
+      data-default-theme="@userPreferences.Theme"
+      data-theme="@userPreferences.Theme"
+      data-user-grid-page-size="@userPreferences.GridPageSize"
+      data-preferences-url="@Url.Action("Current", "UserPreferences")"
+      data-preferences-save-url="@Url.Action("Save", "UserPreferences")"
+      data-preferences-theme-url="@Url.Action("Theme", "UserPreferences")"
+      data-preferences-grid-page-size-url="@Url.Action("GridPageSize", "UserPreferences")"
+      data-preferences-grid-layout-url="@Url.Action("GridLayout", "UserPreferences")"
+      data-preferences-grid-layout-reset-url="@Url.Action("ResetGridLayout", "UserPreferences")"
+      data-saved-view-get-url="@Url.Action("Get", "SavedViews")"
+      data-saved-view-save-url="@Url.Action("Save", "SavedViews")"
+      data-saved-view-delete-url="@Url.Action("Delete", "SavedViews")"
+      data-outbound-report-create-url="@Url.Action("Create", "OutboundReports")"
+      data-outbound-report-email-status-url="@Url.Action("EmailStatus", "OutboundReports")"
+      data-outbound-report-edit-definition-url="@Url.Action("EditDefinition", "Reports")"
+      data-outbound-report-update-view-url="@Url.Action("UpdateView", "Reports")"
+      data-outbound-report-delete-url="@Url.Action("DeleteReports", "Reports")"
+      data-outbound-report-index-url="@reportsWorkspaceUrl"
+      data-tags-list-url="@Url.Action("List", "Tags")"
+      data-tags-create-url="@Url.Action("Create", "Tags")"
+      data-tags-update-url="@Url.Action("Update", "Tags")"
+      data-tags-delete-url="@Url.Action("Delete", "Tags")"
+      data-active-saved-view-id="@(activeSavedView?.Id ?? string.Empty)"
+      data-active-saved-view-name="@(activeSavedView?.ViewName ?? string.Empty)"
+      data-active-saved-view-description="@(activeSavedView?.Description ?? string.Empty)"
+      data-active-saved-view-grid="@(activeSavedView?.GridKey ?? string.Empty)"
+      data-current-user="@currentUser"
+      data-idle-session-timeout-minutes="@idleSessionTimeoutMinutes"
+      data-session-activity-url="@Url.Action("Activity", "Account")"
+      data-browser-notification-log-url="@Url.Action("Record", "BrowserNotifications")"
+      data-session-expired-url="@Url.Action("SessionExpired", "Account")"
+      data-system-message-dismiss-url="@Url.Action("DismissSystemMessage", "Account")"
+      data-task-failure-alert-poll-url="@Url.Action("Poll", "TaskFailureAlerts")"
+      data-scheduler-status-url="@Url.Action("Status", "MoveItScheduler")"
+      data-scheduler-start-url="@Url.Action("Start", "MoveItScheduler")"
+      data-scheduler-stop-url="@Url.Action("Stop", "MoveItScheduler")"
+      data-tamper-reset-url="@Url.Action("ResetTamperDetection", "MoveItServer")"
+      data-failover-status-url="@Url.Action("FailoverStatus", "MoveItServer")">
+<head>
+    <meta charset="utf-8" />
+    <script>
+        // Resolve MAUI routes within the IIS application, whether hosted at / or /MAUI/.
+        // This is for MAUI browser routes, not MOVEit server API paths or external URLs.
+        window.mauiAppUrl = function (path) {
+            const base = document.documentElement.dataset.appBaseUrl || '/';
+            const route = String(path || '');
+            if (!route.startsWith('/') || route.startsWith('//')) return route;
+            const prefix = base === '/' ? '' : base.replace(/\/$/, '');
+            // All callers supply a MAUI application-relative route. Never infer that a
+            // route already has PathBase: an IIS application can itself be named
+            // /Tasks, /Records, or any other MAUI route segment.
+            return prefix + route;
+        };
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - @ui.ApplicationName</title>
+    <link rel="icon" type="image/x-icon" href="~/favicon.ico" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/ssh-algorithm-list.css" asp-append-version="true" />
+</head>
+<body class="@(isLogin ? "login-body" : (isSetup || isUpgrade) ? "setup-body" : "app-body")">
+@if (isPublicShell)
+{
+    @RenderBody()
+}
+else
+{
+    <div class="app-shell" data-shell>
+        <aside class="sidebar" data-sidebar>
+            <div class="brand-block">
+                <a class="brand-link" asp-controller="Home" asp-action="Index" title="@ui.ApplicationName">
+                    <img src="@(ui.ApplicationLogo?.StartsWith("/", StringComparison.Ordinal) == true && ui.ApplicationLogo?.StartsWith("//", StringComparison.Ordinal) != true ? Url.Content("~" + ui.ApplicationLogo) : ui.ApplicationLogo)" alt="" class="brand-logo" />
+                    <span class="brand-text">@ui.ApplicationName</span>
+                </a>
+                <button type="button" class="icon-button sidebar-toggle" data-sidebar-toggle aria-label="Collapse navigation" title="Collapse navigation">
+                    <span class="icon"><partial name="_Icon" model="@("chevron")" /></span>
+                </button>
+            </div>
+
+            <nav class="nav-tree" aria-label="Primary navigation">
+                <a class="nav-item @(controller == "Home" ? "active" : "")" asp-controller="Home" asp-action="Index">
+                    <span class="icon"><partial name="_Icon" model="@("dashboard")" /></span><span class="nav-label">Dashboard</span>
+                </a>
+
+                @if (isMoveItAdmin && UiOptionsAccessor.Value.EnableQuickTransfer.Value)
+                {
+                <div class="nav-group @(controller == "QuickTransfers" && !hasActiveSavedView ? "expanded" : "")" data-nav-group>
+                    <button type="button"
+                            class="nav-item nav-parent @(controller == "QuickTransfers" && !hasActiveSavedView ? "active" : "")"
+                            data-nav-parent>
+                        <span class="icon"><partial name="_Icon" model="@("transfer")" /></span><span class="nav-label">Transfers</span><span class="nav-caret">⌄</span>
+                    </button>
+                    <div class="nav-children">
+                        <a class="@(controller == "QuickTransfers" ? "active-child" : "")" asp-controller="QuickTransfers" asp-action="Index">Quick Transfer</a>
+                    </div>
+                </div>
+                }
+
+
+                <div class="nav-group @(controller == "Tasks" && !hasActiveSavedView ? "expanded" : "")" data-nav-group>
+                    <button type="button"
+                            class="nav-item nav-parent @(controller == "Tasks" && !hasActiveSavedView ? "active" : "")"
+                            data-nav-parent>
+                        <span class="icon"><partial name="_Icon" model="@("tasks")" /></span><span class="nav-label">Tasks</span><span class="nav-caret">⌄</span>
+                    </button>
+                    <div class="nav-children">
+                        <a class="@(taskFilter == "all" ? "active-child" : "")" asp-controller="Tasks" asp-action="Index" asp-route-filter="all">All</a>
+                        <a class="@(taskFilter == "running" ? "active-child" : "")" asp-controller="Tasks" asp-action="Index" asp-route-filter="running">Running</a>
+                        <a class="@(action == "UpcomingRuns" ? "active-child" : "")" asp-controller="Tasks" asp-action="UpcomingRuns">Upcoming Runs</a>
+                        <a class="@(action == "Calendar" ? "active-child" : "")" asp-controller="Tasks" asp-action="Calendar">Calendar</a>
+                        <a class="@(taskFilter == "success" ? "active-child" : "")" asp-controller="Tasks" asp-action="Index" asp-route-filter="success">Success</a>
+                        <a class="@(taskFilter == "failed" ? "active-child" : "")" asp-controller="Tasks" asp-action="Index" asp-route-filter="failed">Failed</a>
+                        <a class="@(taskFilter == "no-transfers" ? "active-child" : "")" asp-controller="Tasks" asp-action="Index" asp-route-filter="no-transfers">No Transfers</a>
+                    </div>
+                </div>
+
+                <div class="nav-group @(controller == "Hosts" && !hasActiveSavedView ? "expanded" : "")" data-nav-group>
+                    <button type="button"
+                            class="nav-item nav-parent @(controller == "Hosts" && !hasActiveSavedView ? "active" : "")"
+                            data-nav-parent>
+                        <span class="icon"><partial name="_Icon" model="@("host")" /></span><span class="nav-label">Hosts</span><span class="nav-caret">⌄</span>
+                    </button>
+                    <div class="nav-children">
+                        <a class="@(hostFilter == "all" ? "active-child" : "")" asp-controller="Hosts" asp-action="Index" asp-route-filter="all">All</a>
+                        <a class="@(hostFilter == "local-file-system" ? "active-child" : "")" asp-controller="Hosts" asp-action="Index" asp-route-filter="local-file-system">Local File System</a>
+                        <a class="@(hostFilter == "unc-share" ? "active-child" : "")" asp-controller="Hosts" asp-action="Index" asp-route-filter="unc-share">UNC Share</a>
+                        <a class="@(hostFilter == "moveit-transfer" ? "active-child" : "")" asp-controller="Hosts" asp-action="Index" asp-route-filter="moveit-transfer">MOVEit Transfer</a>
+                        <a class="@(hostFilter == "ftp-ftps" ? "active-child" : "")" asp-controller="Hosts" asp-action="Index" asp-route-filter="ftp-ftps">FTP/FTPS</a>
+                        <a class="@(hostFilter == "ssh-sftp" ? "active-child" : "")" asp-controller="Hosts" asp-action="Index" asp-route-filter="ssh-sftp">SSH/SFTP</a>
+                        <a class="@(hostFilter == "pop3" ? "active-child" : "")" asp-controller="Hosts" asp-action="Index" asp-route-filter="pop3">POP3 (Incoming Email)</a>
+                        <a class="@(hostFilter == "smtp" ? "active-child" : "")" asp-controller="Hosts" asp-action="Index" asp-route-filter="smtp">SMTP (Outgoing Email)</a>
+                        <a class="@(hostFilter == "amazon-s3" ? "active-child" : "")" asp-controller="Hosts" asp-action="Index" asp-route-filter="amazon-s3">Amazon S3</a>
+                        <a class="@(hostFilter == "azure-blob" ? "active-child" : "")" asp-controller="Hosts" asp-action="Index" asp-route-filter="azure-blob">Azure Blob</a>
+                        <a class="@(hostFilter == "sharepoint" ? "active-child" : "")" asp-controller="Hosts" asp-action="Index" asp-route-filter="sharepoint">SharePoint</a>
+                        @if (MoveItFeatureSupport.Supports(activeMoveItSession?.Info, MoveItFeature.OneDriveHosts))
+                        { <a class="@(hostFilter == "onedrive" ? "active-child" : "")" asp-controller="Hosts" asp-action="Index" asp-route-filter="onedrive">Microsoft OneDrive</a> }
+                        <a class="@(hostFilter == "google-storage" ? "active-child" : "")" asp-controller="Hosts" asp-action="Index" asp-route-filter="google-storage">Google Storage</a>
+                    </div>
+                </div>
+
+                <div class="nav-group @(controller == "Resources" && !hasActiveSavedView ? "expanded" : "")" data-nav-group>
+                    <button type="button" class="nav-item nav-parent @(controller == "Resources" && !hasActiveSavedView ? "active" : "")" data-nav-parent>
+                        <span class="icon"><partial name="_Icon" model="@("layers")" /></span><span class="nav-label">Resources</span><span class="nav-caret">⌄</span>
+                    </button>
+                    <div class="nav-children">
+                        <a class="@(action == "Scripts" ? "active-child" : "")" asp-controller="Resources" asp-action="Scripts">Scripts</a>
+                        <a class="@(action == "DateLists" ? "active-child" : "")" asp-controller="Resources" asp-action="DateLists">Date Lists</a>
+                        <a class="@(action == "KeysAndCerts" ? "active-child" : "")" asp-controller="Resources" asp-action="KeysAndCerts">Keys and Certificates</a>
+                        <a class="@(action == "GlobalParameters" ? "active-child" : "")" asp-controller="Resources" asp-action="GlobalParameters">Global Parameters</a>
+                        @if (isMoveItAdmin)
+                        {
+                        <a class="@(action == "GroupsAndPermissions" ? "active-child" : "")"
+                           asp-controller="Resources"
+                           asp-action="GroupsAndPermissions"
+                           data-groups-and-permissions-native-route="#/resources/permissions"
+                           data-native-editor-route="@(useMauiGroupsAndPermissionsEditor ? null : "#/resources/permissions")"
+                           data-native-editor-title="MOVEit Groups and Permissions"
+                           data-native-editor-session-url="@Url.Action("Session", "NativeEditor")">Groups and Permissions</a>
+                        }
+                    </div>
+                </div>
+
+                <div class="nav-group @(controller == "Records" && !hasActiveSavedView ? "expanded" : "")" data-nav-group>
+                    <button type="button" class="nav-item nav-parent @(controller == "Records" && !hasActiveSavedView ? "active" : "")" data-nav-parent>
+                        <span class="icon"><partial name="_Icon" model="@("records")" /></span><span class="nav-label">Records</span><span class="nav-caret">⌄</span>
+                    </button>
+                    <div class="nav-children">
+                        <a class="@(action == "TaskRun" ? "active-child" : "")" asp-controller="Records" asp-action="TaskRun">Task Run</a>
+                        <a class="@(action == "FileActivity" ? "active-child" : "")" asp-controller="Records" asp-action="FileActivity">File Activity</a>
+                        <a class="@(action == "Audit" ? "active-child" : "")" asp-controller="Records" asp-action="Audit">Audit</a>
+                    </div>
+                </div>
+
+                <div class="nav-group @(controller == "Reports" && !hasActiveSavedView ? "expanded" : "")" data-nav-group>
+                    <button type="button" class="nav-item nav-parent @(controller == "Reports" && !hasActiveSavedView ? "active" : "")" data-nav-parent>
+                        <span class="icon"><partial name="_Icon" model="@("report")" /></span><span class="nav-label">Reports</span><span class="nav-caret">⌄</span>
+                    </button>
+                    <div class="nav-children">
+                        @if (isAdmin)
+                        {
+                            <a class="@(controller == "Reports" && action == "Index" ? "active-child" : "")" asp-controller="Reports" asp-action="Index">All Reports</a>
+                        }
+                        <a class="@(controller == "Reports" && action == "My" ? "active-child" : "")" asp-controller="Reports" asp-action="My">My Reports</a>
+                    </div>
+                </div>
+
+                <div class="nav-group @(!hasActiveSavedView ? "" : "expanded")" data-nav-group>
+                    <button type="button" class="nav-item nav-parent @(!hasActiveSavedView ? "" : "active")" data-nav-parent>
+                        <span class="icon"><partial name="_Icon" model="@("columns")" /></span><span class="nav-label">My Views</span><span class="nav-caret">⌄</span>
+                    </button>
+                    <div class="nav-children saved-view-nav-children">
+                        @foreach (var savedView in savedViews)
+                        {
+                            var isActiveSavedView = savedView.Id.Equals(activeSavedViewId, StringComparison.OrdinalIgnoreCase);
+                            <a class="saved-view-nav-link @(isActiveSavedView ? "active-child" : "")"
+                               href="@Url.Action(savedView.Action, savedView.Controller, new { savedView = savedView.Id })"
+                               title="@savedView.ViewName">@savedView.ViewName</a>
+                        }
+                    </div>
+                </div>
+
+                @if (isAdmin)
+                {
+                    <div class="nav-group @(controller == "Configuration" ? "expanded" : "")" data-nav-group>
+                        <button type="button" class="nav-item nav-parent @(controller == "Configuration" ? "active" : "")" data-nav-parent>
+                            <span class="icon"><partial name="_Icon" model="@("settings")" /></span><span class="nav-label">Configuration</span><span class="nav-caret">⌄</span>
+                        </button>
+                        <div class="nav-children">
+                            <a class="@(action == "Settings" ? "active-child" : "")" asp-controller="Configuration" asp-action="Settings">Settings</a>
+                            <a class="@(action == "Logs" ? "active-child" : "")" asp-controller="Configuration" asp-action="Logs">Logs</a>
+                            <a asp-controller="Configuration"
+                               asp-action="Settings"
+                               data-system-settings-open
+                               data-native-editor-route="@(useMauiSystemSettingsEditor ? null : "#/system/settings")"
+                               data-native-editor-title="MOVEit Settings"
+                               data-native-editor-session-url="@Url.Action("Session", "NativeEditor")">MOVEit Settings</a>
+                            <a asp-controller="Configuration"
+                               asp-action="Settings"
+                               data-manage-lockouts-native
+                               hidden="@(useMauiSystemSettingsEditor ? "hidden" : null)"
+                               data-native-editor-route="#/system/lockouts"
+                               data-native-editor-title="Manage MOVEit Lockouts"
+                               data-native-editor-session-url="@Url.Action("Session", "NativeEditor")">Manage MOVEit Lockouts</a>
+                        </div>
+                    </div>
+                }
+
+                <div class="nav-group @(controller == "Help" ? "expanded" : "")" data-nav-group>
+                    <button type="button" class="nav-item nav-parent @(controller == "Help" ? "active" : "")" data-nav-parent>
+                        <span class="icon"><partial name="_Icon" model="@("help")" /></span><span class="nav-label">Help</span><span class="nav-caret">⌄</span>
+                    </button>
+                    <div class="nav-children">
+                        <a href="https://docs.progress.com/bundle/moveit-automation-web-admin-help-2025" target="_blank" rel="noopener noreferrer">MOVEit Help</a>
+                        <a class="@(action == "About" ? "active-child" : "")" asp-controller="Help" asp-action="About">About</a>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="sidebar-bottom">
+                @if (recycleBinEnabled)
+                {
+                    <button type="button" class="nav-item recycle-bin-nav" data-recycle-bin-open title="Open MAUI Recycle Bin">
+                        <span class="icon"><partial name="_Icon" model="@("recycle")" /></span>
+                        <span class="nav-label">Recycle Bin</span>
+                    </button>
+                }
+                <button type="button" class="nav-item theme-quick-toggle" data-theme-quick-toggle title="Toggle light/dark theme">
+                    <span class="icon theme-icon-light"><partial name="_Icon" model="@("sun")" /></span>
+                    <span class="icon theme-icon-dark"><partial name="_Icon" model="@("moon")" /></span>
+                    <span class="nav-label">Toggle Theme</span>
+                </button>
+                <form asp-controller="Account" asp-action="Logout" method="post" data-session-logout-form>
+                    <button type="submit" class="nav-item logout-button">
+                        <span class="icon"><partial name="_Icon" model="@("logout")" /></span><span class="nav-label">Sign Out</span>
+                    </button>
+                </form>
+            </div>
+        </aside>
+
+        <div class="app-main">
+            <div class="system-message-banner system-message-critical" data-task-failure-alert hidden role="alert" aria-live="assertive">
+                <span class="system-message-icon icon" aria-hidden="true"><partial name="_Icon" model="@("critical")" /></span>
+                <div class="system-message-copy">
+                    <strong data-task-failure-alert-title>Task Failure</strong>
+                    <div class="system-message-body task-failure-alert-body">
+                        <ul class="task-failure-alert-list" data-task-failure-alert-list></ul>
+                    </div>
+                </div>
+                <button type="button" class="secondary-button system-message-dismiss" data-task-failure-alert-dismiss>Dismiss</button>
+            </div>
+            @if (showSystemMessage)
+            {
+                <div class="system-message-banner system-message-@systemMessageCssType" data-system-message-banner data-dismissed="false" role="status" aria-live="polite">
+                    <span class="system-message-icon icon" aria-hidden="true"><partial name="_Icon" model="@(systemMessageIcon)" /></span>
+                    <div class="system-message-copy">
+                        <strong>@systemMessageType</strong>
+                        <div class="system-message-body">@systemMessageBody</div>
+                    </div>
+                    <button type="button" class="secondary-button system-message-dismiss" data-system-message-dismiss>Dismiss</button>
+                </div>
+            }
+            <div class="system-message-banner system-message-important" data-moveit-unreachable-banner hidden role="status" aria-live="polite">
+                <span class="system-message-icon icon" aria-hidden="true"><partial name="_Icon" model="@("warning")" /></span>
+                <div class="system-message-copy">
+                    <strong>MOVEit Unreachable</strong>
+                    <div class="system-message-body">Displayed data may be out of date. MAUI will retry on the next grid refresh.</div>
+                </div>
+            </div>
+            <div class="session-expiration-warning" data-session-expiration-warning role="status" aria-live="polite" hidden>
+                <span class="session-expiration-warning-icon icon" aria-hidden="true"><partial name="_Icon" model="@("clock")" /></span>
+                <div class="session-expiration-warning-copy">
+                    <strong>Session expiring soon</strong>
+                    <span>Your MAUI session will expire due to inactivity in <strong data-session-expiration-countdown>2:00</strong>.</span>
+                </div>
+                <button type="button" class="secondary-button session-expiration-warning-action" data-session-expiration-stay>Stay Signed In</button>
+            </div>
+            <div class="scheduler-stopped-indicator" data-scheduler-stopped-indicator role="status" aria-live="polite" hidden>
+                <span class="scheduler-stopped-indicator-dot" aria-hidden="true"></span>
+                <span>Scheduler Not Running</span>
+            </div>
+            <main class="content-area">
+                @if (!string.IsNullOrWhiteSpace(activeReportEditId) && !controller.Equals("Reports", StringComparison.OrdinalIgnoreCase))
+                {
+                    <div class="report-backlink-slot">
+                        <a class="report-backlink" href="@reportsWorkspaceUrl" data-grid-report-edit-back>‹ Back to Reports</a>
+                    </div>
+                }
+                @RenderBody()
+            </main>
+
+            <footer class="app-footer">
+                <div class="footer-left"><span>Version @ui.Version</span><span class="footer-dot">•</span><span>Build @MauiReleaseInfo.Build</span><span class="footer-dot">•</span><span>@ui.CopyrightText</span></div>
+                <div class="footer-right">
+                    <span class="footer-label">User</span>
+                    <div class="user-menu" data-user-menu>
+                        <button type="button" class="user-menu-button" data-user-menu-button aria-haspopup="menu" aria-expanded="false">
+                            <strong>@currentUser</strong><span class="user-menu-caret">⌄</span>
+                        </button>
+                        <div class="user-menu-panel" data-user-menu-panel role="menu" hidden>
+                            <button type="button" role="menuitem" data-user-preferences-open>Preferences</button>
+                            <form asp-controller="Account" asp-action="Logout" method="post" data-session-logout-form>
+                                <button type="submit" role="menuitem">Sign Out</button>
+                            </form>
+                        </div>
+                    </div>
+                    <span class="footer-dot">•</span><span class="footer-label">Server</span>
+                    <div class="server-menu" data-server-menu>
+                        @if (isAdmin)
+                        {
+                            <button type="button" class="server-menu-button" data-server-menu-button aria-haspopup="menu" aria-expanded="false">
+                                <strong data-server-name>@currentServer</strong><span class="server-menu-caret">⌄</span>
+                            </button>
+                            <div class="server-menu-panel" data-server-menu-panel role="menu" hidden>
+                                <button type="button" role="menuitem" data-scheduler-action disabled>Checking Scheduler...</button>
+                                <button type="button" role="menuitem" data-failover-status-open hidden>Failover Status</button>
+                                <div class="server-menu-separator" role="separator"></div>
+                                <button type="button" role="menuitem" class="server-danger-action" data-tamper-reset-open>Reset Tamper Detection</button>
+                            </div>
+                        }
+                        else
+                        {
+                            <span class="server-menu-static"><strong data-server-name>@currentServer</strong></span>
+                        }
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+    <form class="global-antiforgery" hidden aria-hidden="true">
+        @Html.AntiForgeryToken()
+    </form>
+    @if (isAdmin)
+    {
+        <dialog class="settings-dialog scheduler-stop-dialog" data-scheduler-stop-dialog>
+            <div class="settings-card scheduler-stop-shell">
+                <div class="settings-header">
+                    <div>
+                        <h2>Stop Scheduler</h2>
+                        <p>Confirm that you want to stop scheduled task launches.</p>
+                    </div>
+                    <button type="button" class="dialog-close" data-scheduler-stop-cancel aria-label="Close">×</button>
+                </div>
+                <div class="settings-body scheduler-stop-body">
+                    <div class="inline-alert error-alert" data-scheduler-stop-error hidden></div>
+
+                    <p>No new scheduled tasks will start while the scheduler is stopped. Tasks that are already running will continue to completion.</p>
+
+                </div>
+                <div class="settings-footer">
+                    <button type="button" class="secondary-button" data-scheduler-stop-cancel>Cancel</button>
+                    <button type="button" class="danger-button" data-scheduler-stop-confirm>Stop Scheduler</button>
+                </div>
+            </div>
+        </dialog>
+
+        <dialog class="settings-dialog failover-status-dialog" data-failover-status-dialog>
+            <div class="settings-card failover-status-shell">
+                <div class="settings-header">
+                    <div>
+                        <h2>Failover Status</h2>
+                        <p>Current MOVEit Automation resiliency status.</p>
+                    </div>
+                    <button type="button" class="dialog-close" data-failover-status-close aria-label="Close">×</button>
+                </div>
+                <div class="settings-body failover-status-body">
+                    <div class="inline-alert error-alert" data-failover-status-error hidden></div>
+                    <div class="details-loading failover-status-loading" data-failover-status-loading role="status" aria-live="polite" aria-label="Loading failover status">
+                        <span class="inline-spinner" aria-hidden="true"></span>
+                        <span>Loading...</span>
+                    </div>
+                    <div class="failover-node-grid" data-failover-node-grid hidden></div>
+                    <template data-failover-node-template>
+                        <article class="failover-node-card">
+                            <div class="failover-node-heading">
+                                <div class="failover-node-icon-wrap" data-failover-node-icon-wrap>
+                                    <span class="icon failover-node-server-icon" aria-hidden="true"><partial name="_Icon" model="@("host")" /></span>
+                                    <span class="failover-node-health-mark" data-failover-node-health-mark aria-hidden="true"></span>
+                                </div>
+                                <div class="failover-node-title">
+                                    <strong data-failover-node-hostname></strong>
+                                    <div class="failover-node-badges">
+                                        <span class="failover-role-badge" data-failover-node-role></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="failover-node-detail">
+                                <span class="failover-node-detail-label">Status</span>
+                                <div class="failover-node-status" data-failover-node-status></div>
+                                <span class="failover-node-stamp" data-failover-node-stamp></span>
+                            </div>
+                        </article>
+                    </template>
+                </div>
+                <div class="settings-footer">
+                    <button type="button" class="secondary-button" data-failover-status-close>Close</button>
+                </div>
+            </div>
+        </dialog>
+
+        <dialog class="settings-dialog scheduler-stop-dialog" data-tamper-reset-dialog>
+            <div class="settings-card scheduler-stop-shell">
+                <div class="settings-header">
+                    <div>
+                        <h2>Confirm Reset of Tamper Detection</h2>
+                    </div>
+                    <button type="button" class="dialog-close" data-tamper-reset-no aria-label="Close">×</button>
+                </div>
+                <div class="settings-body scheduler-stop-body">
+                    <div class="inline-alert error-alert" data-tamper-reset-error hidden></div>
+                    <p>This command will erase all tamper detection data in MOVEit Automation. You will be able to detect future tampering, but not any tampering that has already occurred.<br /><br />Are you sure you want to reset tamper detection?</p>
+                </div>
+                <div class="settings-footer">
+                    <button type="button" class="secondary-button" data-tamper-reset-no>Cancel</button>
+                    <button type="button" class="danger-button" data-tamper-reset-yes>Reset Tamper Detection</button>
+                </div>
+            </div>
+        </dialog>
+    }
+    <dialog class="settings-dialog user-preferences-dialog" data-user-preferences-dialog>
+        <div class="settings-card user-preferences-shell">
+            <div class="settings-header">
+                <div>
+                    <h2>Preferences</h2>
+                    <p>Customize how MAUI works for your account.</p>
+                </div>
+                <button type="button" class="dialog-close" data-user-preferences-close aria-label="Close">×</button>
+            </div>
+            <div class="settings-body user-preferences-body">
+                <div class="settings-message" data-user-preferences-message hidden></div>
+
+                <section class="settings-section-block">
+                    <div class="settings-section-copy">
+                        <h3>Appearance</h3>
+                    </div>
+                    <label class="settings-field">
+                        <span>Theme</span>
+                        <select class="text-input" data-user-preferences-theme>
+                            <option value="light">Light</option>
+                            <option value="dark">Dark</option>
+                        </select>
+                    </label>
+                </section>
+
+                <section class="settings-section-block">
+                    <div class="settings-section-copy">
+                        <h3>Startup</h3>
+                    </div>
+                    <label class="settings-field">
+                        <span>Start Page</span>
+                        <select class="text-input" data-user-preferences-start-page>
+                            <option value="Dashboard">Dashboard</option>
+                            <option value="Tasks">Tasks</option>
+                            <option value="Hosts">Hosts</option>
+                        </select>
+                    </label>
+                </section>
+
+                <section class="settings-section-block">
+                    <div class="settings-section-copy">
+                        <h3>Grid</h3>
+                    </div>
+                    <label class="settings-field">
+                        <span>Grid Page Size</span>
+                        <select class="text-input" data-user-preferences-grid-page-size></select>
+                        <small>This personal default overrides Grid Default Row Size. Column visibility, order, and widths are saved automatically per grid.</small>
+                    </label>
+                </section>
+            </div>
+            <div class="settings-footer">
+                <button type="button" class="secondary-button" data-user-preferences-close>Cancel</button>
+                <button type="button" class="primary-button" data-user-preferences-save>Save Preferences</button>
+            </div>
+        </div>
+    </dialog>
+    <dialog class="settings-dialog saved-view-dialog" data-saved-view-save-dialog>
+        <form class="settings-card saved-view-dialog-shell" data-saved-view-save-form>
+            <div class="settings-header">
+                <div><h2 data-saved-view-dialog-title>Create View</h2><p data-saved-view-dialog-instructions>Create a reusable view from the current grid layout, sorting, and column filters.</p></div>
+                <button type="button" class="dialog-close" data-saved-view-save-cancel aria-label="Close">×</button>
+            </div>
+            <div class="settings-body saved-view-dialog-body">
+                <div class="inline-alert error-alert" data-saved-view-save-error hidden></div>
+
+                <label class="settings-field">
+                    <span>View Name</span>
+                    <input type="text" class="text-input" maxlength="100" autocomplete="off" data-saved-view-name />
+                </label>
+                <label class="settings-field">
+                    <span>Description <span class="field-optional">(optional)</span></span>
+                    <textarea class="text-input saved-view-description-input" maxlength="500" rows="3" data-saved-view-description></textarea>
+                </label>
+                <div class="saved-view-summary">
+                    <span>This view will save:</span>
+                    <ul><li>Visible columns</li><li>Column order</li><li>Column widths</li><li>Sort column and direction</li><li>Column filters</li></ul>
+                </div>
+                <div class="inline-alert info-alert" data-saved-view-overwrite-message hidden></div>
+
+            </div>
+            <div class="settings-footer">
+                <button type="button" class="secondary-button" data-saved-view-save-cancel>Cancel</button>
+                <button type="submit" class="primary-button" data-saved-view-save-button>Create View</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog class="settings-dialog saved-view-dialog" data-saved-view-delete-dialog>
+        <div class="settings-card saved-view-dialog-shell">
+            <div class="settings-header">
+                <div><h2>Delete View</h2></div>
+                <button type="button" class="dialog-close" data-saved-view-delete-cancel aria-label="Close">×</button>
+            </div>
+            <div class="settings-body saved-view-dialog-body">
+                <div class="inline-alert error-alert" data-saved-view-delete-error hidden></div>
+
+                <p>Are you sure you want to delete this saved view?</p>
+                <div class="saved-view-delete-name" data-saved-view-delete-name></div>
+                <p>This does not modify or delete any MOVEit objects.</p>
+
+            </div>
+            <div class="settings-footer">
+                <button type="button" class="secondary-button" data-saved-view-delete-cancel>Cancel</button>
+                <button type="button" class="danger-button" data-saved-view-delete-confirm>Delete View</button>
+            </div>
+        </div>
+    </dialog>
+
+    <dialog class="settings-dialog maui-confirm-dialog" data-maui-confirm-dialog>
+        <div class="settings-card maui-confirm-card">
+            <div class="settings-header">
+                <div><h2 data-maui-confirm-title>Confirm Action</h2></div>
+                <button type="button" class="dialog-close" data-maui-confirm-cancel aria-label="Close">×</button>
+            </div>
+            <div class="settings-body maui-confirm-body">
+                <p data-maui-confirm-message></p>
+            </div>
+            <div class="settings-footer">
+                <button type="button" class="secondary-button" data-maui-confirm-cancel>Cancel</button>
+                <button type="button" class="primary-button" data-maui-confirm-accept>Continue</button>
+            </div>
+        </div>
+    </dialog>
+
+    @if (recycleBinEnabled)
+    {
+        <dialog class="recycle-bin-dialog" data-recycle-bin-dialog
+                data-items-url="@Url.Action("Items", "RecycleBin")"
+                data-preflight-url="@Url.Action("PreflightRestore", "RecycleBin")"
+                data-restore-url="@Url.Action("Restore", "RecycleBin")"
+                data-empty-url="@Url.Action("Empty", "RecycleBin")">
+            <div class="recycle-bin-shell">
+                <div class="settings-header">
+                    <div>
+                        <h2>Recycle Bin</h2>
+                        <p data-recycle-bin-subtitle>Deleted Tasks, Hosts, custom Scripts, and Date Lists available to you.</p>
+                    </div>
+                    <button type="button" class="dialog-close" data-recycle-bin-close aria-label="Close">×</button>
+                </div>
+                <div class="recycle-bin-body">
+                    <div class="recycle-bin-message" data-recycle-bin-message hidden></div>
+                    <div class="recycle-bin-table-wrap">
+                        <table class="recycle-bin-table">
+                            <thead><tr><th class="recycle-bin-select"><input type="checkbox" data-recycle-bin-select-all aria-label="Select all" /></th><th>Type</th><th>Name</th><th>Deleted By</th><th>Deleted On</th></tr></thead>
+                            <tbody data-recycle-bin-rows></tbody>
+                        </table>
+                        <div class="recycle-bin-empty" data-recycle-bin-empty hidden>The Recycle Bin is empty.</div>
+                    </div>
+                </div>
+                <div class="settings-footer recycle-bin-footer">
+                    <button type="button" class="danger-button" data-recycle-bin-empty-button hidden>Empty Recycle Bin</button>
+                    <span class="recycle-bin-footer-spacer"></span>
+                    <button type="button" class="secondary-button" data-recycle-bin-close>Close</button>
+                    <button type="button" class="primary-button" data-recycle-bin-restore disabled>Restore Selected</button>
+                </div>
+            </div>
+        </dialog>
+        <dialog class="recycle-bin-dialog recycle-bin-confirm-dialog" data-recycle-bin-confirm-dialog>
+            <div class="recycle-bin-shell recycle-bin-confirm-shell">
+                <div class="settings-header">
+                    <div>
+                        <h2 data-recycle-bin-confirm-title>Confirm Action</h2>
+                    </div>
+                    <button type="button" class="dialog-close" data-recycle-bin-confirm-cancel aria-label="Close">×</button>
+                </div>
+                <div class="recycle-bin-confirm-body">
+                    <p data-recycle-bin-confirm-message></p>
+                </div>
+                <div class="settings-footer recycle-bin-footer">
+                    <span class="recycle-bin-footer-spacer"></span>
+                    <button type="button" class="secondary-button" data-recycle-bin-confirm-cancel>Cancel</button>
+                    <button type="button" class="primary-button" data-recycle-bin-confirm-accept>Continue</button>
+                </div>
+            </div>
+        </dialog>
+    }
+}
+@if (!isPublicShell)
+{
+    @if (objectCreationAccess is not null)
+    {
+        <script type="application/json" data-object-creation-access>@Html.Raw(System.Text.Json.JsonSerializer.Serialize(objectCreationAccess, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)))</script>
+        <script src="~/js/object-access.js" asp-append-version="true"></script>
+    }
+    <link rel="stylesheet" href="~/css/script-editor.css" asp-append-version="true" />
+    <partial name="_ScriptEditor" />
+    <partial name="_DateListEditor" />
+    <link rel="stylesheet" href="~/css/host-browser.css" asp-append-version="true" />
+    <partial name="_HostBrowser" />
+    @if (isAdmin)
+    {
+        <link rel="stylesheet" href="~/css/system-settings-editor.css" asp-append-version="true" />
+        <partial name="_SystemSettingsEditor" />
+    }
+}
+<form class="maui-editor-routing-antiforgery" hidden>@Html.AntiForgeryToken()</form>
+<script src="~/js/modal-ui.js" asp-append-version="true"></script>
+<script src="~/js/shared/folder-browser-sorting.js" asp-append-version="true"></script>
+<script src="~/js/shared/host-browser.js" asp-append-version="true"></script>
+<script src="~/js/native-editor.js" asp-append-version="true"></script>
+<script src="~/js/editors/object-edit-lease.js" asp-append-version="true"></script>
+<script src="~/js/editors/editor-routing.js" asp-append-version="true"></script>
+<script src="~/js/editors/system-settings-lockouts.js" asp-append-version="true"></script>
+<script src="~/js/editors/system-settings-editor.js" asp-append-version="true"></script>
+<script src="~/js/editors/script-editor.js" asp-append-version="true"></script>
+<script src="~/js/editors/date-list-editor.js" asp-append-version="true"></script>
+<script src="~/js/ssh-algorithm-list.js" asp-append-version="true"></script>
+<script src="~/js/shared/moveit-grid-connection.js" asp-append-version="true"></script>
+<script src="~/js/browser-notifications.js" asp-append-version="true"></script>
+<script src="~/js/site.js" asp-append-version="true"></script>
+<script src="~/js/resource-ui.js" asp-append-version="true"></script>
+<script src="~/js/grid-saved-views.js" asp-append-version="true"></script>
+<script src="~/js/grid-row-renderer.js" asp-append-version="true"></script>
+<script src="~/js/grid-layout.js" asp-append-version="true"></script>
+<script src="~/js/grid-view-state.js" asp-append-version="true"></script>
+<script src="~/js/grid-export.js" asp-append-version="true"></script>
+<script src="~/js/grid-print.js" asp-append-version="true"></script>
+<script src="~/js/outbound-reports.js" asp-append-version="true"></script>
+<script src="~/js/grid-actions.js" asp-append-version="true"></script>
+<script src="~/js/grid-date-macros.js" asp-append-version="true"></script>
+<script src="~/js/task-filename-search.js" asp-append-version="true"></script>
+<script src="~/js/grid.js" asp-append-version="true"></script>
+@if (environmentCopyEnabled)
+{
+    <partial name="_EnvironmentCopy" />
+    <link rel="stylesheet" href="~/css/environment-copy.css" asp-append-version="true" />
+    <script src="~/js/environment-copy.js" asp-append-version="true"></script>
+}
+@if (!isPublicShell && recycleBinEnabled)
+{
+    <script src="~/js/recycle-bin.js" asp-append-version="true"></script>
+}
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

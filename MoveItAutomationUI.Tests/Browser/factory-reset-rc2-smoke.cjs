@@ -1,0 +1,41 @@
+// RC2 Factory Reset portability and UI integration checks (no destructive operations).
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const root = path.resolve(__dirname, '../..');
+const read = name => fs.readFileSync(path.join(root, name), 'utf8');
+const view = read('Views/Configuration/Settings.cshtml');
+const js = read('wwwroot/js/configuration-factory-reset.js');
+const program = read('Program.cs');
+const endpoint = read('Controllers/MauiFactoryResetController.cs');
+const service = read('Services/Lifecycle/MauiFactoryResetService.cs');
+const recovery = read('Services/Lifecycle/MauiFactoryResetRecovery.cs');
+const css = read('wwwroot/css/site.css');
+const marker = 'data-factory-reset-section';
+const start = view.indexOf(marker);
+assert.ok(start !== -1, 'Factory Reset section missing');
+const section = view.slice(start, view.indexOf('</section>', start));
+assert.match(section, /configuration-operation-body[\s\S]*configuration-destructive-warning[\s\S]*configuration-operation-actions/);
+assert.match(css, /\.configuration-operation-body\s*\{[^}]*padding:\s*18px 20px 20px/);
+assert.match(view, /data-factory-reset-url="@Url.Action\("Execute", "MauiFactoryReset"\)"/);
+assert.match(view, /data-factory-reset-dialog/);
+assert.match(view, /configuration-factory-reset\.js/);
+assert.match(js, /input\.value !== 'RESET'/);
+assert.match(js, /'RequestVerificationToken': antiforgery/);
+assert.match(endpoint, /\[Authorize\(Policy = MauiSecurityPolicies\.Admin\)\]/);
+assert.match(endpoint, /\[HttpPost\]/);
+assert.match(endpoint, /\[ValidateAntiForgeryToken\]/);
+assert.match(endpoint, /MauiLifecyclePaths\.BrowserUrl\(Request\.PathBase, MauiLifecyclePaths\.Setup\)/);
+assert.match(service, /_writes\.Gate\.WaitAsync/);
+assert.match(service, /_restart\.ScheduleRestart\("MAUI Factory Reset"\)/);
+assert.match(recovery, /IsEmptySettingsDocument\(settingsPath\)/);
+assert.match(recovery, /CheckDeletionTree\(dataPath\)/);
+assert.match(recovery, /File\.Delete\(marker\);/);
+const recover = program.indexOf('MauiFactoryResetRecovery.CompletePendingReset(');
+const dp = program.indexOf('MauiDataProtectionConfiguration.AddMauiDataProtection(');
+const qt = program.indexOf('AddHostedService<QuickTransferCleanupWorker>');
+assert.ok(recover >= 0 && recover < dp && dp < qt, 'Recovery must precede cryptography and background workers');
+for (const rc2Setting of ['Enable Quick Transfer', 'Import Row Limit', 'Use MAUI Task Editor']) {
+    assert.ok(view.includes(rc2Setting), `RC2-only Settings lost: ${rc2Setting}`);
+}
+console.log('RC2 Factory Reset UI/security/startup integration and RC2-only Settings: PASS');

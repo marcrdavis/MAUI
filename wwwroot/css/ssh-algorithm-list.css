@@ -1,0 +1,17 @@
+.maui-host-algorithm-list { border:1px solid var(--border); border-radius:9px; background:var(--input-bg); overflow:hidden; }
+.maui-host-algorithm-toolbar { display:flex; justify-content:flex-end; padding:8px; border-bottom:1px solid var(--border); background:var(--surface-2); }
+.maui-host-algorithm-row { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:12px; padding:8px 10px; border-bottom:1px solid var(--border); }
+.maui-host-algorithm-row:last-child { border-bottom:0; }
+.maui-host-algorithm-row label { display:flex; align-items:center; gap:9px; min-width:0; font-size:12px; color:var(--text); overflow-wrap:anywhere; }
+.maui-host-algorithm-row input { flex:0 0 auto; accent-color:var(--accent); }
+.maui-host-algorithm-row > div { display:flex; gap:5px; }
+.maui-host-algorithm-row button { min-height:28px; padding:0 9px; display:inline-flex; align-items:center; justify-content:center; line-height:1; }
+.maui-host-algorithm-heading { flex:1; min-width:0; }
+.maui-host-algorithm-heading strong { font-size:12px; }
+.maui-host-algorithm-heading p { margin:4px 0 0; color:var(--text-soft); font-size:11px; line-height:1.45; }
+[data-config-section="ssh-algorithms"] .configuration-card-heading.row-heading { align-items:flex-start; }
+[data-config-section="ssh-algorithms"] .configuration-card-heading > div { flex:1; min-width:0; }
+[data-config-section="ssh-algorithms"] [data-ssh-algorithms-reload] { flex:0 0 auto; }
+[data-config-section="ssh-algorithms"] .configuration-ssh-algorithm-section { padding:15px 20px; }
+[data-config-section="ssh-algorithms"] .maui-host-algorithm-toolbar { align-items:center; gap:16px; padding:12px 14px; }
+[data-config-section="ssh-algorithms"] [data-ssh-algorithms-status], [data-config-section="ssh-algorithms"] .configuration-card > .muted { margin:12px 20px; }

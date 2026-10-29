@@ -1,0 +1,12 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   This Razor file is part of the MAUI application. *@
+@{
+    ViewData["Title"] = "Help";
+}
+<div class="page-heading"><div><h1>Help</h1><p>MAUI capabilities, integration, and storage overview.</p></div></div>
+<div class="dashboard-grid">
+    <section class="panel-card"><h2>MOVEit integration</h2><p>MAUI uses the MOVEit Automation REST API for authentication, inventory, status, reporting, and supported resource operations. The Windows COM API is used for configuration operations that are not consistently available through REST.</p></section>
+    <section class="panel-card"><h2>Native editors</h2><p>MAUI opens supported Tasks, Hosts, Scripts, Date Lists, Keys and Certificates, and administrative pages in the native MOVEit Web Admin interface.</p></section>
+    <section class="panel-card"><h2>MAUI metadata</h2><p>MAUI metadata, folders, preferences, saved views, Reports, undo history, and Recycle Bin data are stored in the configured SQLite or SQL Server database and do not replace the MOVEit Automation database.</p></section>
+</div>

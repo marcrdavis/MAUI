@@ -1,0 +1,61 @@
+/* Reuse Script/Information modal surfaces; scope only the System Settings layout. */
+.system-settings-editor-dialog [hidden] { display:none !important; }
+.system-settings-editor-dialog.is-editing { width:min(1140px,calc(100vw - 48px)); height:min(820px,calc(100dvh - 48px)); }
+.system-settings-editor-dialog .script-editor-card { height:100%; }
+.system-settings-editor-dialog .script-editor-tabs { flex-shrink:0; }
+.system-settings-editor-dialog .system-settings-tab-actions { width:auto; flex-shrink:0; }
+.system-settings-body { flex:1; min-height:0; overflow:auto; }
+.system-settings-fields { margin:0; min-width:0; padding:22px; }
+.system-settings-fields .field-block > label { font-weight:650; color:var(--text-soft); }
+.system-settings-check { display:flex; gap:9px; align-items:center; font-size:13px; color:var(--text); }
+.system-settings-check input { margin:0; accent-color:var(--accent); }
+.system-settings-size, .system-settings-path { display:flex; gap:10px; align-items:center; min-width:0; }
+.system-settings-path .text-input, .system-settings-size input { flex:1; min-width:0; }
+.system-settings-size select { width:90px; flex:0 0 90px; }
+.system-settings-path .secondary-button { flex-shrink:0; }
+@media(max-width:900px) {
+ .system-settings-editor-dialog .script-editor-tabs { height:auto; min-height:43px; flex-wrap:wrap; }
+ .system-settings-editor-dialog .task-details-tab { white-space:nowrap; }
+}
+@media(max-width:700px) {
+ .system-settings-editor-dialog.is-editing { width:calc(100vw - 16px); height:calc(100dvh - 16px); }
+ .system-settings-fields { padding:16px; }
+}
+/* Information modal grouping uses the shared grey property surface in both themes. */
+.system-settings-fields.maui-property-card { background:var(--surface-2); box-shadow:none; }
+.system-settings-policy { display:grid; gap:16px; }
+.system-settings-section-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; margin-bottom:16px; }
+.system-settings-section-heading h3 { margin:0; font-size:var(--property-section-title-size,15px); }
+.system-settings-hint { margin:0; color:var(--text-soft); font-size:12px; line-height:1.5; }
+.system-settings-section-heading .system-settings-hint { margin-top:5px; }
+.system-settings-toggle { display:flex; align-items:center; gap:9px; font-size:12px; color:var(--text-soft); }
+.system-settings-radio-list { display:grid; gap:13px; }
+.system-settings-label { color:var(--text-soft); font-size:13px; font-weight:650; }
+.system-settings-inline, .system-settings-lockout-rule { display:flex; align-items:center; flex-wrap:wrap; gap:10px; min-width:0; }
+.system-settings-lockout-rule { margin-bottom:20px; font-size:13px; }
+.system-settings-inline .text-input, .system-settings-lockout-rule .text-input { width:110px; flex:0 0 110px; }
+.system-settings-inline select.text-input, .system-settings-lockout-rule select.text-input { width:125px; flex-basis:125px; }
+.system-settings-trusted-list { display:grid; gap:10px; margin-bottom:14px; }
+.system-settings-trusted-row { display:flex; align-items:center; gap:12px; }
+.system-settings-trusted-row .text-input { width:min(420px,100%); min-width:0; }
+.system-settings-trusted-row .danger-button { flex-shrink:0; }
+[data-manage-lockouts-native][hidden] { display:none !important; }
+.system-settings-active-lockouts { display:grid; gap:16px; }
+.system-settings-lockouts-title { display:flex; align-items:center; gap:10px; min-width:0; }
+.system-settings-lockouts-list { height:160px; overflow:auto; border:1px solid var(--border); border-radius:8px; background:var(--surface); }
+.system-settings-lockouts-table { width:100%; min-width:480px; table-layout:fixed; }
+.system-settings-lockouts-table thead th { position:sticky; top:0; z-index:2; height:38px; }
+.system-settings-lockouts-table thead .select-column { z-index:10; }
+.system-settings-lockouts-table td { height:38px; }
+.system-settings-lockouts-table th:nth-child(2) { width:auto; }
+.system-settings-lockouts-table input[type="checkbox"] { margin:0; vertical-align:middle; accent-color:var(--accent); }
+.system-settings-lockouts-table .system-settings-lockouts-date { width:190px; }
+.system-settings-lockouts-table .system-settings-lockouts-action { width:96px; }
+.system-settings-lockouts-table td:last-child { padding:0 8px; text-overflow:clip; }
+.system-settings-lockouts-table .system-settings-lockouts-empty { height:118px; text-align:center; color:var(--text-faint); }
+.system-settings-lockouts-empty .inline-spinner { display:inline-block; vertical-align:middle; margin-right:8px; }
+.system-settings-lockouts-table .secondary-button { min-height:28px; }
+@media(max-width:700px) {
+ .system-settings-active-lockouts .system-settings-section-heading { flex-wrap:wrap; gap:10px; }
+ .system-settings-active-lockouts .system-settings-section-heading > button { white-space:nowrap; }
+}

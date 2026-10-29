@@ -1,0 +1,136 @@
+@* Shared Task Information dialog used by Task grids and Upcoming Runs. *@
+<dialog class="task-details-dialog" data-task-details-dialog>
+    <form method="dialog" class="task-details-card" data-task-details-form>
+        <div class="settings-header">
+            <div><h2>Task Information</h2><p data-task-details-subtitle>MOVEit properties, MAUI metadata, and related Task information.</p></div>
+            <button type="submit" class="dialog-close" aria-label="Close">×</button>
+        </div>
+        <div class="task-details-tabs" role="tablist" aria-label="Task information sections">
+            <button type="button"
+                    class="task-details-tab active"
+                    role="tab"
+                    aria-selected="true"
+                    data-task-details-tab="information">Information</button>
+            <button type="button"
+                    class="task-details-tab"
+                    role="tab"
+                    aria-selected="false"
+                    data-task-details-tab="tasks">Tasks</button>
+            <button type="button"
+                    class="task-details-tab"
+                    role="tab"
+                    aria-selected="false"
+                    data-task-details-tab="logs">Task Logs</button>
+        </div>
+        <div class="task-details-body">
+            <div class="inline-alert error-alert" data-task-logs-error hidden></div>
+            <div class="inline-alert error-alert" data-task-details-error hidden></div>
+
+            <div class="details-loading" data-task-details-loading role="status" aria-live="polite" aria-label="Loading task information">
+                <span class="inline-spinner" aria-hidden="true"></span>
+                <span>Loading...</span>
+            </div>
+            <div data-task-details-content hidden>
+                <div data-task-details-panel="information">
+                    <section class="details-section">
+                        <div class="details-section-heading maui-object-properties-heading">
+                            <div class="task-identity-row maui-object-identity" aria-label="Task identity">
+                                <div class="task-identity-item"><span>Type</span><strong data-task-type></strong></div>
+                                <div class="task-identity-item"><span>Task ID</span><strong data-task-id></strong></div>
+                            </div>
+                            <span class="source-badge">MOVEit</span>
+                        </div>
+                        <div class="details-grid">
+                            <label class="field-block full-span"><span>Task Name</span><input class="text-input" data-task-name maxlength="254" required /></label>
+                            <label class="field-block full-span"><span>Description</span><textarea class="text-input textarea-input" rows="3" data-task-description></textarea></label>
+                            <label class="field-block full-span"><span>Operator Notes</span><textarea class="text-input textarea-input" rows="3" data-task-operator-notes></textarea></label>
+                            <label class="field-block full-span"><span>Resource Groups</span><input class="text-input" data-task-resource-groups readonly /></label>
+                        </div>
+                        <div class="inline-alert info-alert" data-task-edit-note hidden></div>
+                    </section>
+
+                    <section class="details-section">
+                        <div class="details-section-heading"><h3>Organization</h3><span class="source-badge local-badge">MAUI</span></div>
+                        <div class="field-block full-span">
+                            <span>Folder</span>
+                            <div class="menu-control task-folder-tree-select task-details-folder-tree-select" data-task-folder-tree>
+                                <button type="button"
+                                        class="task-folder-tree-button"
+                                        data-task-folder-button
+                                        aria-label="Task folder"
+                                        aria-haspopup="menu"
+                                        aria-expanded="false">
+                                    <span class="task-folder-tree-button-icon icon" data-task-folder-button-icon><partial name="_Icon" model="@("tasks")" /></span>
+                                    <span class="task-folder-tree-button-text" data-task-folder-label>All Tasks</span>
+                                    <span class="task-folder-tree-caret" aria-hidden="true">⌄</span>
+                                </button>
+                                <div class="dropdown-menu task-folder-tree-menu dropdown-left"
+                                     data-task-folder-menu
+                                     role="menu"
+                                     aria-label="Task folders"></div>
+                                <input type="hidden" data-modal-value data-task-folder value="" />
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="details-section">
+                        <div class="details-section-heading"><h3>Additional Information</h3><span class="source-badge local-badge">MAUI</span></div>
+                        <div class="details-grid" data-metadata-fields></div>
+                    </section>
+
+                    <section class="details-section audit-section">
+                        <div class="details-section-heading"><h3>Task Metadata</h3><span class="source-badge local-badge">MAUI</span></div>
+                        <div class="audit-grid" data-metadata-audit></div>
+                    </section>
+                </div>
+
+                <div data-task-details-panel="tasks" hidden>
+                    <div class="task-dependencies-loading details-loading" data-task-dependencies-loading role="status" aria-live="polite" aria-label="Loading task relationships" hidden>
+                        <span class="inline-spinner" aria-hidden="true"></span>
+                        <span>Loading...</span>
+                    </div>
+                    <div class="inline-alert error-alert" data-task-dependencies-error hidden></div>
+
+                    <section class="details-section">
+                        <div class="details-section-heading"><h3>Called By</h3></div>
+                        <div class="host-tasks-empty" data-task-called-by-empty hidden>No visible tasks currently call this Task.</div>
+                        <div class="host-tasks-list" data-task-called-by-list hidden>
+                            <div class="host-tasks-header" role="row"><div role="columnheader">Task ID</div><div role="columnheader">Task Name</div></div>
+                            <div data-task-called-by-rows></div>
+                        </div>
+                    </section>
+
+                    <section class="details-section">
+                        <div class="details-section-heading"><h3>Calls</h3></div>
+                        <div class="host-tasks-empty" data-task-calls-empty hidden>This Task does not call any visible tasks.</div>
+                        <div class="host-tasks-list" data-task-calls-list hidden>
+                            <div class="host-tasks-header" role="row"><div role="columnheader">Task ID</div><div role="columnheader">Task Name</div></div>
+                            <div data-task-calls-rows></div>
+                        </div>
+                    </section>
+                </div>
+
+                <div data-task-details-panel="logs" hidden>
+                    <div class="task-logs-loading details-loading" data-task-logs-loading role="status" aria-live="polite" aria-label="Loading recent task logs" hidden>
+                        <span class="inline-spinner" aria-hidden="true"></span>
+                        <span>Loading...</span>
+                    </div>
+
+                    <div class="task-logs-empty" data-task-logs-empty hidden>No recent task logs are available for this task.</div>
+                    <div class="task-logs-list" data-task-logs-list hidden>
+                        <div class="task-logs-header" role="row">
+                            <div role="columnheader">Result</div>
+                            <div role="columnheader">Task Log</div>
+                        </div>
+                        <div class="task-logs-rows" data-task-logs-rows></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <div class="settings-footer">
+            <button type="button" class="secondary-button" data-task-details-cancel>Close</button>
+            <button type="button" class="primary-button" data-task-details-save>Save</button>
+        </div>
+    </form>
+</dialog>

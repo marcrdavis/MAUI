@@ -1,0 +1,90 @@
+@* Shared Host creation form. The boolean model is the configured name-format default. *@
+@model bool
+@{ var oneDriveAvailable = MoveItFeatureSupport.Supports(Context.RequestServices.GetService<IMoveItSessionService>()?.Get()?.Info, MoveItFeature.OneDriveHosts); }
+<dialog class="new-task-dialog" data-new-host-dialog>
+    <form class="new-task-card" data-new-host-form>
+        <header class="script-editor-header">
+            <div class="script-editor-title-wrap"><span class="script-editor-icon" aria-hidden="true"><partial name="_Icon" model="@("host")" /></span><div><h2>New Host</h2><p>Create the Host in MOVEit and continue configuring it in the selected Host Editor.</p></div></div>
+            <button type="button" class="dialog-close" data-new-host-close aria-label="Close">×</button>
+        </header>
+        <div class="new-task-body">
+            <div class="inline-alert error-alert" data-new-host-error hidden></div>
+
+            <partial name="_ObjectCreationResourceGroup" model="@("Host")" />
+            <label class="field-block full-span">
+                <span>Host Name</span>
+                <input class="text-input" type="text" autocomplete="off" data-new-host-name />
+            </label>
+            <label class="new-task-auto-format" title="When enabled, converts the name to uppercase and replaces spaces with underscores. Example: My Host → MY_HOST.">
+                <input type="checkbox" data-new-host-auto-format @(Model ? "checked" : null) />
+                <span>Auto Format Name</span>
+            </label>
+
+            <label class="field-block full-span" data-new-host-unc-field>
+                <span>Resource UNC</span>
+                <input class="text-input" type="text" autocomplete="off" spellcheck="false" required
+                       placeholder="\\server\share" aria-describedby="new-host-unc-help" data-new-host-unc />
+                <span class="field-help" id="new-host-unc-help">Enter a unique UNC path for this host.</span>
+            </label>
+
+            <fieldset class="new-task-type-fieldset">
+                <legend>Host Type</legend>
+                <label class="new-task-type-card">
+                    <input type="radio" name="newHostType" value="Share" checked />
+                    <span class="new-task-type-copy"><strong>UNC Share</strong><span>Windows network share accessed by UNC path.</span></span>
+                </label>
+                <label class="new-task-type-card">
+                    <input type="radio" name="newHostType" value="siLock" />
+                    <span class="new-task-type-copy"><strong>MOVEit Transfer</strong><span>MOVEit Transfer server connection.</span></span>
+                </label>
+                <label class="new-task-type-card">
+                    <input type="radio" name="newHostType" value="FTP" />
+                    <span class="new-task-type-copy"><strong>FTP/FTPS</strong><span>FTP or TLS-secured FTPS server connection.</span></span>
+                </label>
+                <label class="new-task-type-card">
+                    <input type="radio" name="newHostType" value="SSHFTP" />
+                    <span class="new-task-type-copy"><strong>SSH/SFTP</strong><span>SSH File Transfer Protocol server connection.</span></span>
+                </label>
+                <label class="new-task-type-card">
+                    <input type="radio" name="newHostType" value="POP3" />
+                    <span class="new-task-type-copy"><strong>POP3 (Incoming Email)</strong><span>Incoming email mailbox connection.</span></span>
+                </label>
+                <label class="new-task-type-card">
+                    <input type="radio" name="newHostType" value="SMTP" />
+                    <span class="new-task-type-copy"><strong>SMTP (Outgoing Email)</strong><span>Outgoing email server connection.</span></span>
+                </label>
+                <label class="new-task-type-card">
+                    <input type="radio" name="newHostType" value="S3" />
+                    <span class="new-task-type-copy"><strong>Amazon S3</strong><span>Amazon S3-compatible object storage connection.</span></span>
+                </label>
+                <label class="new-task-type-card">
+                    <input type="radio" name="newHostType" value="AzureBlob" />
+                    <span class="new-task-type-copy"><strong>Azure Blob</strong><span>Microsoft Azure Blob Storage connection.</span></span>
+                </label>
+                <label class="new-task-type-card">
+                    <input type="radio" name="newHostType" value="SharePoint" />
+                    <span class="new-task-type-copy"><strong>SharePoint</strong><span>Microsoft SharePoint document library connection.</span></span>
+                </label>
+                <label class="new-task-type-card">
+                    <input type="radio" name="newHostType" value="GoogleStorage" />
+                    <span class="new-task-type-copy"><strong>Google Storage</strong><span>Google Cloud Storage connection.</span></span>
+                </label>
+                @if (oneDriveAvailable)
+                {
+                    <label class="new-task-type-card">
+                        <input type="radio" name="newHostType" value="OneDrive" />
+                        <span class="new-task-type-copy"><strong>Microsoft OneDrive</strong><span>Microsoft OneDrive connection.</span></span>
+                    </label>
+                }
+            </fieldset>
+
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-new-host-cancel>Cancel</button>
+            <button type="submit" class="primary-button new-task-submit" data-new-host-submit>
+                <span class="inline-spinner button-spinner" data-new-host-spinner hidden aria-hidden="true"></span>
+                <span data-new-host-submit-label>Create Host</span>
+            </button>
+        </div>
+    </form>
+</dialog>

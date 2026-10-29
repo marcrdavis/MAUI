@@ -1,0 +1,116 @@
+/* Author: Marc R. Davis (marcdavis@comcast.net)
+   Dedicated hierarchy styles; shared flat grids retain their existing layout. */
+.permissions-workspace .permissions-help { color: var(--text-soft); font-size: 12px; line-height: 1.5; margin: 12px 0; }
+.permissions-workspace .permissions-scroll { overflow-x: auto; }
+.permissions-workspace .permissions-table { width: 100%; min-width: 1260px; table-layout: fixed; font-family:var(--font-sans); }
+.permissions-table .permissions-name-column { width: 300px; }
+.permissions-table th, .permissions-table td { width: auto; height: 46px; text-align: center; padding: 7px 8px; }
+.permissions-table .permissions-resource-headers th:first-child, .permissions-table .column-filter-row th:first-child, .permissions-table td:first-child { text-align: left; }
+.permissions-table .permissions-resource-headers th { height: 35px; }
+.permissions-table .column-header-row th { height: 34px; font-size: 11px; }
+.permissions-table .column-filter-row th { height: 36px; }
+.permissions-table .column-filter-row select { width: 100%; min-width: 0; height: 27px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); border-radius: 6px; font: inherit; font-size: 11px; padding: 0 5px; }
+.permissions-table .permissions-parent { background: var(--surface); }
+.permissions-table .permissions-child td { background: var(--surface-2); height: 39px; }
+.permissions-table .permissions-child td:first-child { padding-left: 41px; }
+.permissions-group-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.permissions-expand { border: 0; padding: 2px 0; background: transparent; color: var(--text); font: inherit; font-weight: 650; cursor: pointer; display: flex; align-items: center; gap: 9px; min-width: 0; text-align: left; flex: 1; }
+.permissions-expand > span:last-child { overflow-wrap: anywhere; }
+.permissions-expand-symbol { width: 20px; height: 20px; flex: 0 0 20px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border-strong); border-radius: 5px; color: var(--accent); }
+.permissions-assigned-count { display: block; font-size: 11px; color: var(--text-faint); padding: 3px 0 0 29px; }
+.permissions-row-menu { flex-shrink: 0; }
+.permissions-summary { display: inline-block; min-width: 47px; border-radius: 999px; padding: 3px 8px; font-size: 11px; font-weight: 650; border: 1px solid var(--border); }
+.permissions-all { color: var(--teal); background: color-mix(in srgb, var(--teal) 9%, var(--surface)); border-color: color-mix(in srgb, var(--teal) 28%, var(--border)); }
+.permissions-some { color: var(--accent); background: color-mix(in srgb, var(--accent) 9%, var(--surface)); border-color: color-mix(in srgb, var(--accent) 28%, var(--border)); }
+.permissions-none { color: var(--text-faint); background: var(--surface-2); }
+.permissions-table .permissions-granted { color: var(--teal); font-size: 17px; font-weight: 700; }
+.permissions-table .permissions-denied { color: var(--text-faint); font-size: 16px; }
+.permissions-empty, .permissions-empty-child { color: var(--text-faint); text-align: center !important; padding: 18px !important; }
+.permissions-empty-child { background: var(--surface-2); }
+.permissions-pager { gap:12px; }
+.permissions-settings-body { padding: 20px; }
+.permissions-workspace .dropdown-menu button:disabled { opacity: .5; cursor: default; }
+.permissions-workspace [data-permissions-error] { margin-bottom: 12px; }
+@media (max-width: 900px) { .permissions-workspace .grid-toolbar { align-items: flex-start; flex-wrap: wrap; } .permissions-workspace .toolbar-group { flex-wrap: wrap; } }
+
+.permissions-row-actions button:disabled { opacity: .5; cursor: default; }
+
+
+/* The hierarchy has three header rows; shared fixed-grid rules assume two. */
+body.grid-fixed-page .permissions-resource-headers th { position:sticky; top:0; z-index:14; }
+body.grid-fixed-page .permissions-table .column-header-row th { top:35px; }
+body.grid-fixed-page .permissions-table .column-filter-row th { top:69px; }
+.permissions-pager { flex:0 0 auto; }
+.permissions-row-actions button.task-row-danger-action:disabled { color:var(--danger); }
+.resource-group-editor { width:min(1000px,calc(100vw - 56px)); }
+.resource-group-editor .script-editor-card { height:min(780px,calc(100dvh - 56px)); }
+.resource-group-editor [hidden], .resource-group-picker [hidden] { display:none !important; }
+.resource-group-fields { display:flex; flex-direction:column; gap:16px; min-height:0; flex:1; }
+.resource-group-members { border:1px solid var(--border); border-radius:10px; background:var(--surface); display:flex; flex-direction:column; min-height:220px; flex:1; overflow:hidden; }
+.resource-group-members h3 { margin:0; padding:13px 16px; font-size:15px; font-weight:680; }
+.resource-group-tabs { padding:0 8px; flex-wrap:wrap; flex-shrink:0; }
+.resource-group-member-panel { display:flex; flex-direction:column; flex:1; min-height:0; }
+.resource-group-member-list { padding:12px 16px; overflow:auto; min-height:100px; flex:1; }
+.resource-group-member { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:10px 12px; border:1px solid var(--border); border-radius:8px; margin-bottom:8px; }
+.resource-group-member-copy { min-width:0; display:flex; flex-direction:column; gap:4px; font-size:12px; overflow-wrap:anywhere; }
+.resource-group-member-copy strong { font-weight:650; }
+.resource-group-member-copy span { color:var(--text-soft); }
+.resource-group-member-copy .resource-group-required { color:var(--text-faint); font-size:11px; }
+.resource-group-member .danger-button { flex-shrink:0; background:var(--danger); color:#fff; border-color:var(--danger); }
+.resource-group-member .danger-button:disabled { opacity:.45; cursor:default; }
+.resource-group-member-tools { border-top:1px solid var(--border); padding:10px 16px; display:flex; justify-content:space-between; align-items:center; gap:12px; font-size:12px; color:var(--text-soft); }
+.resource-group-empty { color:var(--text-faint); font-size:12px; padding:12px; }
+.resource-group-status { flex:1; font-size:12px; color:var(--text-soft); }
+.resource-group-picker { width:min(1000px,calc(100vw - 56px)); }
+.resource-group-picker .new-task-card { width:100%; max-height:calc(100dvh - 56px); }
+.resource-group-picker-body { display:flex; flex-direction:column; gap:14px; min-height:0; }
+.resource-group-picker-body .search-box { flex:0 0 44px; max-width:none; width:100%; box-sizing:border-box; }
+.resource-group-picker-table { overflow:auto; min-height:160px; max-height:420px; border:1px solid var(--border); border-radius:8px; }
+.resource-group-picker-table th:first-child, .resource-group-picker-table td:first-child { width:35px; text-align:center; vertical-align:middle; }
+.resource-group-picker-table th:nth-child(2) { width:120px; }
+.resource-group-picker-table td { font:inherit; overflow-wrap:anywhere; }
+.resource-group-picker-table td:last-child { font:inherit; }
+@media(max-width:700px) { .resource-group-editor .script-editor-card { height:calc(100dvh - 32px); } .resource-group-editor, .resource-group-picker { width:calc(100vw - 24px); } .resource-group-tabs .task-details-tab { padding:0 9px; } }
+
+/* Assigned User Groups retain the parent row's menu alignment and the standard grid footer. */
+.permissions-user-name { flex:1; min-width:0; overflow-wrap:anywhere; }
+.permissions-row-actions [hidden] { display:none; }
+.permissions-pager .pager-controls { flex-shrink:0; }
+.resource-user-groups .new-task-card { height:min(700px,calc(100dvh - 56px)); }
+.resource-user-groups .resource-group-picker-body { flex:1; }
+.resource-user-groups .script-editor-header, .resource-user-groups .new-task-footer { flex-shrink:0; }
+.resource-user-groups [hidden] { display:none !important; }
+.resource-user-group-filters { display:grid; grid-template-columns:180px minmax(0,1fr) auto; align-items:end; gap:14px; }
+.resource-user-groups .resource-user-group-filters, .resource-user-groups .permissions-help { flex-shrink:0; }
+.resource-user-group-filters .search-box { min-width:0; width:100%; margin:0; }
+.resource-user-group-filters .secondary-button { min-height:42px; }
+.resource-user-group-table { flex:1; max-height:none; }
+.resource-user-group-table table { font-family:var(--font-sans); }
+.resource-user-group-table th:nth-child(2) { width:34%; }
+.resource-user-group-results { margin:0; padding-left:20px; font-size:12px; color:var(--text-soft); max-height:110px; overflow:auto; }
+.resource-user-groups .permissions-help, :is([data-user-group-remove-dialog], [data-group-delete-dialog]) .permissions-help { color:var(--text-soft); font-size:12px; line-height:1.5; margin:0; }
+:is([data-user-group-remove-dialog], [data-group-delete-dialog]) .new-task-body { display:flex; flex-direction:column; gap:16px; }
+/* Center the visible confirmation card, rather than a wider transparent dialog shell. */
+.script-editor-dialog:is([data-user-group-remove-dialog], [data-group-delete-dialog]) { width:min(650px,calc(100vw - 56px)); }
+:is([data-user-group-remove-dialog], [data-group-delete-dialog]) .new-task-card { width:100%; max-height:calc(100dvh - 56px); }
+.permissions-name-column.is-editing { width:400px; }
+.permissions-edit-actions { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.permissions-edit-actions button { min-height:30px; padding:0 9px; }
+.permissions-edit-status { display:block; margin:6px 0 0 29px; color:var(--text-soft); font-size:12px; white-space:normal; overflow-wrap:anywhere; }
+.permissions-edit-status.is-error { color:var(--danger); }
+.permissions-table .permissions-editing td { background:color-mix(in srgb,var(--accent) 5%,var(--surface-2)); }
+.permissions-edit-checkbox { width:16px; height:16px; margin:0; vertical-align:middle; accent-color:var(--accent); cursor:pointer; }
+.permissions-edit-checkbox:disabled { cursor:default; opacity:.48; }
+@media(max-width:700px) {
+    .permissions-pager { flex-wrap:wrap; }
+    .resource-user-group-filters { grid-template-columns:minmax(0,1fr) auto; }
+    .resource-user-group-filters > .field-block { grid-column:1; grid-row:1; }
+    .resource-user-group-filters > [data-user-group-reload] { grid-column:2; grid-row:1; }
+    .resource-user-group-filters > .search-box { grid-column:1 / -1; grid-row:2; }
+}
+
+/* Reserve the final grid viewport at first paint, before scripts/data arrive. */
+html:has(.permissions-workspace):not(:has(.grid-page-scroll-fallback)),
+body:has(.permissions-workspace):not(.grid-page-scroll-fallback) { height: 100%; overflow: hidden; }
+body:has(.permissions-workspace):not(.grid-page-scroll-fallback) .app-shell,
+body:has(.permissions-workspace):not(.grid-page-scroll-fallback) .app-main { height: 100vh; min-height: 0; overflow: hidden; }

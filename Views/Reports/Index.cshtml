@@ -1,0 +1,59 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   First-class MAUI Report administration workspace. *@
+@model ReportsPageViewModel
+@{
+    var reportScope = ViewData["ReportsScope"]?.ToString() ?? "all";
+    var reportTitle = ViewData["ReportsTitle"]?.ToString() ?? "Reports";
+    var reportDescription = ViewData["ReportsDescription"]?.ToString() ?? "Manage saved MAUI Reports, schedules, delivery, and execution history.";
+    ViewData["Title"] = reportTitle;
+    ViewData["GridDeferInitialLoad"] = true;
+}
+
+<div class="page-heading compact-heading">
+    <div>
+        <h1>@reportTitle</h1>
+        <p>@reportDescription</p>
+    </div>
+</div>
+
+<div class="outbound-report-readiness-alerts reports-workspace-readiness" data-outbound-report-readiness hidden>
+    <div class="inline-alert warning-alert" data-outbound-report-smtp-warning hidden>
+        <strong>Outbound email is not ready.</strong> <span data-outbound-report-smtp-warning-text>Saved Reports cannot be delivered until SMTP Configuration is completed.</span>
+    </div>
+    <div class="inline-alert warning-alert" data-outbound-report-data-access-warning hidden>
+        <strong>Data Access Credentials are missing.</strong> <span data-outbound-report-data-access-warning-text></span>
+    </div>
+</div>
+
+<partial name="_DataGrid" model="Model.Grid" />
+
+<div data-reports-page-config
+     data-list-url="@Url.Action("List", "Reports", new { scope = reportScope })"
+     data-report-scope="@reportScope"
+     data-history-url="@Url.Action("History", "Reports")"
+     data-update-url="@Url.Action("Update", "Reports")"
+     data-edit-view-url="@Url.Action("EditView", "Reports")"
+     data-enabled-url="@Url.Action("SetEnabled", "Reports")"
+     data-run-url="@Url.Action("RunNow", "Reports")"
+     data-export-url="@Url.Action("ExportReports", "Reports")"
+     data-import-preflight-url="@Url.Action("PreflightImportReports", "Reports")"
+     data-import-url="@Url.Action("ImportReports", "Reports")"
+     data-bulk-delete-url="@Url.Action("DeleteReports", "Reports")"></div>
+
+<div class="task-row-action-menu" data-report-management-row-action-menu role="menu" aria-label="Report actions" hidden>
+    <button type="button" role="menuitem" data-report-management-command="edit-information">Edit Report Information</button>
+    <div class="task-row-action-divider" role="separator"></div>
+    <button type="button" role="menuitem" data-report-management-command="run">Run Now</button>
+    <button type="button" role="menuitem" data-report-management-command="history">History</button>
+    <div class="task-row-action-divider" role="separator"></div>
+    <button type="button" role="menuitem" data-report-management-command="toggle-enabled">Disable Report</button>
+    <div class="task-row-action-divider" role="separator"></div>
+    <button type="button" role="menuitem" class="task-row-danger-action" data-report-management-command="delete">Delete Report</button>
+</div>
+
+<partial name="_ReportManagementDialogs" />
+
+@section Scripts {
+    <script src="~/js/reports.js" asp-append-version="true"></script>
+}

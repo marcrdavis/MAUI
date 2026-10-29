@@ -1,0 +1,39 @@
+@* Host CSV/XLSX import panel embedded in the same Import Source modal used by native portability, matching Tasks. *@
+    <div class="task-spreadsheet-import-panel" data-host-spreadsheet-import-panel hidden>
+        <label class="field-block full-span"><span>CSV / Excel File</span>
+            <input class="text-input task-import-file" type="file" accept=".csv,.xlsx" data-host-spreadsheet-file />
+            <small>Choose a CSV or XLSX file (first worksheet, maximum 50 MB). Rows appear in the grid before validation. Use Y/N for IGNORE_CERT_PROBS. <a href="@Url.Action("DownloadTemplate", "HostSpreadsheetImport", new { format = "xlsx" })" download>Excel template</a> · <a href="@Url.Action("DownloadTemplate", "HostSpreadsheetImport", new { format = "csv" })" download>CSV template</a></small>
+        </label>
+        <div class="task-spreadsheet-options">
+            <label class="field-block"><span>Host Name Prefix (optional)</span>
+                <input class="text-input" type="text" maxlength="60" autocomplete="off" data-host-spreadsheet-prefix placeholder="e.g. PROD_" />
+            </label>
+            <div class="task-spreadsheet-checkboxes">
+                <label class="configuration-import-acknowledgement native-portability-option">
+                    <input type="checkbox" data-host-spreadsheet-update-existing />
+                    <span>Update existing Host if name already exists</span>
+                </label>
+                <label class="configuration-import-acknowledgement native-portability-option">
+                    <input type="checkbox" data-host-spreadsheet-test-after />
+                    <span>Test each Host connection after import</span>
+                </label>
+            </div>
+        </div>
+        <div class="inline-alert warning-alert">The source spreadsheet may contain plaintext passwords. MAUI masks these values in the preview and results. Protect the original file and securely delete it when no longer needed.</div>
+        <div class="task-spreadsheet-analysis" data-host-spreadsheet-analysis hidden>
+            <div class="task-spreadsheet-summary" data-host-spreadsheet-summary></div>
+            <div class="task-spreadsheet-grid-frame">
+                <table class="task-spreadsheet-grid"><thead data-host-spreadsheet-head></thead><tbody data-host-spreadsheet-body></tbody></table>
+            </div>
+            <div class="task-spreadsheet-grid-pagination" data-host-spreadsheet-pagination hidden>
+                <span data-host-spreadsheet-page-label></span>
+                <div class="task-spreadsheet-page-controls">
+                    <button type="button" class="secondary-button" data-host-spreadsheet-prev>Previous</button>
+                    <button type="button" class="secondary-button" data-host-spreadsheet-next>Next</button>
+                </div>
+            </div>
+            <section class="task-spreadsheet-results-panel" data-host-spreadsheet-results-panel hidden>
+                <h3>Results</h3><div class="task-spreadsheet-results-scroll" data-host-spreadsheet-results></div>
+            </section>
+        </div>
+    </div>

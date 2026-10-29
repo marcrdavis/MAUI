@@ -1,0 +1,117 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   Controlled authenticated application upgrade surface. *@
+@model MauiUpgradeViewModel
+@{
+    ViewData["Title"] = "Upgrade";
+    var ui = UiOptionsAccessor.Value;
+}
+
+<div class="upgrade-page"
+     data-upgrade-page
+     data-run-url="@Url.Action("Run", "Upgrade")"
+     data-restart-url="@Url.Action("Restart", "Upgrade")"
+     data-restart-status-url="@Url.Action("RestartStatus", "Upgrade")"
+     data-login-url="@Url.Action("Login", "Account")">
+    <div class="upgrade-shell">
+        <section class="upgrade-card">
+            <form data-upgrade-token-form hidden>
+                @Html.AntiForgeryToken()
+            </form>
+
+            @if (Model.PendingRestart)
+            {
+                <div class="upgrade-result success" data-upgrade-result>
+                    <div class="upgrade-logo-frame complete">
+                        <img src="@(ui.ApplicationLogo?.StartsWith("/", StringComparison.Ordinal) == true && ui.ApplicationLogo?.StartsWith("//", StringComparison.Ordinal) != true ? Url.Content("~" + ui.ApplicationLogo) : ui.ApplicationLogo)" alt="" class="upgrade-logo" />
+                    </div>
+                    <h1>Upgrade completed</h1>
+                    <p>MAUI has been upgraded to <strong>@Model.TargetVersion</strong> (Build @MauiReleaseInfo.Build).</p>
+                    <div class="upgrade-summary">
+                        <span>Database schema <strong>v@(Model.CurrentSchemaVersion)</strong></span>
+                        <span>Configuration <strong>v@(Model.CurrentConfigurationVersion)</strong></span>
+                    </div>
+                    <div class="upgrade-restart-message" data-upgrade-completion-message>
+                        Select Restart MAUI to finish applying the upgrade.
+                    </div>
+                    <button type="button" class="primary-button upgrade-begin-button" data-upgrade-restart>Restart MAUI</button>
+                </div>
+            }
+            else if (!string.IsNullOrWhiteSpace(Model.StartupError))
+            {
+                <div class="upgrade-result error" data-upgrade-result>
+                    <div class="upgrade-logo-frame">
+                        <img src="@(ui.ApplicationLogo?.StartsWith("/", StringComparison.Ordinal) == true && ui.ApplicationLogo?.StartsWith("//", StringComparison.Ordinal) != true ? Url.Content("~" + ui.ApplicationLogo) : ui.ApplicationLogo)" alt="" class="upgrade-logo" />
+                    </div>
+                    <h1>Upgrade cannot continue</h1>
+                    <p class="upgrade-error-text">@Model.StartupError</p>
+                </div>
+            }
+            else
+            {
+                <div class="upgrade-ready" data-upgrade-ready>
+                    <div class="upgrade-logo-frame">
+                        <img src="@(ui.ApplicationLogo?.StartsWith("/", StringComparison.Ordinal) == true && ui.ApplicationLogo?.StartsWith("//", StringComparison.Ordinal) != true ? Url.Content("~" + ui.ApplicationLogo) : ui.ApplicationLogo)" alt="" class="upgrade-logo" />
+                    </div>
+                    <div class="upgrade-eyebrow">MAUI UPGRADE</div>
+                    <h1>An upgrade is pending</h1>
+                    <p>MAUI must complete the application upgrade before normal access can resume.</p>
+                    <div class="upgrade-version-line">
+                        <span>@Model.InstalledVersion</span>
+                        <span class="upgrade-arrow">→</span>
+                        <strong>@Model.TargetVersion</strong>
+                    </div>
+                    <p class="upgrade-version-only-note">Build @MauiReleaseInfo.Build</p>
+                    <p class="upgrade-description">@Model.Description</p>
+                    <div class="upgrade-summary">
+                        <span>Database schema <strong>v@(Model.CurrentSchemaVersion) → v@(Model.TargetSchemaVersion)</strong></span>
+                        <span>Configuration <strong>v@(Model.CurrentConfigurationVersion) → v@(Model.TargetConfigurationVersion)</strong></span>
+                    </div>
+                    @if (Model.CurrentSchemaVersion == Model.TargetSchemaVersion
+                        && Model.CurrentConfigurationVersion == Model.TargetConfigurationVersion)
+                    {
+                        <p class="upgrade-version-only-note">No database or configuration migration is required. This upgrade updates the MAUI application version only.</p>
+                    }
+                    <button type="button" class="primary-button upgrade-begin-button" data-upgrade-begin>Begin Upgrade</button>
+                </div>
+
+                <div class="upgrade-running" data-upgrade-running hidden>
+                    <div class="upgrade-logo-frame pulsing">
+                        <img src="@(ui.ApplicationLogo?.StartsWith("/", StringComparison.Ordinal) == true && ui.ApplicationLogo?.StartsWith("//", StringComparison.Ordinal) != true ? Url.Content("~" + ui.ApplicationLogo) : ui.ApplicationLogo)" alt="" class="upgrade-logo" />
+                    </div>
+                    <div class="upgrade-progress-line" data-upgrade-progress>Preparing upgrade...</div>
+                </div>
+
+                <div class="upgrade-result success" data-upgrade-success hidden>
+                    <div class="upgrade-logo-frame complete">
+                        <img src="@(ui.ApplicationLogo?.StartsWith("/", StringComparison.Ordinal) == true && ui.ApplicationLogo?.StartsWith("//", StringComparison.Ordinal) != true ? Url.Content("~" + ui.ApplicationLogo) : ui.ApplicationLogo)" alt="" class="upgrade-logo" />
+                    </div>
+                    <h1>Upgrade completed</h1>
+                    <p data-upgrade-success-version></p>
+                    <p class="upgrade-version-only-note">Build @MauiReleaseInfo.Build</p>
+                    <div class="upgrade-summary" data-upgrade-summary></div>
+                    <div class="upgrade-restart-message" data-upgrade-completion-message>
+                        Upgrade completed successfully.
+                    </div>
+                    <button type="button" class="primary-button upgrade-begin-button" data-upgrade-restart hidden>Restart MAUI</button>
+                    <button type="button" class="primary-button upgrade-begin-button" data-upgrade-return hidden>Return to MAUI</button>
+                </div>
+
+                <div class="upgrade-result error" data-upgrade-error hidden>
+                    <div class="upgrade-logo-frame">
+                        <img src="@(ui.ApplicationLogo?.StartsWith("/", StringComparison.Ordinal) == true && ui.ApplicationLogo?.StartsWith("//", StringComparison.Ordinal) != true ? Url.Content("~" + ui.ApplicationLogo) : ui.ApplicationLogo)" alt="" class="upgrade-logo" />
+                    </div>
+                    <h1>Upgrade stopped</h1>
+                    <p class="upgrade-error-text" data-upgrade-error-message></p>
+                    <p class="upgrade-error-note">No further upgrade steps were attempted. Correct the reported problem and retry the upgrade.</p>
+                    <button type="button" class="secondary-button" data-upgrade-retry>Retry Upgrade</button>
+                </div>
+            }
+        </section>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/upgrade.js" asp-append-version="true"></script>
+}
+

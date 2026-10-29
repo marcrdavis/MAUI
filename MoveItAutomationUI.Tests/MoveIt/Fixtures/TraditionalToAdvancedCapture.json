@@ -1,0 +1,839 @@
+{
+  "Traditional": {
+    "Name": "ADHOC_EXT_BBFTP.BNSF.COM_.txt_2C51A8CE216A",
+    "ID": "498499684",
+    "AR": 0,
+    "Active": 0,
+    "Info": {
+      "Description": "Temporary Task created by MAUI Quick Transfer.",
+      "Notes": "Created by MAUI Quick Transfer."
+    },
+    "CacheNames": "random",
+    "UseDefStateCaching": 1,
+    "Parameters": {
+      "Parameter": [
+        {
+          "value": "0x654DB456",
+          "DisplayValue": "BNSF Railway B2Bi Prod exp04102029 (Production) <TECHSVCSDLeServicesComms@bnsf.com>",
+          "Name": "PGPRecipientKey",
+          "Secure": 0
+        }
+      ]
+    },
+    "NextEID": 16,
+    "Watched": 0,
+    "InvalidOverride": 0,
+    "NextActions": {
+      "NextAction": [
+        {
+          "DoIfSuccess": 1,
+          "DoIfFailure": 0,
+          "DoIfNoAction": 0,
+          "DoAfter": "Task",
+          "HostID": "802642794",
+          "AddressTo": "marc@home.com",
+          "Subject": "Success",
+          "Message": "Success",
+          "IsHTML": 0,
+          "Type": "Email"
+        },
+        {
+          "DoIfSuccess": 0,
+          "DoIfFailure": 1,
+          "DoIfNoAction": 0,
+          "DoAfter": "Task",
+          "HostID": "802642794",
+          "AddressTo": "marc@home.com",
+          "Subject": "Failure",
+          "Message": "Failed",
+          "IsHTML": 0,
+          "Type": "Email"
+        },
+        {
+          "DoIfSuccess": 0,
+          "DoIfFailure": 0,
+          "DoIfNoAction": 1,
+          "DoAfter": "Task",
+          "HostID": "802642794",
+          "AddressTo": "marc@home.com",
+          "Subject": "No Action",
+          "Message": "Nothing",
+          "IsHTML": 0,
+          "Type": "Email"
+        },
+        {
+          "DoIfSuccess": 1,
+          "DoIfFailure": 1,
+          "DoIfNoAction": 1,
+          "DoAfter": "Task",
+          "TaskID": "353799693",
+          "Type": "Task"
+        },
+        {
+          "DoIfSuccess": 0,
+          "DoIfFailure": 1,
+          "DoIfNoAction": 1,
+          "DoAfter": "Task",
+          "TaskID": "508667141",
+          "Type": "Task"
+        }
+      ]
+    },
+    "Schedules": {
+      "Schedule": [
+        {
+          "OnlyUntilFirstSuccess": 0,
+          "FailIfNoSuccessInSched": 1,
+          "RunEvenIfNotif": 0,
+          "Frequency": {
+            "Interval": [
+              {
+                "StartTime": "00:00",
+                "EndTime": "23:59",
+                "value": "",
+                "EveryMinutes": 15
+              }
+            ]
+          },
+          "Days": {
+            "DayOfWeek": [
+              "Monday",
+              "Tuesday",
+              "Wednesday",
+              "Thursday",
+              "Friday",
+              "Saturday",
+              "Sunday"
+            ]
+          }
+        }
+      ]
+    },
+    "steps": [
+      {
+        "Source": {
+          "ID": "11",
+          "Disabled": 0,
+          "HostID": "852490296",
+          "Type": "FTP",
+          "UseDefRetryCount": 1,
+          "RetryCount": 0,
+          "UseDefRetryTimeoutSecs": 1,
+          "RetryTimeoutSecs": 0,
+          "InvalidOverride": 0,
+          "FileMask": "*.txt",
+          "ExFile": "",
+          "DeleteOrig": 0,
+          "RenameTo": "",
+          "DelRename": 0,
+          "NewFilesOnly": 1,
+          "Unzip": 0,
+          "RetryIfNoFiles": 0,
+          "UseDefUser": 1,
+          "Username": "",
+          "Password": null,
+          "Path": "/",
+          "ExFo": "",
+          "SearchSubdirs": 0,
+          "Account": null,
+          "UseDefRescanSecs": 1,
+          "RescanSecs": 0,
+          "UseDefConnTimeoutSecs": 1,
+          "ConnTimeoutSecs": 0,
+          "UseDefDataTimeoutSecs": 1,
+          "DataTimeoutSecs": 0,
+          "UseDefClientCert": 1,
+          "ClientCertStore": "",
+          "ClientCertSubject": "",
+          "ClientCertSHA1": "",
+          "UseDefBlindDL": 1,
+          "BlindDL": 0,
+          "UseDefMD5Get": 1,
+          "MD5Get": "Never",
+          "UseDefMD5File": 1,
+          "MD5File": "MD5SUM",
+          "UseDefAB": 1,
+          "AB": "binary",
+          "UseDefPassive": 1,
+          "Passive": 0,
+          "UDMxFi": 1,
+          "MxFi": 0,
+          "UDMxBy": 1,
+          "MxBy": 0,
+          "UseDefXS": 1,
+          "XS": "0",
+          "UseDefRsm": 1,
+          "Rsm": 0,
+          "AddCom": "",
+          "AddComAX": "",
+          "UseDefReuseSSL": 1,
+          "ReuseSSL": 0,
+          "ClientSecret": null,
+          "OAuthClientSecret": null
+        }
+      },
+      {
+        "Destination": {
+          "ID": "13",
+          "Disabled": 0,
+          "HostID": "375860624",
+          "Type": "SSHFTP",
+          "UseOrigName": 0,
+          "FileName": "[OrigName].pgp",
+          "UseDefRetryCount": 1,
+          "RetryCount": 0,
+          "UseDefRetryTimeoutSecs": 1,
+          "RetryTimeoutSecs": 0,
+          "InvalidOverride": 0,
+          "UseDefUser": 1,
+          "Username": "",
+          "Password": null,
+          "Path": "/Home/myfolder",
+          "ForceDir": 1,
+          "OverwriteOrig": 1,
+          "UseRelativeSubdirs": 1,
+          "UseDefConnTimeoutSecs": 1,
+          "ConnTimeoutSecs": 0,
+          "UseDefBlindUL": 1,
+          "BlindUL": 0,
+          "UseDefClientKey": 1,
+          "ClientKeyID": "",
+          "UseDefRsm": 1,
+          "Rsm": 0,
+          "UseDefSetFileAttr": 1,
+          "SetFileAttr": 0,
+          "DestFileAttr": "",
+          "Zip": 0,
+          "UseDefPreserveFileTimestamp": 1,
+          "PreserveFileTimestamp": 0,
+          "UseDefDataTimeoutSecs": 1,
+          "Account": null,
+          "ClientSecret": null,
+          "OAuthClientSecret": null
+        }
+      },
+      {
+        "Process": {
+          "ID": "15",
+          "Disabled": 0,
+          "ScriptID": "100021",
+          "Run": "PerFile",
+          "IsDest": 0
+        }
+      }
+    ],
+    "TT": "",
+    "Group": []
+  },
+  "Advanced": {
+    "Name": "ADHOC_EXT_BBFTP.BNSF.COM_.txt_2C51A8CE216A Advanced",
+    "ID": "",
+    "AR": 0,
+    "Active": 0,
+    "Info": {
+      "Description": "Temporary Task created by MAUI Quick Transfer.",
+      "Notes": "Created by MAUI Quick Transfer."
+    },
+    "CacheNames": "random",
+    "UseDefStateCaching": 1,
+    "Parameters": {
+      "Parameter": [
+        {
+          "value": "0x654DB456",
+          "DisplayValue": "BNSF Railway B2Bi Prod exp04102029 (Production) <TECHSVCSDLeServicesComms@bnsf.com>",
+          "Name": "PGPRecipientKey",
+          "Secure": 0
+        }
+      ]
+    },
+    "NextEID": 22,
+    "Watched": 0,
+    "InvalidOverride": 0,
+    "Schedules": {
+      "Schedule": [
+        {
+          "OnlyUntilFirstSuccess": 0,
+          "FailIfNoSuccessInSched": 1,
+          "RunEvenIfNotif": 0,
+          "Frequency": {
+            "Interval": [
+              {
+                "StartTime": "00:00",
+                "EndTime": "23:59",
+                "value": "",
+                "EveryMinutes": 15
+              }
+            ]
+          },
+          "Days": {
+            "DayOfWeek": [
+              "Monday",
+              "Tuesday",
+              "Wednesday",
+              "Thursday",
+              "Friday",
+              "Saturday",
+              "Sunday"
+            ]
+          }
+        }
+      ]
+    },
+    "steps": [
+      {
+        "Source": {
+          "ID": "11",
+          "Disabled": 0,
+          "HostID": "852490296",
+          "Type": "FTP",
+          "UseDefRetryCount": 1,
+          "RetryCount": 0,
+          "UseDefRetryTimeoutSecs": 1,
+          "RetryTimeoutSecs": 0,
+          "InvalidOverride": 0,
+          "FileMask": "*.txt",
+          "ExFile": "",
+          "DeleteOrig": 0,
+          "RenameTo": "",
+          "DelRename": 0,
+          "NewFilesOnly": 1,
+          "Unzip": 0,
+          "RetryIfNoFiles": 0,
+          "UseDefUser": 1,
+          "Username": "",
+          "Password": null,
+          "Path": "/",
+          "ExFo": "",
+          "SearchSubdirs": 0,
+          "Account": null,
+          "UseDefRescanSecs": 1,
+          "RescanSecs": 0,
+          "UseDefConnTimeoutSecs": 1,
+          "ConnTimeoutSecs": 0,
+          "UseDefDataTimeoutSecs": 1,
+          "DataTimeoutSecs": 0,
+          "UseDefClientCert": 1,
+          "ClientCertStore": "",
+          "ClientCertSubject": "",
+          "ClientCertSHA1": "",
+          "UseDefBlindDL": 1,
+          "BlindDL": 0,
+          "UseDefMD5Get": 1,
+          "MD5Get": "Never",
+          "UseDefMD5File": 1,
+          "MD5File": "MD5SUM",
+          "UseDefAB": 1,
+          "AB": "binary",
+          "UseDefPassive": 1,
+          "Passive": 0,
+          "UDMxFi": 1,
+          "MxFi": 0,
+          "UDMxBy": 1,
+          "MxBy": 0,
+          "UseDefXS": 1,
+          "XS": "0",
+          "UseDefRsm": 1,
+          "Rsm": 0,
+          "AddCom": "",
+          "AddComAX": "",
+          "UseDefReuseSSL": 1,
+          "ReuseSSL": 0,
+          "ClientSecret": null,
+          "OAuthClientSecret": null
+        }
+      },
+      {
+        "For": {
+          "ID": "12",
+          "Disabled": 0,
+          "steps": [
+            {
+              "Process": {
+                "ID": "13",
+                "Disabled": 0,
+                "ScriptID": "100021",
+                "Run": "PerFile",
+                "IsDest": 0
+              }
+            },
+            {
+              "Destination": {
+                "ID": "14",
+                "Disabled": 0,
+                "HostID": "375860624",
+                "Type": "SSHFTP",
+                "UseOrigName": 0,
+                "FileName": "[OrigName].pgp",
+                "UseDefRetryCount": 1,
+                "RetryCount": 0,
+                "UseDefRetryTimeoutSecs": 1,
+                "RetryTimeoutSecs": 0,
+                "InvalidOverride": 0,
+                "UseDefUser": 1,
+                "Username": "",
+                "Password": null,
+                "Path": "/Home/myfolder",
+                "ForceDir": 1,
+                "OverwriteOrig": 1,
+                "UseRelativeSubdirs": 1,
+                "UseDefConnTimeoutSecs": 1,
+                "ConnTimeoutSecs": 0,
+                "UseDefBlindUL": 1,
+                "BlindUL": 0,
+                "UseDefClientKey": 1,
+                "ClientKeyID": "",
+                "UseDefRsm": 1,
+                "Rsm": 0,
+                "UseDefSetFileAttr": 1,
+                "SetFileAttr": 0,
+                "DestFileAttr": "",
+                "Zip": 0,
+                "UseDefPreserveFileTimestamp": 1,
+                "PreserveFileTimestamp": 0,
+                "UseDefDataTimeoutSecs": 1,
+                "Account": null,
+                "ClientSecret": null,
+                "OAuthClientSecret": null
+              }
+            }
+          ]
+        }
+      },
+      {
+        "If": {
+          "ID": "15",
+          "Disabled": 0,
+          "When": [
+            {
+              "steps": [
+                {
+                  "Email": {
+                    "ID": "16",
+                    "Disabled": 0,
+                    "HostID": "802642794",
+                    "Subject": "Success",
+                    "Message": "Success",
+                    "AddressTo": "marc@home.com",
+                    "UseDefRetryCount": 1,
+                    "UseDefRetryTimeoutSecs": 1,
+                    "UseDefConnTimeoutSecs": 1,
+                    "UseDefDataTimeoutSecs": 1,
+                    "IsHTML": 0
+                  }
+                }
+              ],
+              "__parentStepId": "",
+              "__branchIndex": 0,
+              "Criteria": {
+                "comp": {
+                  "a": "[TaskStatus]",
+                  "b": "Success",
+                  "test": "MASK"
+                }
+              }
+            },
+            {
+              "steps": [
+                {
+                  "Email": {
+                    "ID": "17",
+                    "Disabled": 0,
+                    "HostID": "802642794",
+                    "Subject": "Failure",
+                    "Message": "Failed",
+                    "AddressTo": "marc@home.com",
+                    "UseDefRetryCount": 1,
+                    "UseDefRetryTimeoutSecs": 1,
+                    "UseDefConnTimeoutSecs": 1,
+                    "UseDefDataTimeoutSecs": 1,
+                    "IsHTML": 0
+                  }
+                },
+                {
+                  "RunTask": {
+                    "ID": "20",
+                    "Disabled": 0,
+                    "TaskID": "508667141",
+                    "Wait": 0
+                  }
+                }
+              ],
+              "__parentStepId": "",
+              "__branchIndex": 0,
+              "Criteria": {
+                "comp": {
+                  "a": "[TaskStatus]",
+                  "b": "Failure",
+                  "test": "MASK"
+                }
+              }
+            },
+            {
+              "steps": [
+                {
+                  "Email": {
+                    "ID": "18",
+                    "Disabled": 0,
+                    "HostID": "802642794",
+                    "Subject": "No Action",
+                    "Message": "Nothing",
+                    "AddressTo": "marc@home.com",
+                    "UseDefRetryCount": 1,
+                    "UseDefRetryTimeoutSecs": 1,
+                    "UseDefConnTimeoutSecs": 1,
+                    "UseDefDataTimeoutSecs": 1,
+                    "IsHTML": 0
+                  }
+                },
+                {
+                  "RunTask": {
+                    "ID": "21",
+                    "Disabled": 0,
+                    "TaskID": "508667141",
+                    "Wait": 0
+                  }
+                }
+              ],
+              "__parentStepId": "",
+              "__branchIndex": 0,
+              "Criteria": {
+                "comp": {
+                  "a": "[TaskStatus]",
+                  "b": "No xfers",
+                  "test": "MASK"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "RunTask": {
+          "ID": "19",
+          "Disabled": 0,
+          "TaskID": "353799693",
+          "Wait": 0
+        }
+      }
+    ],
+    "TT": "COS",
+    "Group": [],
+    "ClonedFromTaskID": "498499684"
+  },
+  "EachFileAdvanced": {
+    "Name": "ADHOC_EXT_BBFTP.BNSF.COM_.txt_2C51A8CE216A Advanced 2",
+    "ID": "490917247",
+    "AR": 0,
+    "Active": 0,
+    "Info": {
+      "Description": "Temporary Task created by MAUI Quick Transfer.",
+      "Notes": "Created by MAUI Quick Transfer."
+    },
+    "CacheNames": "random",
+    "UseDefStateCaching": 1,
+    "Parameters": {
+      "Parameter": [
+        {
+          "value": "0x654DB456",
+          "DisplayValue": "BNSF Railway B2Bi Prod exp04102029 (Production) <TECHSVCSDLeServicesComms@bnsf.com>",
+          "Name": "PGPRecipientKey",
+          "Secure": 0
+        }
+      ]
+    },
+    "NextEID": 23,
+    "Watched": 0,
+    "InvalidOverride": 0,
+    "Schedules": {
+      "Schedule": [
+        {
+          "OnlyUntilFirstSuccess": 0,
+          "FailIfNoSuccessInSched": 1,
+          "RunEvenIfNotif": 0,
+          "Frequency": {
+            "Interval": [
+              {
+                "StartTime": "00:00",
+                "EndTime": "23:59",
+                "value": "",
+                "EveryMinutes": 15
+              }
+            ]
+          },
+          "Days": {
+            "DayOfWeek": [
+              "Monday",
+              "Tuesday",
+              "Wednesday",
+              "Thursday",
+              "Friday",
+              "Saturday",
+              "Sunday"
+            ]
+          }
+        }
+      ]
+    },
+    "steps": [
+      {
+        "Source": {
+          "ID": "11",
+          "Disabled": 0,
+          "HostID": "852490296",
+          "Type": "FTP",
+          "UseDefRetryCount": 1,
+          "RetryCount": 0,
+          "UseDefRetryTimeoutSecs": 1,
+          "RetryTimeoutSecs": 0,
+          "InvalidOverride": 0,
+          "FileMask": "*.txt",
+          "ExFile": "",
+          "DeleteOrig": 0,
+          "RenameTo": "",
+          "DelRename": 0,
+          "NewFilesOnly": 1,
+          "Unzip": 0,
+          "RetryIfNoFiles": 0,
+          "UseDefUser": 1,
+          "Username": "",
+          "Password": null,
+          "Path": "/",
+          "ExFo": "",
+          "SearchSubdirs": 0,
+          "Account": null,
+          "UseDefRescanSecs": 1,
+          "RescanSecs": 0,
+          "UseDefConnTimeoutSecs": 1,
+          "ConnTimeoutSecs": 0,
+          "UseDefDataTimeoutSecs": 1,
+          "DataTimeoutSecs": 0,
+          "UseDefClientCert": 1,
+          "ClientCertStore": "",
+          "ClientCertSubject": "",
+          "ClientCertSHA1": "",
+          "UseDefBlindDL": 1,
+          "BlindDL": 0,
+          "UseDefMD5Get": 1,
+          "MD5Get": "Never",
+          "UseDefMD5File": 1,
+          "MD5File": "MD5SUM",
+          "UseDefAB": 1,
+          "AB": "binary",
+          "UseDefPassive": 1,
+          "Passive": 0,
+          "UDMxFi": 1,
+          "MxFi": 0,
+          "UDMxBy": 1,
+          "MxBy": 0,
+          "UseDefXS": 1,
+          "XS": "0",
+          "UseDefRsm": 1,
+          "Rsm": 0,
+          "AddCom": "",
+          "AddComAX": "",
+          "UseDefReuseSSL": 1,
+          "ReuseSSL": 0,
+          "ClientSecret": null,
+          "OAuthClientSecret": null
+        }
+      },
+      {
+        "For": {
+          "ID": "12",
+          "Disabled": 0,
+          "steps": [
+            {
+              "Process": {
+                "ID": "13",
+                "Disabled": 0,
+                "ScriptID": "100021",
+                "Run": "PerFile",
+                "IsDest": 0
+              }
+            },
+            {
+              "Destination": {
+                "ID": "14",
+                "Disabled": 0,
+                "HostID": "375860624",
+                "Type": "SSHFTP",
+                "UseOrigName": 0,
+                "FileName": "[OrigName].pgp",
+                "UseDefRetryCount": 1,
+                "RetryCount": 0,
+                "UseDefRetryTimeoutSecs": 1,
+                "RetryTimeoutSecs": 0,
+                "InvalidOverride": 0,
+                "UseDefUser": 1,
+                "Username": "",
+                "Password": null,
+                "Path": "/Home/myfolder",
+                "ForceDir": 1,
+                "OverwriteOrig": 1,
+                "UseRelativeSubdirs": 1,
+                "UseDefConnTimeoutSecs": 1,
+                "ConnTimeoutSecs": 0,
+                "UseDefBlindUL": 1,
+                "BlindUL": 0,
+                "UseDefClientKey": 1,
+                "ClientKeyID": "",
+                "UseDefRsm": 1,
+                "Rsm": 0,
+                "UseDefSetFileAttr": 1,
+                "SetFileAttr": 0,
+                "DestFileAttr": "",
+                "Zip": 0,
+                "UseDefPreserveFileTimestamp": 1,
+                "PreserveFileTimestamp": 0,
+                "UseDefDataTimeoutSecs": 1,
+                "Account": null,
+                "ClientSecret": null,
+                "OAuthClientSecret": null
+              }
+            },
+            {
+              "If": {
+                "ID": "15",
+                "Disabled": 0,
+                "When": [
+                  {
+                    "steps": [
+                      {
+                        "Email": {
+                          "ID": "16",
+                          "Disabled": 0,
+                          "HostID": "802642794",
+                          "Subject": "Failure",
+                          "Message": "Failed",
+                          "AddressTo": "marc@home.com",
+                          "UseDefRetryCount": 1,
+                          "UseDefRetryTimeoutSecs": 1,
+                          "UseDefConnTimeoutSecs": 1,
+                          "UseDefDataTimeoutSecs": 1,
+                          "IsHTML": 0
+                        }
+                      }
+                    ],
+                    "__parentStepId": "15",
+                    "__branchIndex": 0,
+                    "Criteria": {
+                      "comp": {
+                        "a": "[ErrorCodeFile]",
+                        "b": 0,
+                        "test": "NGT"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "If": {
+          "ID": "17",
+          "Disabled": 0,
+          "When": [
+            {
+              "steps": [
+                {
+                  "Email": {
+                    "ID": "18",
+                    "Disabled": 0,
+                    "HostID": "802642794",
+                    "Subject": "Success",
+                    "Message": "Success",
+                    "AddressTo": "marc@home.com",
+                    "UseDefRetryCount": 1,
+                    "UseDefRetryTimeoutSecs": 1,
+                    "UseDefConnTimeoutSecs": 1,
+                    "UseDefDataTimeoutSecs": 1,
+                    "IsHTML": 0
+                  }
+                }
+              ],
+              "__parentStepId": "17",
+              "__branchIndex": 0,
+              "Criteria": {
+                "comp": {
+                  "a": "[TaskStatus]",
+                  "b": "Success",
+                  "test": "MASK"
+                }
+              }
+            },
+            {
+              "steps": [
+                {
+                  "Email": {
+                    "ID": "19",
+                    "Disabled": 0,
+                    "HostID": "802642794",
+                    "Subject": "No Action",
+                    "Message": "Nothing",
+                    "AddressTo": "marc@home.com",
+                    "UseDefRetryCount": 1,
+                    "UseDefRetryTimeoutSecs": 1,
+                    "UseDefConnTimeoutSecs": 1,
+                    "UseDefDataTimeoutSecs": 1,
+                    "IsHTML": 0
+                  }
+                },
+                {
+                  "RunTask": {
+                    "ID": "22",
+                    "Disabled": 0,
+                    "TaskID": "508667141",
+                    "Wait": 0
+                  }
+                }
+              ],
+              "__parentStepId": "17",
+              "__branchIndex": 1,
+              "Criteria": {
+                "comp": {
+                  "a": "[TaskStatus]",
+                  "b": "No xfers",
+                  "test": "MASK"
+                }
+              }
+            },
+            {
+              "steps": [
+                {
+                  "RunTask": {
+                    "ID": "21",
+                    "Disabled": 0,
+                    "TaskID": "508667141",
+                    "Wait": 0
+                  }
+                }
+              ],
+              "__parentStepId": "17",
+              "__branchIndex": 2,
+              "Criteria": {
+                "comp": {
+                  "a": "[TaskStatus]",
+                  "b": "Failure",
+                  "test": "MASK"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "RunTask": {
+          "ID": "20",
+          "Disabled": 0,
+          "TaskID": "353799693",
+          "Wait": 0
+        }
+      }
+    ],
+    "TT": "COS",
+    "Group": [],
+    "ClonedFromTaskID": "498499684"
+  }
+}

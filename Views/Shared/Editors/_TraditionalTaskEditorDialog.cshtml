@@ -1,0 +1,1293 @@
+@* RC2 MAUI Traditional Task editor shell. *@
+<dialog class="traditional-task-editor-dialog"
+        data-traditional-task-editor-dialog
+        data-traditional-task-editor-shell-url='@Url.Action("Shell", "TraditionalTaskEditor")'
+        data-script-metadata-url='@Url.Action("ScriptMetadata", "TraditionalTaskEditor")'
+        data-traditional-task-editor-save-url='@Url.Action("Save", "TraditionalTaskEditor")'
+        data-traditional-task-editor-preferences-url='@Url.Action("SavePreferences", "TraditionalTaskEditor")'
+        data-traditional-task-editor-transfer-exceptions-url='@Url.Action("TransferExceptions", "TraditionalTaskEditor")'
+        data-traditional-task-editor-delete-transfer-exceptions-url='@Url.Action("DeleteTransferExceptions", "TraditionalTaskEditor")'
+        data-traditional-task-editor-source-timestamps-url='@Url.Action("SourceTimestamps", "TraditionalTaskEditor")'
+        data-traditional-task-editor-update-source-timestamp-url='@Url.Action("UpdateSourceTimestamp", "TraditionalTaskEditor")'
+        data-sync-preview-url='@Url.Action("SyncPreview", "TraditionalTaskEditor")'
+        data-sync-action-url='@Url.Action("SyncAction", "TraditionalTaskEditor")'
+        data-traditional-task-editor-browse-url='@Url.Action("BrowseFolders", "TraditionalTaskEditor")'>
+    <div class="traditional-task-editor-card">
+        <div class="traditional-task-editor-header">
+            <div class="traditional-task-editor-title-group">
+                <span class="traditional-task-editor-mark icon" aria-hidden="true"><partial name="_Icon" model="@("tasks")" /></span>
+                <div class="traditional-task-editor-title-copy">
+                    <span class="traditional-task-editor-kicker" data-task-editor-kind-label>Traditional Task Editor</span>
+                    <h2 data-traditional-task-editor-title>Task</h2>
+                    <p data-traditional-task-editor-description>No description</p>
+                </div>
+            </div>
+            <button type="button" class="dialog-close" data-traditional-task-editor-close aria-label="Close">×</button>
+        </div>
+
+        <div class="task-details-tabs traditional-task-editor-tabs" role="tablist" aria-label="Traditional Task editor sections">
+            <button type="button" class="task-details-tab active" role="tab" aria-selected="true" data-traditional-task-editor-tab="task">Task</button>
+            <button type="button" class="task-details-tab" role="tab" aria-selected="false" data-traditional-task-editor-tab="properties">Properties</button>
+            <button type="button" class="task-details-tab" role="tab" aria-selected="false" data-traditional-task-editor-tab="advanced">Advanced</button>
+            <button type="button" class="task-details-tab" role="tab" aria-selected="false" data-traditional-task-editor-tab="logs">Task Logs</button>
+            <div class="traditional-task-editor-tab-actions">
+                <label class="traditional-task-editor-auto-save" title="Automatically save writable changes to MOVEit Automation">
+                    <span>Auto Save</span>
+                    <span class="configuration-switch">
+                        <input type="checkbox" data-traditional-task-editor-auto-save />
+                        <span aria-hidden="true"></span>
+                    </span>
+                </label>
+                <label class="traditional-task-editor-auto-save traditional-task-editor-enable-control" title="Enable or disable this Task">
+                    <span data-traditional-task-editor-enabled-label>Task Enabled</span>
+                    <span class="configuration-switch">
+                        <input type="checkbox" data-editor-field="enabled" data-traditional-task-editor-enabled />
+                        <span aria-hidden="true"></span>
+                    </span>
+                </label>
+                <div class="traditional-task-editor-actions-control">
+                    <button type="button" class="secondary-button" data-traditional-task-editor-actions aria-haspopup="menu" aria-expanded="false">
+                        Actions <span class="button-caret" aria-hidden="true">⌄</span>
+                    </button>
+                    <div class="traditional-task-editor-actions-menu" data-traditional-task-editor-actions-menu role="menu" hidden>
+                        <button type="button" role="menuitem" data-traditional-task-editor-undo disabled title="No editor change is available to undo.">Undo Last Change</button>
+                        <div class="task-row-action-divider" role="separator"></div>
+                        <button type="button" role="menuitem" data-traditional-task-editor-task-parameters>Task Parameters</button>
+                        <button type="button" role="menuitem" data-traditional-task-editor-transfer-exceptions>Transfer Exceptions</button>
+                        <button type="button" role="menuitem" data-traditional-task-editor-preflight>Preflight Check</button>
+                        <button type="button" role="menuitem" data-traditional-task-editor-run-now>Run Now</button>
+                        <button type="button" role="menuitem" data-traditional-task-editor-run-as-of disabled>Run As Of…</button>
+                        <div class="task-row-action-divider" role="separator" data-sync-only hidden></div>
+                        <button type="button" role="menuitem" data-sync-action="swap" data-sync-only hidden>Swap Sync Folders</button>
+                        <button type="button" role="menuitem" data-sync-action="clear-listings" data-sync-only hidden>Clear Sync Listings</button>
+                        <button type="button" role="menuitem" data-sync-view-preview data-sync-only hidden>View Sync Preview</button>
+                        <div class="task-row-action-divider" role="separator"></div>
+                        <button type="button" role="menuitem" data-traditional-task-editor-clone>Clone Task</button>
+                        <button type="button" role="menuitem" data-traditional-task-editor-create-advanced>Create Advanced Task</button>
+                        <button type="button" role="menuitem" data-traditional-task-editor-export>Export Task</button>
+                        <button type="button" role="menuitem" data-advanced-save-flow hidden>Save Task Flow</button>
+                        <div class="task-row-action-divider" role="separator"></div>
+                        <button type="button" role="menuitem" class="danger-menu-item" data-traditional-task-editor-delete>Delete Task</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="traditional-task-editor-body">
+            <div class="details-loading" data-traditional-task-editor-loading>Loading task editor…</div>
+            <div class="inline-alert error-alert traditional-task-editor-error" data-traditional-task-editor-error hidden></div>
+
+            <div class="traditional-task-editor-content" data-traditional-task-editor-content hidden>
+                <section class="traditional-task-editor-panel traditional-task-editor-task-panel" data-traditional-task-editor-panel="task">
+                    <aside class="traditional-task-editor-rail" aria-label="Task configuration sections">
+                        <div class="traditional-task-editor-rail-section" data-traditional-task-editor-section="sync-settings" data-sync-only hidden>
+                            <button type="button" class="traditional-task-editor-rail-heading" data-traditional-task-editor-section-button="sync-settings" aria-expanded="false">
+                                <span class="icon"><partial name="_Icon" model="@("tasks")" /></span><strong>Sync Settings</strong><span class="traditional-task-editor-rail-caret" aria-hidden="true">›</span>
+                            </button>
+                        </div>
+                        <div class="traditional-task-editor-rail-section active" data-traditional-task-editor-section="steps">
+                            <button type="button" class="traditional-task-editor-rail-heading" data-traditional-task-editor-section-button="steps" aria-expanded="true">
+                                <span class="icon"><partial name="_Icon" model="@("layers")" /></span>
+                                <strong><span data-task-editor-folders-label>Steps</span> <span data-traditional-task-editor-step-count>(0)</span></strong>
+                                <span class="traditional-task-editor-rail-caret" aria-hidden="true">›</span>
+                            </button>
+                            <div class="traditional-task-editor-rail-items">
+                                <div class="traditional-task-editor-step-list" data-traditional-task-editor-step-items></div>
+                                <div class="traditional-task-editor-add-control">
+                                    <button type="button" class="secondary-button traditional-task-editor-add-button" data-traditional-task-editor-add-step aria-haspopup="menu" aria-expanded="false">+ Add Step <span class="button-caret" aria-hidden="true">⌄</span></button>
+                                    <div class="traditional-task-editor-add-menu" data-traditional-task-editor-add-step-menu role="menu" hidden>
+                                        <button type="button" role="menuitem" data-traditional-task-editor-add-source>Add Source</button>
+                                        <button type="button" role="menuitem" data-traditional-task-editor-add-process>Add Process</button>
+                                        <button type="button" role="menuitem" data-traditional-task-editor-add-destination>Add Destination</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="traditional-task-editor-rail-section" data-traditional-task-editor-section="schedules">
+                            <button type="button" class="traditional-task-editor-rail-heading" data-traditional-task-editor-section-button="schedules" aria-expanded="false">
+                                <span class="icon"><partial name="_Icon" model="@("calendar")" /></span>
+                                <strong>Schedules <span data-traditional-task-editor-schedule-count>(0)</span></strong>
+                                <span class="traditional-task-editor-rail-caret" aria-hidden="true">›</span>
+                            </button>
+                            <div class="traditional-task-editor-rail-items" hidden>
+                                <div class="traditional-task-editor-schedule-list" data-traditional-task-editor-schedule-items></div>
+                                <button type="button" class="secondary-button traditional-task-editor-add-button" data-traditional-task-editor-add-schedule>+ Add Schedule</button>
+                            </div>
+                        </div>
+
+                        <div class="traditional-task-editor-rail-section" data-traditional-task-editor-section="next-actions">
+                            <button type="button" class="traditional-task-editor-rail-heading" data-traditional-task-editor-section-button="next-actions" aria-expanded="false">
+                                <span class="icon"><partial name="_Icon" model="@("mail")" /></span>
+                                <strong>Next Actions <span data-traditional-task-editor-next-action-count>(0)</span></strong>
+                                <span class="traditional-task-editor-rail-caret" aria-hidden="true">›</span>
+                            </button>
+                            <div class="traditional-task-editor-rail-items" hidden>
+                                <div class="traditional-task-editor-next-action-list" data-traditional-task-editor-next-action-items></div>
+                                <div class="traditional-task-editor-add-control">
+                                    <button type="button" class="secondary-button traditional-task-editor-add-button" data-traditional-task-editor-add-next-action aria-haspopup="menu" aria-expanded="false">+ Add Next Action <span class="button-caret" aria-hidden="true">⌄</span></button>
+                                    <div class="traditional-task-editor-add-menu traditional-task-editor-next-action-add-menu" data-traditional-task-editor-add-next-action-menu role="menu" hidden>
+                                        <button type="button" role="menuitem" data-traditional-task-editor-add-email-action>Send Email</button>
+                                        <button type="button" role="menuitem" data-traditional-task-editor-add-run-task-action>Run Task</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="advanced-mobile-navigation" data-advanced-mobile hidden><button type="button" class="secondary-button" data-advanced-view="flow">Flow</button><button type="button" class="secondary-button" data-advanced-view="properties">Properties</button></div>
+                    </aside>
+
+                    <section class="advanced-task-editor-flow-pane" data-advanced-flow-pane hidden aria-label="Advanced Task flow">
+                        <div class="advanced-flow-tree-scroll"><div data-advanced-flow-tree></div></div>
+                    </section>
+                    <div class="advanced-flow-divider" data-advanced-divider title="Drag to resize flow and properties, or focus and use the arrow keys." role="separator" aria-label="Resize flow and properties" aria-orientation="vertical" aria-valuemin="25" aria-valuemax="70" aria-valuenow="40" tabindex="0"></div>
+                    <div class="traditional-task-editor-workspace">
+                        <div class="traditional-task-editor-workspace-panel" data-traditional-task-editor-workspace="sync-settings" hidden>
+                            <div class="traditional-task-editor-workspace-heading"><div><span class="traditional-task-editor-workspace-kicker">Synchronization</span><h3>Sync Settings</h3><p>Folder A and Folder B use the same folder editor and Host overrides.</p></div></div>
+                            <div class="traditional-task-editor-form-card">
+                                <div class="details-grid">
+                                    <label class="field-block full-span"><span>Sync Type</span><select class="text-input" data-sync-direction data-editor-field="syncDirection"><option value="unidirectional">Unidirectional: Folder A → Folder B</option><option value="bidirectional">Bidirectional: Folder A ⇄ Folder B</option></select></label>
+                                    <label class="field-block full-span"><span>Sync Deletes</span><select class="text-input" data-sync-deletes data-editor-field="syncDeletePolicy"><option value="0">Ignore deletes</option><option value="1">Synchronize deleted files and folders</option><option value="2">Synchronize deletes and delete extra files in Folder B</option></select></label>
+                                    <label class="traditional-task-editor-inline-check full-span"><input type="checkbox" data-sync-comparisons data-editor-field="syncCaseSensitive" /><span>Case Sensitive Comparisons</span></label>
+                                    <p class="field-help full-span">Use case sensitive comparisons when both folders use case sensitive file systems, such as Linux, S3 or Azure Blob.</p>
+                                    <input type="hidden" data-editor-field="syncInitialRun" />
+                                    <input type="hidden" data-editor-field="syncSameSeconds" />
+                                </div>
+                            </div>
+                            <div class="inline-alert info-alert">Saving changes to Sync Type, Sync Deletes or filename comparisons clears the Sync listing and disables the Task. Review a Sync Preview before enabling it. Initial-run options control which files are transferred after the listing is cleared.</div>
+
+                        </div>
+                        <div class="traditional-task-editor-workspace-panel" data-traditional-task-editor-workspace="advanced-step" data-advanced-inspector hidden></div>
+                        <div class="traditional-task-editor-workspace-panel" data-traditional-task-editor-workspace="steps">
+                            <div class="traditional-task-editor-step-empty" data-traditional-task-editor-step-empty>
+                                <span class="icon" aria-hidden="true"><partial name="_Icon" model="@("layers")" /></span>
+                                <h3>Select or add a task step</h3>
+                                <p>Select an existing step from the left or add a new step.</p>
+                            </div>
+
+                            <div data-traditional-task-editor-step-detail hidden>
+                                <div class="traditional-task-editor-workspace-heading">
+                                    <div>
+                                        <span class="traditional-task-editor-workspace-kicker" data-traditional-task-editor-step-kicker>Selected Step</span>
+                                        <h3 data-traditional-task-editor-step-title>Step Properties</h3>
+                                        <p data-traditional-task-editor-step-summary></p>
+                                    </div>
+                                    <div class="traditional-task-editor-step-actions-control">
+                                        <button type="button" class="secondary-button traditional-task-editor-step-actions-button" data-traditional-task-editor-step-actions aria-haspopup="menu" aria-expanded="false" title="Step actions" aria-label="Step actions">⋯</button>
+                                        <div class="traditional-task-editor-step-actions-menu" data-traditional-task-editor-step-actions-menu role="menu" hidden>
+                                            <button type="button" role="menuitem" data-traditional-task-editor-step-action="change-host" data-sync-only hidden>Change Host</button>
+                                            <button type="button" role="menuitem" data-traditional-task-editor-step-action="clone">Clone Step</button>
+                                            <button type="button" role="menuitem" data-traditional-task-editor-step-action="source-timestamps">Edit Source Timestamps</button>
+                                            <div class="task-row-action-divider" role="separator"></div>
+                                            <button type="button" role="menuitem" class="danger-menu-item" data-traditional-task-editor-step-action="delete">Delete Step</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="traditional-task-editor-step-placeholder" data-traditional-task-editor-generic-step hidden>
+                                    <div class="inline-alert info-alert" data-traditional-task-editor-generic-step-message>This step type is not mapped in the MAUI editor yet.</div>
+                                </div>
+
+                                <div class="traditional-task-editor-source" data-traditional-task-editor-source hidden>
+                                    <div class="traditional-task-editor-subtabs" role="tablist" aria-label="Source step properties">
+                                        <button type="button" class="active" data-traditional-task-editor-source-tab="general">General</button>
+                                        <button type="button" data-traditional-task-editor-source-tab="after-transfer">After Transfer</button>
+                                        <button type="button" data-traditional-task-editor-source-tab="additional-commands" hidden>Additional Commands</button>
+                                        <button type="button" data-traditional-task-editor-source-tab="host-overrides">Host Overrides</button>
+                                    </div>
+
+                                    <div class="traditional-task-editor-source-panel" data-traditional-task-editor-source-panel="general">
+                                        <div class="traditional-task-editor-form-card">
+                                            <div class="details-grid traditional-task-editor-source-host-grid">
+                                                <label class="field-block full-span"><span>Host Type</span><select class="text-input" data-traditional-task-editor-source-host-type-filter></select></label>
+                                                <div class="field-block full-span"><span id="traditional-task-editor-source-host-label">Host</span><div class="traditional-task-editor-host-select-row"><select class="text-input" aria-labelledby="traditional-task-editor-source-host-label" data-source-field="hostId" data-traditional-task-editor-source-host></select><button type="button" class="secondary-button" data-traditional-task-editor-edit-host="Source" hidden>Edit Host</button></div><small data-traditional-task-editor-source-host-help></small></div>
+                                                <label class="field-block full-span" data-source-s3-general-only hidden><span>Bucket Name</span><span class="traditional-task-editor-input-action"><input class="text-input" data-source-field="bucket" data-traditional-task-editor-source-bucket /><button type="button" class="secondary-button" data-traditional-task-editor-source-bucket-browse>Browse</button></span><small data-traditional-task-editor-source-bucket-help></small></label>
+                                                <label class="field-block full-span" data-source-azureblob-general-only hidden><span>Container</span><span class="traditional-task-editor-input-action"><input class="text-input" data-source-field="container" data-traditional-task-editor-source-container /><button type="button" class="secondary-button" data-traditional-task-editor-source-container-browse>Browse</button></span><small data-traditional-task-editor-source-container-help></small></label>
+                                                <label class="field-block full-span" data-source-sharepoint-general-only hidden><span>Document Library</span><span class="traditional-task-editor-input-action"><input class="text-input" data-source-field="documentLibrary" data-traditional-task-editor-source-document-library readonly /><button type="button" class="secondary-button" data-traditional-task-editor-source-document-library-browse>Browse</button></span><small data-traditional-task-editor-source-document-library-help></small></label>
+                                                <label class="field-block full-span" data-source-non-pop3><span>Folder(s)</span><span class="traditional-task-editor-input-action"><input class="text-input" data-source-field="path" data-traditional-task-editor-source-path /><button type="button" class="secondary-button" data-traditional-task-editor-source-browse>Browse</button><select class="text-input traditional-task-editor-field-macro" data-traditional-task-editor-field-macro data-macro-context="source-path" data-macro-target='[data-source-field="path"]' aria-label="Insert macro into Source Folder(s)"></select></span><small class="traditional-task-editor-folder-macro-warning" data-traditional-task-editor-source-browse-warning hidden>Folders containing macros cannot be browsed. Remove the macro to use Browse.</small></label>
+                                                <label class="traditional-task-editor-inline-check full-span" data-source-non-pop3><input type="checkbox" data-source-field="searchSubdirectories" /> <span>Search subdirectories</span></label>
+                                                <label class="field-block full-span traditional-task-editor-check-with-value" data-source-non-pop3><span class="traditional-task-editor-inline-check"><input type="checkbox" data-source-field="ignoreFolders" /> <span>Ignore folder(s)</span></span><span class="traditional-task-editor-input-action"><input class="text-input" data-source-field="excludeFolders" placeholder="Folder mask" /><select class="text-input traditional-task-editor-field-macro" data-traditional-task-editor-field-macro data-macro-context="source-path" data-macro-target='[data-source-field="excludeFolders"]' aria-label="Insert macro into ignored folder mask"></select></span></label>
+                                                <label class="field-block full-span"><span>File(s)</span><span class="traditional-task-editor-input-action"><input class="text-input" data-source-field="fileMask" placeholder="File name or wildcard pattern" /><select class="text-input traditional-task-editor-field-macro" data-traditional-task-editor-field-macro data-macro-context="source-file" data-macro-target='[data-source-field="fileMask"]' aria-label="Insert macro into Source File(s)"></select></span></label>
+                                                <label class="field-block full-span traditional-task-editor-check-with-value"><span class="traditional-task-editor-inline-check"><input type="checkbox" data-source-field="ignoreFiles" /> <span>Ignore file(s)</span></span><span class="traditional-task-editor-input-action"><input class="text-input" data-source-field="excludeFiles" placeholder="File mask" /><select class="text-input traditional-task-editor-field-macro" data-traditional-task-editor-field-macro data-macro-context="source-file" data-macro-target='[data-source-field="excludeFiles"]' aria-label="Insert macro into ignored file mask"></select></span></label>
+                                            </div>
+                                            <div class="traditional-task-editor-source-options">
+                                                <div class="traditional-task-editor-option-action-row" data-source-non-pop3>
+                                                    <label class="traditional-task-editor-inline-check"><input type="checkbox" data-source-field="hasSpecialFilters" /> <span>Special Filters</span></label>
+                                                    <button type="button" class="secondary-button compact-button" data-traditional-task-editor-special-filters>Edit</button>
+                                                </div>
+                                                <div class="traditional-task-editor-option-note traditional-task-editor-special-filter-summary" data-source-non-pop3 data-traditional-task-editor-special-filter-status>No filters configured.</div>
+                                                <label class="traditional-task-editor-inline-check"><input type="checkbox" data-source-field="collectOnlyNewFiles" /> <span>Collect only new files</span></label>
+                                                <label class="traditional-task-editor-inline-check"><input type="checkbox" data-source-field="expandZipFiles" /> <span>Expand zip files</span></label>
+                                                <label class="traditional-task-editor-inline-check"><input type="checkbox" data-source-field="retryIfNoFilesFound" /> <span>Retry if no files found</span></label>
+                                            </div>
+                                            <div class="details-grid" data-sync-only hidden>
+                                                <label class="traditional-task-editor-inline-check full-span"><input type="checkbox" data-source-field="overridePreserveFileTimestamp" /> <span>Override default preserve file timestamp</span></label>
+                                                <label class="traditional-task-editor-inline-check full-span traditional-task-editor-sync-timestamp-value"><input type="checkbox" data-source-field="preserveFileTimestamp" /> <span>Preserve file timestamp</span></label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="traditional-task-editor-source-panel" data-traditional-task-editor-source-panel="after-transfer" hidden>
+                                        <div class="traditional-task-editor-form-card">
+                                            <div class="traditional-task-editor-field-heading">After successful transfer</div>
+                                            <div class="traditional-task-editor-radio-list">
+                                                <label><input type="radio" name="traditional-task-editor-delete-original" value="0" data-source-field="deleteOriginalAction" /> <span>Do nothing</span></label>
+                                                <label><input type="radio" name="traditional-task-editor-delete-original" value="1" data-source-field="deleteOriginalAction" /> <span>Delete original file(s)</span></label>
+                                                <label data-source-rename-original-option><input type="radio" name="traditional-task-editor-delete-original" value="2" data-source-field="deleteOriginalAction" /> <span>Rename original file(s)</span></label>
+                                            </div>
+                                            <div class="traditional-task-editor-after-transfer-rename" data-traditional-task-editor-rename-options>
+                                                <label class="field-block full-span"><span>Rename To</span><span class="traditional-task-editor-input-action"><input class="text-input" data-source-field="renameTo" placeholder="File name or MOVEit macro expression" /><select class="text-input traditional-task-editor-field-macro" data-traditional-task-editor-field-macro data-macro-context="runtime-file" data-macro-target='[data-source-field="renameTo"]' aria-label="Insert macro into Rename To"></select></span></label>
+                                                <label class="traditional-task-editor-inline-check"><input type="checkbox" data-source-field="renamedFilesMayOverwrite" /> <span>Renamed files may overwrite existing files</span></label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="traditional-task-editor-source-panel" data-traditional-task-editor-source-panel="additional-commands" hidden>
+                                        <div class="traditional-task-editor-form-card">
+                                            <div class="details-grid">
+                                                <label class="field-block full-span"><span>Commands to execute (per file) before transfer</span><textarea class="text-input traditional-task-editor-command-textarea" data-source-field="additionalCommandsBefore" rows="4"></textarea><small>One FTP quote command per line. MOVEit macros are supported.</small></label>
+                                                <label class="field-block full-span"><span>Commands to execute (per file) after transfer</span><textarea class="text-input traditional-task-editor-command-textarea" data-source-field="additionalCommandsAfter" rows="4"></textarea><small>One FTP quote command per line. MOVEit macros are supported.</small></label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="traditional-task-editor-source-panel" data-traditional-task-editor-source-panel="host-overrides" hidden>
+                                        <div class="traditional-task-editor-host-override-heading">
+                                            <div><strong data-traditional-task-editor-source-host-type>Host Overrides</strong><span>These values override settings configured on the selected Host for this Source only.</span></div>
+                                        </div>
+                                        <div class="traditional-task-editor-host-override-unsupported inline-alert info-alert" data-traditional-task-editor-host-override-unsupported hidden></div>
+                                        @* Host-profile extension point. Keep protocol-specific controls inside this container; the Task Editor shell/workspace hierarchy is stable. *@
+                                        <div data-traditional-task-editor-host-override-supported>
+                                            <div class="traditional-task-editor-subtabs traditional-task-editor-host-subtabs" role="tablist" aria-label="Host override property groups">
+                                                <button type="button" data-traditional-task-editor-host-tab="authentication" hidden>Authentication</button>
+                                                <button type="button" data-traditional-task-editor-host-tab="file-sorting" hidden>File Sorting</button>
+                                                <button type="button" class="active" data-traditional-task-editor-host-tab="timeouts">Timeouts</button>
+                                                <button type="button" data-traditional-task-editor-host-tab="transfer">Transfer</button>
+                                                <button type="button" data-traditional-task-editor-host-tab="download-limits">Download Limits</button>
+                                                <button type="button" data-traditional-task-editor-host-tab="security" hidden>Security</button>
+                                                <button type="button" data-traditional-task-editor-host-tab="data-integrity" hidden>Data Integrity Checking</button>
+                                            </div>
+
+                                            <div class="traditional-task-editor-host-panel" data-traditional-task-editor-host-panel="authentication" hidden>
+                                                <div class="traditional-task-editor-form-card">
+                                                    <label class="traditional-task-editor-inline-check" data-source-credential-override-toggle><input type="checkbox" data-source-field="overrideCredentials" /> <span>Override Default Credentials</span></label>
+                                                    <div class="traditional-task-editor-dependent-option traditional-task-editor-auth-mode" data-source-email-auth-only hidden>
+                                                        <div class="traditional-task-editor-radio-list">
+                                                            <label><input type="radio" name="traditional-task-editor-source-email-auth" value="0" data-source-field="emailUseOAuth" data-traditional-task-editor-source-email-legacy /> <span>Legacy</span></label>
+                                                            <label><input type="radio" name="traditional-task-editor-source-email-auth" value="1" data-source-field="emailUseOAuth" data-traditional-task-editor-source-email-oauth /> <span>OAuth</span></label>
+                                                        </div>
+                                                        <div class="details-grid" data-traditional-task-editor-source-email-oauth-details hidden>
+                                                            <label class="field-block"><span>Type</span><select class="text-input" data-source-field="emailOAuthType"><option value="microsoft365">Microsoft Office 365</option><option value="custom">Custom</option></select></label>
+                                                            <label class="field-block"><span>Username</span><input class="text-input" data-source-field="emailOAuthUsername" autocomplete="off" /></label>
+                                                            <label class="field-block"><span>Client ID</span><input class="text-input" data-source-field="emailOAuthClientId" autocomplete="off" /></label>
+                                                            <label class="field-block"><span>Client Secret</span><input type="password" class="text-input" data-source-field="emailOAuthClientSecret" autocomplete="new-password" placeholder="Leave blank to keep configured client secret" /><small data-traditional-task-editor-source-email-oauth-secret-help></small></label>
+                                                            <label class="field-block full-span" data-source-email-oauth-microsoft-only><span>Tenant ID</span><input class="text-input" data-source-field="emailOAuthTenantId" autocomplete="off" /></label>
+                                                            <label class="field-block full-span" data-source-email-oauth-custom-only hidden><span>Authorization Scope</span><input class="text-input" data-source-field="emailOAuthScope" autocomplete="off" /></label>
+                                                            <label class="field-block full-span" data-source-email-oauth-custom-only hidden><span>Token URL</span><input class="text-input" data-source-field="emailOAuthTokenUrl" autocomplete="off" /></label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="traditional-task-editor-dependent-option traditional-task-editor-auth-mode" data-source-google-auth-only hidden>
+                                                        <div class="traditional-task-editor-radio-list">
+                                                            <label><input type="radio" name="traditional-task-editor-source-google-auth" value="0" data-source-field="googleUseOAuth" data-traditional-task-editor-source-google-hmac /> <span>HMAC</span></label>
+                                                            <label><input type="radio" name="traditional-task-editor-source-google-auth" value="1" data-source-field="googleUseOAuth" data-traditional-task-editor-source-google-oauth /> <span>OAuth 2.0</span></label>
+                                                        </div>
+                                                        <div class="details-grid" data-source-google-oauth-fields hidden>
+                                                            <label class="field-block"><span>Client ID</span><input class="text-input" data-source-field="googleOAuthClientId" autocomplete="off" /></label>
+                                                            <label class="field-block"><span>Project ID</span><input class="text-input" data-source-field="googleProjectId" autocomplete="off" /></label>
+                                                            <label class="field-block full-span"><span>Private Key</span><input type="password" class="text-input" data-source-field="googleOAuthClientSecret" autocomplete="new-password" placeholder="Leave blank to keep configured private key" /><small data-traditional-task-editor-source-google-oauth-secret-help></small></label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="traditional-task-editor-dependent-option traditional-task-editor-auth-mode" data-source-sharepoint-auth-only hidden>
+                                                        <div class="traditional-task-editor-radio-list">
+                                                            <label><input type="radio" name="traditional-task-editor-source-sharepoint-auth" value="2" data-source-field="sharePointAuthenticationMode" /> <span>Certificate Access</span></label>
+                                                            <label><input type="radio" name="traditional-task-editor-source-sharepoint-auth" value="1" data-source-field="sharePointAuthenticationMode" /> <span>App Access</span></label>
+                                                        </div>
+                                                        <div class="details-grid" data-source-sharepoint-client-id-fields hidden>
+                                                            <label class="field-block full-span"><span>Client ID</span><input class="text-input" data-source-field="sharePointClientId" autocomplete="off" /></label>
+                                                        </div>
+                                                        <div class="details-grid" data-source-sharepoint-app-fields hidden>
+                                                            <label class="field-block"><span>Realm ID</span><input class="text-input" data-source-field="sharePointRealmId" autocomplete="off" /></label>
+                                                            <label class="field-block"><span>Client Secret</span><input type="password" class="text-input" data-source-field="sharePointClientSecret" autocomplete="new-password" placeholder="Leave blank to keep configured client secret" /><small data-traditional-task-editor-source-sharepoint-client-secret-help></small></label>
+                                                        </div>
+                                                        <div class="details-grid" data-source-sharepoint-certificate-fields hidden>
+                                                            <label class="field-block"><span>Tenant ID</span><input class="text-input" data-source-field="sharePointTenantId" autocomplete="off" /></label>
+                                                            <label class="field-block"><span>Certificate</span><select class="text-input" data-source-field="sharePointCertificateSha1"></select></label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="details-grid traditional-task-editor-dependent-option traditional-task-editor-auth-fields" data-source-generic-credentials>
+                                                        <label class="field-block"><span data-traditional-task-editor-source-credential-user-label>Username</span><input class="text-input" data-source-field="username" autocomplete="off" /></label>
+                                                        <label class="field-block"><span data-traditional-task-editor-source-credential-password-label>Password</span><input type="password" class="text-input" data-source-field="password" autocomplete="new-password" placeholder="Leave blank to keep configured password" /><small data-traditional-task-editor-source-password-help></small></label>
+                                                        <label class="field-block full-span" data-source-ftp-only hidden><span>Account <span class="muted-text">(optional)</span></span><input type="password" class="text-input" data-source-field="account" autocomplete="new-password" placeholder="Leave blank to keep configured account" /><small data-traditional-task-editor-source-account-help></small></label>
+                                                    </div>
+                                                    <small class="traditional-task-editor-auth-summary" data-traditional-task-editor-source-email-auth-help data-source-email-auth-only hidden></small>
+                                                    <small class="traditional-task-editor-auth-summary" data-traditional-task-editor-source-google-auth-help data-source-google-auth-only hidden></small>
+                                                    <div class="traditional-task-editor-destination-transfer-divider" data-source-cert-only></div>
+                                                    <label class="traditional-task-editor-inline-check" data-source-cert-only><input type="checkbox" data-source-field="overrideClientCertificate" /> <span>Override Default Client Certificate</span></label>
+                                                    <label class="field-block traditional-task-editor-dependent-option" data-source-cert-only><span>Client Certificate</span><select class="text-input" data-source-field="clientCertificateSha1"></select><small data-traditional-task-editor-source-client-cert-help></small></label>
+                                                    <label class="traditional-task-editor-inline-check" data-source-sftp-only hidden><input type="checkbox" data-source-field="overrideClientKey" /> <span>Override Default Client Key</span></label>
+                                                    <label class="field-block traditional-task-editor-dependent-option" data-source-sftp-only hidden><span>Client Key</span><select class="text-input" data-source-field="clientKeyId"></select><small data-traditional-task-editor-source-client-key-help></small></label>
+                                                </div>
+                                            </div>
+
+                                            <div class="traditional-task-editor-host-panel" data-traditional-task-editor-host-panel="file-sorting" hidden>
+                                                <div class="traditional-task-editor-form-card">
+                                                    <label class="traditional-task-editor-inline-check"><input type="checkbox" data-source-field="overrideFileSorting" /> <span>Override Default File Sorting</span></label>
+                                                    <div class="details-grid traditional-task-editor-dependent-option">
+                                                        <label class="field-block"><span>Sort files by</span><select class="text-input" data-source-field="sortField"><option value="Filename">File Name</option><option value="Size">Size</option><option value="Date">Date</option></select></label>
+                                                        <label class="field-block"><span>Direction</span><select class="text-input" data-source-field="sortDirection"><option value="A">Ascending</option><option value="D">Descending</option></select></label>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="traditional-task-editor-host-panel" data-traditional-task-editor-host-panel="timeouts">
+                                                <div class="traditional-task-editor-form-card details-grid">
+                                                    <label class="field-block traditional-task-editor-check-with-value" data-source-connect-timeout-only hidden><span class="traditional-task-editor-inline-check"><input type="checkbox" data-source-field="overrideConnectTimeout" /> <span>Override Default Connect Timeout</span></span><span class="traditional-task-editor-number-suffix"><input type="number" min="0" step="1" class="text-input" data-source-field="connectTimeoutSeconds" /><span>secs</span></span></label>
+                                                    <label class="field-block traditional-task-editor-check-with-value" data-source-data-timeout-only hidden><span class="traditional-task-editor-inline-check"><input type="checkbox" data-source-field="overrideDataTimeout" /> <span>Override Default Data Timeout</span></span><span class="traditional-task-editor-number-suffix"><input type="number" min="0" step="1" class="text-input" data-source-field="dataTimeoutSeconds" /><span>secs</span></span></label>
+                                                    <label class="field-block traditional-task-editor-check-with-value"><span class="traditional-task-editor-inline-check"><input type="checkbox" data-source-field="overrideRetryCount" /> <span>Override Default Retry Count</span></span><input type="number" min="0" step="1" class="text-input" data-source-field="retryCount" /></label>
+                                                    <label class="field-block traditional-task-editor-check-with-value"><span class="traditional-task-editor-inline-check"><input type="checkbox" data-source-field="overrideRetryTimeout" /> <span>Override Default Retry Timeout</span></span><span class="traditional-task-editor-number-suffix"><input type="number" min="0" step="1" class="text-input" data-source-field="retryTimeoutSeconds" /><span>secs</span></span></label>
+                                                    <label class="field-block traditional-task-editor-check-with-value" data-source-rescan-only><span class="traditional-task-editor-inline-check"><input type="checkbox" data-source-field="overrideRescanTime" /> <span>Override Default Transfer Rescan Time</span></span><span class="traditional-task-editor-number-suffix"><input type="number" min="0" step="1" class="text-input" data-source-field="rescanSeconds" /><span>secs</span></span></label>
+                                                </div>
+                                            </div>
+
+                                            <div class="traditional-task-editor-host-panel" data-traditional-task-editor-host-panel="transfer" hidden>
+                                                <div class="traditional-task-editor-form-card">
+                                                    <div data-source-unc-only>
+                                                        <label class="traditional-task-editor-inline-check"><input type="checkbox" data-source-field="overrideWindowsCopyFileApi" /> <span>Override Default Use Windows CopyFile API</span></label>
+                                                        <label class="traditional-task-editor-inline-check traditional-task-editor-dependent-option"><input type="checkbox" data-source-field="useWindowsCopyFileApi" /> <span>Use Windows CopyFile API for UNC transfers</span></label>
+                                                    </div>
+                                                    <div data-source-ftp-only hidden>
+                                                        <div class="traditional-task-editor-protocol-grid">
+                                                            <div class="traditional-task-editor-protocol-row"><label class="traditional-task-editor-inline-check"><input type="checkbox" data-source-field="overrideTransferType" /> <span>Override Default Transfer Type</span></label><div class="traditional-task-editor-inline-radio-group" data-source-dependent="overrideTransferType"><label><input type="radio" name="traditional-task-editor-source-ftp-transfer-type" value="ascii" data-source-field="transferType" /> ASCII</label><label><input type="radio" name="traditional-task-editor-source-ftp-transfer-type" value="binary" data-source-field="transferType" /> Binary</label></div></div>
+                                                            <div class="traditional-task-editor-protocol-row"><label class="traditional-task-editor-inline-check"><input type="checkbox" data-source-field="overridePassive" /> <span>Override Default Transfer Mode</span></label><div class="traditional-task-editor-inline-radio-group" data-source-dependent="overridePassive"><label><input type="radio" name="traditional-task-editor-source-ftp-passive" value="0" data-source-field="passive" /> Active</label><label><input type="radio" name="traditional-task-editor-source-ftp-passive" value="1" data-source-field="passive" /> Passive</label></div></div>
+                                                            <div class="traditional-task-editor-protocol-row"><label class="traditional-task-editor-inline-check"><input type="checkbox" data-source-field="overrideXSha1" /> <span>Override Default XSHA1 Setting</span></label><label class="traditional-task-editor-inline-check" data-source-dependent="overrideXSha1"><input type="checkbox" data-source-field="useXSha1" /> <span>Use XSHA1 command, if available</span></label></div>
+                                                            <div class="traditional-task-editor-protocol-row"><label class="traditional-task-editor-inline-check"><input type="checkbox" data-source-field="overrideBlindDownload" /> <span>Override Default Blind Download</span></label><label class="traditional-task-editor-inline-check" data-source-dependent="overrideBlindDownload"><input type="checkbox" data-source-field="blindDownload" /> <span>Blind downloads</span></label></div>
+                                                            <div class="traditional-task-editor-protocol-row"><label class="traditional-task-editor-inline-check"><input type="checkbox" data-source-field="overrideResume" /> <span>Override Default Resume</span></label><label class="traditional-task-editor-inline-check" data-source-dependent="overrideResume"><input type="checkbox" data-source-field="resume" /> <span>Resume partial transfers (if possible)</span></label></div>
+                                                            <div class="traditional-task-editor-protocol-warning inline-alert warning-alert" data-traditional-task-editor-source-ftp-resume-retry-warning hidden>Resume partial transfers requires a non-zero Retry Count.</div>
+                                                            <div class="traditional-task-editor-protocol-warning inline-alert warning-alert" data-traditional-task-editor-source-ftp-resume-blind-warning hidden>Resume partial transfers is not compatible with Blind Downloads.</div>
+                                                            <div class="traditional-task-editor-protocol-row"><label class="traditional-task-editor-inline-check"><input type="checkbox" data-source-field="overrideReuseTlsSession" /> <span>Override Default Reuse TLS Session</span></label><label class="traditional-task-editor-inline-check" data-source-dependent="overrideReuseTlsSession"><input type="checkbox" data-source-field="reuseTlsSession" /> <span>Reuse TLS session for data connections</span></label></div>
+                                                        </div>
+                                                    </div>
+                                                    <div data-source-sftp-only hidden>
+                                                        <div class="traditional-task-editor-protocol-grid">
+                                                            <div class="traditional-task-editor-protocol-row"><label class="traditional-task-editor-inline-check"><input type="checkbox" data-source-field="overrideBlindDownload" /> <span>Override Default Blind Download</span></label><label class="traditional-task-editor-inline-check" data-source-dependent="overrideBlindDownload"><input type="checkbox" data-source-field="blindDownload" /> <span>Blind downloads</span></label></div>
+                                                            <div class="traditional-task-editor-protocol-row"><label class="traditional-task-editor-inline-check"><input type="checkbox" data-source-field="overrideResume" /> <span>Override Default Resume</span></label><label class="traditional-task-editor-inline-check" data-source-dependent="overrideResume"><input type="checkbox" data-source-field="resume" /> <span>Resume partial transfers (if possible)</span></label></div>
+                                                            <div class="traditional-task-editor-protocol-warning inline-alert warning-alert" data-traditional-task-editor-source-sftp-resume-retry-warning hidden>Resume partial transfers requires a non-zero Retry Count.</div>
+                                                            <div class="traditional-task-editor-protocol-warning inline-alert warning-alert" data-traditional-task-editor-source-sftp-resume-blind-warning hidden>Resume partial transfers is not compatible with Blind Downloads.</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="traditional-task-editor-host-panel" data-traditional-task-editor-host-panel="download-limits" hidden>
+                                                <div class="traditional-task-editor-form-card details-grid">
+                                                    <label class="field-block traditional-task-editor-check-with-value"><span class="traditional-task-editor-inline-check"><input type="checkbox" data-source-field="overrideMaxFiles" /> <span>Override default file count download limit</span></span><input type="number" min="0" step="1" class="text-input" data-source-field="maxFiles" /><small>0 = no limit</small></label>
+                                                    <label class="field-block traditional-task-editor-check-with-value"><span class="traditional-task-editor-inline-check"><input type="checkbox" data-source-field="overrideMaxBytes" /> <span>Override default file size download limit</span></span><span class="traditional-task-editor-number-suffix"><input type="number" min="0" step="1" class="text-input" data-source-field="maxBytes" /><span>bytes</span></span><small>0 = no limit</small></label>
+                                                </div>
+                                            </div>
+
+                                            <div class="traditional-task-editor-host-panel" data-traditional-task-editor-host-panel="security" hidden>
+                                                <div class="traditional-task-editor-form-card" data-source-md5-only hidden>
+                                                    <div class="details-grid">
+                                                        <label class="field-block traditional-task-editor-check-with-value"><span class="traditional-task-editor-inline-check"><input type="checkbox" data-source-field="overrideMd5Mode" /> <span>Override Default Use MD5</span></span><select class="text-input" data-source-field="md5Mode"><option value="Never">Never</option><option value="IfPresent">If Present</option><option value="Always">Always (required)</option></select></label>
+                                                        <label class="field-block traditional-task-editor-check-with-value"><span class="traditional-task-editor-inline-check"><input type="checkbox" data-source-field="overrideMd5FileName" /> <span>Override Default MD5 File Name</span></span><input class="text-input" data-source-field="md5FileName" placeholder="MD5SUM" /></label>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="traditional-task-editor-host-panel" data-traditional-task-editor-host-panel="data-integrity" hidden>
+                                                <div class="traditional-task-editor-form-card" data-source-cloud-data-integrity-only hidden>
+                                                    <label class="traditional-task-editor-inline-check"><input type="checkbox" data-source-field="overrideDataIntegrity" /> <span>Override Data Integrity Checking Rule</span></label>
+                                                    <div class="traditional-task-editor-radio-list traditional-task-editor-dependent-option" data-source-dependent="overrideDataIntegrity">
+                                                        <label><input type="radio" name="traditional-task-editor-source-cloud-data-integrity" value="never" data-source-field="dataIntegrityRule" /> <span>Never perform data integrity check</span></label>
+                                                        <label data-source-s3-integrity-ifsure><input type="radio" name="traditional-task-editor-source-cloud-data-integrity" value="ifsure" data-source-field="dataIntegrityRule" /> <span>Perform data integrity check if the hash calculation is guaranteed</span></label>
+                                                        <label><input type="radio" name="traditional-task-editor-source-cloud-data-integrity" value="ignore" data-source-field="dataIntegrityRule" /> <span>Always perform data integrity check and ignore failures</span></label>
+                                                        <label><input type="radio" name="traditional-task-editor-source-cloud-data-integrity" value="always" data-source-field="dataIntegrityRule" /> <span>Always perform data integrity check</span></label>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="traditional-task-editor-process" data-traditional-task-editor-process hidden>
+                                    <div class="traditional-task-editor-subtabs" role="tablist" aria-label="Process step properties">
+                                        <button type="button" class="active" data-traditional-task-editor-process-tab="general">General</button>
+                                        <button type="button" data-traditional-task-editor-process-tab="parameters">Parameters</button>
+                                    </div>
+
+                                    <div class="traditional-task-editor-process-panel" data-traditional-task-editor-process-panel="general">
+                                        <div class="traditional-task-editor-form-card">
+                                            <div class="details-grid traditional-task-editor-process-grid">
+                                                <label class="field-block full-span"><span>Script</span><select class="text-input" data-process-field="scriptId" data-traditional-task-editor-process-script></select><small data-traditional-task-editor-process-script-help></small></label>
+                                            </div>
+                                            <section class="task-script-guidance" data-script-guidance hidden aria-label="Script description and parameters">
+                                                <div data-script-guidance-status role="status" aria-live="polite"></div>
+                                                <p class="task-script-description" data-script-guidance-description></p>
+                                                <div class="task-script-reference" data-script-guidance-reference hidden>
+                                                    <div class="traditional-task-editor-field-heading">Parameters available for this Script</div>
+                                                    <div class="task-script-reference-scroll"><table class="task-script-reference-table"><thead><tr><th>Name</th><th>Direction</th><th>Description</th><th></th></tr></thead><tbody data-script-guidance-rows></tbody></table></div>
+                                                </div>
+                                                <div class="task-script-guidance-footer"><span class="task-script-required" data-script-guidance-required role="status"></span><button type="button" class="secondary-button compact-button" data-script-guidance-edit>Edit Parameters</button><button type="button" class="secondary-button compact-button" data-script-guidance-retry hidden>Reload Script Details</button></div>
+                                            </section>
+                                            <div class="traditional-task-editor-process-execution">
+                                                <div class="traditional-task-editor-field-heading">Run script</div>
+                                                <div class="traditional-task-editor-radio-list">
+                                                    <label><input type="radio" name="traditional-task-editor-process-run" value="PerFile" data-process-field="run" /> <span>Per File</span></label>
+                                                    <label><input type="radio" name="traditional-task-editor-process-run" value="Once" data-process-field="run" /> <span>Once After All Downloads</span></label>
+                                                </div>
+                                                <label class="traditional-task-editor-inline-check traditional-task-editor-process-destination-option"><input type="checkbox" data-process-field="isDestination" /> <span>Use process as a destination</span></label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="traditional-task-editor-process-panel" data-traditional-task-editor-process-panel="parameters" hidden>
+                                        <div class="traditional-task-editor-form-card">
+                                            <div class="traditional-task-editor-parameter-table" data-traditional-task-editor-process-parameter-table>
+                                                <div class="traditional-task-editor-parameter-header"><div>Name</div><div>Value</div><div></div></div>
+                                                <div data-traditional-task-editor-process-parameter-rows></div>
+                                            </div>
+                                            <div class="traditional-task-editor-empty-item traditional-task-editor-parameter-empty" data-traditional-task-editor-process-parameters-empty>No parameters are defined for this Process.</div>
+                                            <div class="traditional-task-editor-process-parameter-footer"><button type="button" class="secondary-button compact-button" data-traditional-task-editor-process-add-parameter>+ Add Parameter</button></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="traditional-task-editor-destination" data-traditional-task-editor-destination hidden>
+                                    <div class="traditional-task-editor-subtabs" role="tablist" aria-label="Destination step properties">
+                                        <button type="button" class="active" data-traditional-task-editor-destination-tab="general">General</button>
+                                        <button type="button" data-traditional-task-editor-destination-tab="additional-commands" hidden>Additional Commands</button>
+                                        <button type="button" data-traditional-task-editor-destination-tab="host-overrides">Host Overrides</button>
+                                    </div>
+
+                                    <div class="traditional-task-editor-destination-panel" data-traditional-task-editor-destination-panel="general">
+                                        <div class="traditional-task-editor-form-card">
+                                            <div class="details-grid traditional-task-editor-destination-host-grid">
+                                                <label class="field-block full-span"><span>Host Type</span><select class="text-input" data-traditional-task-editor-destination-host-type-filter></select></label>
+                                                <div class="field-block full-span"><span id="traditional-task-editor-destination-host-label">Host</span><div class="traditional-task-editor-host-select-row"><select class="text-input" aria-labelledby="traditional-task-editor-destination-host-label" data-destination-field="hostId" data-traditional-task-editor-destination-host></select><button type="button" class="secondary-button" data-traditional-task-editor-edit-host="Destination" hidden>Edit Host</button></div><small data-traditional-task-editor-destination-host-help></small></div>
+                                                <label class="field-block full-span" data-destination-s3-general-only hidden><span>Bucket Name</span><span class="traditional-task-editor-input-action"><input class="text-input" data-destination-field="bucket" data-traditional-task-editor-destination-bucket /><button type="button" class="secondary-button" data-traditional-task-editor-destination-bucket-browse>Browse</button></span><small data-traditional-task-editor-destination-bucket-help></small></label>
+                                                <label class="field-block full-span" data-destination-azureblob-general-only hidden><span>Container</span><span class="traditional-task-editor-input-action"><input class="text-input" data-destination-field="container" data-traditional-task-editor-destination-container /><button type="button" class="secondary-button" data-traditional-task-editor-destination-container-browse>Browse</button></span><small data-traditional-task-editor-destination-container-help></small></label>
+                                                <label class="field-block full-span" data-destination-sharepoint-general-only hidden><span>Document Library</span><span class="traditional-task-editor-input-action"><input class="text-input" data-destination-field="documentLibrary" data-traditional-task-editor-destination-document-library readonly /><button type="button" class="secondary-button" data-traditional-task-editor-destination-document-library-browse>Browse</button></span><small data-traditional-task-editor-destination-document-library-help></small></label>
+                                                <label class="field-block full-span" data-destination-non-smtp><span>Folder(s)</span><span class="traditional-task-editor-input-action"><input class="text-input" data-destination-field="path" data-traditional-task-editor-destination-path /><button type="button" class="secondary-button" data-traditional-task-editor-destination-browse>Browse</button><select class="text-input traditional-task-editor-field-macro" data-traditional-task-editor-field-macro data-macro-context="destination-path" data-macro-target='[data-destination-field="path"]' aria-label="Insert macro into Destination Folder(s)"></select></span><small class="traditional-task-editor-folder-macro-warning" data-traditional-task-editor-destination-browse-warning hidden>Folders containing macros cannot be browsed. Remove the macro to use Browse.</small></label>
+                                            </div>
+                                            <div class="details-grid traditional-task-editor-smtp-fields" data-destination-smtp-only hidden>
+                                                <label class="field-block full-span"><span>Recipients</span><span class="traditional-task-editor-input-action"><input class="text-input" data-destination-field="addressTo" placeholder="Email address" /><select class="text-input task-notification-macro" data-traditional-task-editor-destination-smtp-recipient-macro aria-label="Insert macro into Recipients"></select></span></label>
+                                                <label class="field-block full-span"><span>Subject</span><span class="task-notification-insert-row"><input class="text-input" data-destination-field="subject" placeholder="Subject" /><select class="text-input task-notification-macro" data-traditional-task-editor-destination-smtp-subject-macro aria-label="Insert macro into Subject"></select></span></label>
+                                                <div class="field-block full-span task-notification-message-field traditional-task-editor-smtp-message-card">
+                                                    <div class="traditional-task-editor-field-heading traditional-task-editor-smtp-message-heading"><span>Message</span><span>Send message as: <label><input type="radio" name="traditional-task-editor-destination-smtp-format" value="1" data-destination-field="isHtml" /> HTML</label> <label><input type="radio" name="traditional-task-editor-destination-smtp-format" value="0" data-destination-field="isHtml" /> Plain text</label></span></div>
+                                                    <div class="task-notification-toolbar" data-traditional-task-editor-destination-smtp-html-toolbar>
+                                                        <button type="button" data-destination-smtp-command="bold" title="Bold"><strong>B</strong></button>
+                                                        <button type="button" data-destination-smtp-command="italic" title="Italic"><em>I</em></button>
+                                                        <button type="button" data-destination-smtp-command="underline" title="Underline"><u>U</u></button>
+                                                        <button type="button" data-destination-smtp-command="insertUnorderedList" title="Bulleted list">• List</button>
+                                                        <button type="button" data-destination-smtp-command="insertOrderedList" title="Numbered list">1. List</button>
+                                                        <button type="button" data-traditional-task-editor-destination-smtp-link title="Insert link">Link</button>
+                                                        <button type="button" data-traditional-task-editor-destination-smtp-html-toggle title="Edit HTML source">Source</button>
+                                                        <select class="text-input task-notification-macro" data-traditional-task-editor-destination-smtp-body-macro aria-label="Insert macro into Message"></select>
+                                                        <div class="task-notification-template-picker">
+                                                            <button type="button" data-traditional-task-editor-destination-smtp-template-button title="Load a saved Subject and Message template">Templates</button>
+                                                            <div class="task-notification-template-menu" data-traditional-task-editor-destination-smtp-template-menu role="menu" hidden></div>
+                                                        </div>
+                                                        <button type="button" class="task-notification-save-template" data-traditional-task-editor-destination-smtp-save-template title="Save Subject and Message as Template" aria-label="Save Subject and Message as Template">
+                                                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h12l2 2v16H5z"/><path d="M8 3v6h8V3M8 21v-7h8v7"/></svg>
+                                                        </button>
+                                                    </div>
+                                                    <div class="task-notification-editor" contenteditable="true" data-traditional-task-editor-destination-smtp-html-editor role="textbox" aria-multiline="true"></div>
+                                                    <textarea class="text-input task-notification-html-source" rows="10" data-traditional-task-editor-destination-smtp-html-source aria-label="HTML source" spellcheck="false" hidden></textarea>
+                                                    <textarea class="text-input task-notification-textarea" rows="10" data-traditional-task-editor-destination-smtp-text-editor hidden></textarea>
+                                                </div>
+                                            </div>
+                                            <div class="traditional-task-editor-destination-options">
+                                                <label class="traditional-task-editor-inline-check" data-destination-non-smtp><input type="checkbox" data-destination-field="useRelativeSubdirectories" /> <span>Use relative subdirectories</span></label>
+                                                <label class="traditional-task-editor-inline-check" data-destination-cloud-force-directory data-destination-non-smtp><input type="checkbox" data-destination-field="forceDirectory" /> <span>Create directories if necessary</span></label>
+                                                <label class="traditional-task-editor-inline-check"><input type="checkbox" data-destination-field="zip" /> <span>Compress each file (zip format)</span></label>
+                                                <label class="traditional-task-editor-inline-check"><input type="checkbox" data-destination-field="useOriginalName" /> <span>Use original filename(s)</span></label>
+                                                <label class="field-block traditional-task-editor-destination-file-name" data-traditional-task-editor-destination-file-name><span>File Name</span><span class="traditional-task-editor-input-action"><input class="text-input" data-destination-field="fileName" placeholder="File name or MOVEit macro expression" /><select class="text-input traditional-task-editor-field-macro" data-traditional-task-editor-field-macro data-macro-context="runtime-file" data-macro-target='[data-destination-field="fileName"]' aria-label="Insert macro into Destination File Name"></select></span></label>
+                                            </div>
+                                            <div class="traditional-task-editor-destination-overwrite" data-destination-non-smtp>
+                                                <div class="traditional-task-editor-field-heading">If a file of the same name already exists</div>
+                                                <div class="traditional-task-editor-radio-list">
+                                                    <label><input type="radio" name="traditional-task-editor-destination-overwrite" value="0" data-destination-field="overwriteAction" /> <span>Do not overwrite</span></label>
+                                                    <label><input type="radio" name="traditional-task-editor-destination-overwrite" value="1" data-destination-field="overwriteAction" /> <span>Overwrite</span></label>
+                                                    <label data-destination-append-option><input type="radio" name="traditional-task-editor-destination-overwrite" value="2" data-destination-field="overwriteAction" /> <span>Append to</span></label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="traditional-task-editor-destination-panel" data-traditional-task-editor-destination-panel="additional-commands" hidden>
+                                        <div class="traditional-task-editor-form-card">
+                                            <div class="details-grid">
+                                                <label class="field-block full-span"><span>Commands to execute (per file) before transfer</span><textarea class="text-input traditional-task-editor-command-textarea" data-destination-field="additionalCommandsBefore" rows="4"></textarea><small>One FTP quote command per line. MOVEit macros are supported.</small></label>
+                                                <label class="field-block full-span"><span>Commands to execute (per file) after transfer</span><textarea class="text-input traditional-task-editor-command-textarea" data-destination-field="additionalCommandsAfter" rows="4"></textarea><small>One FTP quote command per line. MOVEit macros are supported.</small></label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="traditional-task-editor-destination-panel" data-traditional-task-editor-destination-panel="host-overrides" hidden>
+                                        <div class="traditional-task-editor-host-override-heading">
+                                            <div><strong data-traditional-task-editor-destination-host-type>Host Overrides</strong><span>These values override settings configured on the selected Host for this Destination only.</span></div>
+                                        </div>
+                                        <div class="traditional-task-editor-host-override-unsupported inline-alert info-alert" data-traditional-task-editor-destination-host-override-unsupported hidden></div>
+                                        @* Host-profile extension point. Keep protocol-specific controls inside this container; the Task Editor shell/workspace hierarchy is stable. *@
+                                        <div data-traditional-task-editor-destination-host-override-supported>
+                                            <div class="traditional-task-editor-subtabs traditional-task-editor-host-subtabs" role="tablist" aria-label="Destination Host override property groups">
+                                                <button type="button" data-traditional-task-editor-destination-host-tab="authentication" hidden>Authentication</button>
+                                                <button type="button" class="active" data-traditional-task-editor-destination-host-tab="timeouts">Timeouts</button>
+                                                <button type="button" data-traditional-task-editor-destination-host-tab="transfer">Transfer</button>
+                                                <button type="button" data-traditional-task-editor-destination-host-tab="file-attributes" hidden>File Attributes</button>
+                                            </div>
+
+                                            <div class="traditional-task-editor-destination-host-panel" data-traditional-task-editor-destination-host-panel="authentication" hidden>
+                                                <div class="traditional-task-editor-form-card">
+                                                    <label class="traditional-task-editor-inline-check" data-destination-credential-override-toggle><input type="checkbox" data-destination-field="overrideCredentials" /> <span>Override Default Credentials</span></label>
+                                                    <div class="traditional-task-editor-dependent-option traditional-task-editor-auth-mode" data-destination-email-auth-only hidden>
+                                                        <div class="traditional-task-editor-radio-list">
+                                                            <label><input type="radio" name="traditional-task-editor-destination-email-auth" value="0" data-destination-field="emailUseOAuth" data-traditional-task-editor-destination-email-legacy /> <span>Legacy</span></label>
+                                                            <label><input type="radio" name="traditional-task-editor-destination-email-auth" value="1" data-destination-field="emailUseOAuth" data-traditional-task-editor-destination-email-oauth /> <span>OAuth</span></label>
+                                                        </div>
+                                                        <div class="details-grid" data-traditional-task-editor-destination-email-oauth-details hidden>
+                                                            <label class="field-block"><span>Type</span><select class="text-input" data-destination-field="emailOAuthType"><option value="microsoft365">Microsoft Office 365</option><option value="custom">Custom</option></select></label>
+                                                            <label class="field-block"><span>Username</span><input class="text-input" data-destination-field="emailOAuthUsername" autocomplete="off" /></label>
+                                                            <label class="field-block"><span>Client ID</span><input class="text-input" data-destination-field="emailOAuthClientId" autocomplete="off" /></label>
+                                                            <label class="field-block"><span>Client Secret</span><input type="password" class="text-input" data-destination-field="emailOAuthClientSecret" autocomplete="new-password" placeholder="Leave blank to keep configured client secret" /><small data-traditional-task-editor-destination-email-oauth-secret-help></small></label>
+                                                            <label class="field-block full-span" data-destination-email-oauth-microsoft-only><span>Tenant ID</span><input class="text-input" data-destination-field="emailOAuthTenantId" autocomplete="off" /></label>
+                                                            <label class="field-block full-span" data-destination-email-oauth-custom-only hidden><span>Authorization Scope</span><input class="text-input" data-destination-field="emailOAuthScope" autocomplete="off" /></label>
+                                                            <label class="field-block full-span" data-destination-email-oauth-custom-only hidden><span>Token URL</span><input class="text-input" data-destination-field="emailOAuthTokenUrl" autocomplete="off" /></label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="traditional-task-editor-dependent-option traditional-task-editor-auth-mode" data-destination-google-auth-only hidden>
+                                                        <div class="traditional-task-editor-radio-list">
+                                                            <label><input type="radio" name="traditional-task-editor-destination-google-auth" value="0" data-destination-field="googleUseOAuth" data-traditional-task-editor-destination-google-hmac /> <span>HMAC</span></label>
+                                                            <label><input type="radio" name="traditional-task-editor-destination-google-auth" value="1" data-destination-field="googleUseOAuth" data-traditional-task-editor-destination-google-oauth /> <span>OAuth 2.0</span></label>
+                                                        </div>
+                                                        <div class="details-grid" data-destination-google-oauth-fields hidden>
+                                                            <label class="field-block"><span>Client ID</span><input class="text-input" data-destination-field="googleOAuthClientId" autocomplete="off" /></label>
+                                                            <label class="field-block"><span>Project ID</span><input class="text-input" data-destination-field="googleProjectId" autocomplete="off" /></label>
+                                                            <label class="field-block full-span"><span>Private Key</span><input type="password" class="text-input" data-destination-field="googleOAuthClientSecret" autocomplete="new-password" placeholder="Leave blank to keep configured private key" /><small data-traditional-task-editor-destination-google-oauth-secret-help></small></label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="traditional-task-editor-dependent-option traditional-task-editor-auth-mode" data-destination-sharepoint-auth-only hidden>
+                                                        <div class="traditional-task-editor-radio-list">
+                                                            <label><input type="radio" name="traditional-task-editor-destination-sharepoint-auth" value="2" data-destination-field="sharePointAuthenticationMode" /> <span>Certificate Access</span></label>
+                                                            <label><input type="radio" name="traditional-task-editor-destination-sharepoint-auth" value="1" data-destination-field="sharePointAuthenticationMode" /> <span>App Access</span></label>
+                                                        </div>
+                                                        <div class="details-grid" data-destination-sharepoint-client-id-fields hidden>
+                                                            <label class="field-block full-span"><span>Client ID</span><input class="text-input" data-destination-field="sharePointClientId" autocomplete="off" /></label>
+                                                        </div>
+                                                        <div class="details-grid" data-destination-sharepoint-app-fields hidden>
+                                                            <label class="field-block"><span>Realm ID</span><input class="text-input" data-destination-field="sharePointRealmId" autocomplete="off" /></label>
+                                                            <label class="field-block"><span>Client Secret</span><input type="password" class="text-input" data-destination-field="sharePointClientSecret" autocomplete="new-password" placeholder="Leave blank to keep configured client secret" /><small data-traditional-task-editor-destination-sharepoint-client-secret-help></small></label>
+                                                        </div>
+                                                        <div class="details-grid" data-destination-sharepoint-certificate-fields hidden>
+                                                            <label class="field-block"><span>Tenant ID</span><input class="text-input" data-destination-field="sharePointTenantId" autocomplete="off" /></label>
+                                                            <label class="field-block"><span>Certificate</span><select class="text-input" data-destination-field="sharePointCertificateSha1"></select></label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="details-grid traditional-task-editor-dependent-option traditional-task-editor-auth-fields" data-destination-generic-credentials>
+                                                        <label class="field-block"><span data-traditional-task-editor-destination-credential-user-label>Username</span><input class="text-input" data-destination-field="username" autocomplete="off" /></label>
+                                                        <label class="field-block"><span data-traditional-task-editor-destination-credential-password-label>Password</span><input type="password" class="text-input" data-destination-field="password" autocomplete="new-password" placeholder="Leave blank to keep configured password" /><small data-traditional-task-editor-destination-password-help></small></label>
+                                                        <label class="field-block full-span" data-destination-ftp-only hidden><span>Account <span class="muted-text">(optional)</span></span><input type="password" class="text-input" data-destination-field="account" autocomplete="new-password" placeholder="Leave blank to keep configured account" /><small data-traditional-task-editor-destination-account-help></small></label>
+                                                    </div>
+                                                    <small class="traditional-task-editor-auth-summary" data-traditional-task-editor-destination-email-auth-help data-destination-email-auth-only hidden></small>
+                                                    <small class="traditional-task-editor-auth-summary" data-traditional-task-editor-destination-google-auth-help data-destination-google-auth-only hidden></small>
+                                                    <div class="traditional-task-editor-destination-transfer-divider" data-destination-cert-only></div>
+                                                    <label class="traditional-task-editor-inline-check" data-destination-cert-only><input type="checkbox" data-destination-field="overrideClientCertificate" /> <span>Override Default Client Certificate</span></label>
+                                                    <label class="field-block traditional-task-editor-dependent-option" data-destination-cert-only><span>Client Certificate</span><select class="text-input" data-destination-field="clientCertificateSha1"></select><small data-traditional-task-editor-destination-client-cert-help></small></label>
+                                                    <label class="traditional-task-editor-inline-check" data-destination-sftp-only hidden><input type="checkbox" data-destination-field="overrideClientKey" /> <span>Override Default Client Key</span></label>
+                                                    <label class="field-block traditional-task-editor-dependent-option" data-destination-sftp-only hidden><span>Client Key</span><select class="text-input" data-destination-field="clientKeyId"></select><small data-traditional-task-editor-destination-client-key-help></small></label>
+                                                </div>
+                                            </div>
+
+                                            <div class="traditional-task-editor-destination-host-panel" data-traditional-task-editor-destination-host-panel="timeouts">
+                                                <div class="traditional-task-editor-form-card details-grid">
+                                                    <label class="field-block traditional-task-editor-check-with-value" data-destination-connect-timeout-only hidden><span class="traditional-task-editor-inline-check"><input type="checkbox" data-destination-field="overrideConnectTimeout" /> <span>Override Default Connect Timeout</span></span><span class="traditional-task-editor-number-suffix"><input type="number" min="0" step="1" class="text-input" data-destination-field="connectTimeoutSeconds" /><span>secs</span></span></label>
+                                                    <label class="field-block traditional-task-editor-check-with-value" data-destination-data-timeout-only hidden><span class="traditional-task-editor-inline-check"><input type="checkbox" data-destination-field="overrideDataTimeout" /> <span>Override Default Data Timeout</span></span><span class="traditional-task-editor-number-suffix"><input type="number" min="0" step="1" class="text-input" data-destination-field="dataTimeoutSeconds" /><span>secs</span></span></label>
+                                                    <label class="field-block traditional-task-editor-check-with-value"><span class="traditional-task-editor-inline-check"><input type="checkbox" data-destination-field="overrideRetryCount" /> <span>Override Default Retry Count</span></span><input type="number" min="0" step="1" class="text-input" data-destination-field="retryCount" /></label>
+                                                    <label class="field-block traditional-task-editor-check-with-value"><span class="traditional-task-editor-inline-check"><input type="checkbox" data-destination-field="overrideRetryTimeout" /> <span>Override Default Retry Timeout</span></span><span class="traditional-task-editor-number-suffix"><input type="number" min="0" step="1" class="text-input" data-destination-field="retryTimeoutSeconds" /><span>secs</span></span></label>
+                                                </div>
+                                            </div>
+
+                                            <div class="traditional-task-editor-destination-host-panel" data-traditional-task-editor-destination-host-panel="transfer" hidden>
+                                                <div class="traditional-task-editor-form-card traditional-task-editor-destination-transfer-options">
+                                                    <div data-destination-file-transfer-only>
+                                                      <div data-destination-unc-only>
+                                                        <label class="traditional-task-editor-inline-check"><input type="checkbox" data-destination-field="overrideWindowsCopyFileApi" /> <span>Override Default Use Windows CopyFile API</span></label>
+                                                        <label class="traditional-task-editor-inline-check traditional-task-editor-dependent-option"><input type="checkbox" data-destination-field="useWindowsCopyFileApi" /> <span>Use Windows CopyFile API for UNC transfers</span></label>
+                                                        <div class="traditional-task-editor-destination-transfer-divider"></div>
+                                                      </div>
+                                                        <label class="traditional-task-editor-inline-check"><input type="checkbox" data-destination-field="overridePreserveFileTimestamp" /> <span>Override Default Preserve File Timestamp on Upload</span></label>
+                                                        <label class="traditional-task-editor-inline-check traditional-task-editor-dependent-option"><input type="checkbox" data-destination-field="preserveFileTimestamp" /> <span>Preserve File Timestamp on Upload</span></label>
+                                                    </div>
+                                                    <div data-destination-ftp-only hidden>
+                                                        <div class="traditional-task-editor-protocol-grid">
+                                                            <div class="traditional-task-editor-protocol-row"><label class="traditional-task-editor-inline-check"><input type="checkbox" data-destination-field="overrideTransferType" /> <span>Override Default Transfer Type</span></label><div class="traditional-task-editor-inline-radio-group" data-destination-dependent="overrideTransferType"><label><input type="radio" name="traditional-task-editor-destination-ftp-transfer-type" value="ascii" data-destination-field="transferType" /> ASCII</label><label><input type="radio" name="traditional-task-editor-destination-ftp-transfer-type" value="binary" data-destination-field="transferType" /> Binary</label></div></div>
+                                                            <div class="traditional-task-editor-protocol-row"><label class="traditional-task-editor-inline-check"><input type="checkbox" data-destination-field="overridePassive" /> <span>Override Default Transfer Mode</span></label><div class="traditional-task-editor-inline-radio-group" data-destination-dependent="overridePassive"><label><input type="radio" name="traditional-task-editor-destination-ftp-passive" value="0" data-destination-field="passive" /> Active</label><label><input type="radio" name="traditional-task-editor-destination-ftp-passive" value="1" data-destination-field="passive" /> Passive</label></div></div>
+                                                            <div class="traditional-task-editor-protocol-row"><label class="traditional-task-editor-inline-check"><input type="checkbox" data-destination-field="overrideXSha1" /> <span>Override Default XSHA1 Setting</span></label><label class="traditional-task-editor-inline-check" data-destination-dependent="overrideXSha1"><input type="checkbox" data-destination-field="useXSha1" /> <span>Use XSHA1 command, if available</span></label></div>
+                                                            <div class="traditional-task-editor-protocol-row"><label class="traditional-task-editor-inline-check"><input type="checkbox" data-destination-field="overrideBlindUpload" /> <span>Override Default Blind Upload</span></label><label class="traditional-task-editor-inline-check" data-destination-dependent="overrideBlindUpload"><input type="checkbox" data-destination-field="blindUpload" /> <span>Blind uploads</span></label></div>
+                                                            <div class="traditional-task-editor-protocol-row"><label class="traditional-task-editor-inline-check"><input type="checkbox" data-destination-field="overrideResume" /> <span>Override Default Resume</span></label><label class="traditional-task-editor-inline-check" data-destination-dependent="overrideResume"><input type="checkbox" data-destination-field="resume" /> <span>Resume partial transfers (if possible)</span></label></div>
+                                                            <div class="traditional-task-editor-protocol-row"><label class="traditional-task-editor-inline-check"><input type="checkbox" data-destination-field="overrideReuseTlsSession" /> <span>Override Default Reuse TLS Session</span></label><label class="traditional-task-editor-inline-check" data-destination-dependent="overrideReuseTlsSession"><input type="checkbox" data-destination-field="reuseTlsSession" /> <span>Reuse TLS session for data connections</span></label></div>
+                                                        </div>
+                                                    </div>
+                                                    <div data-destination-sftp-only hidden>
+                                                        <div class="traditional-task-editor-protocol-grid">
+                                                            <div class="traditional-task-editor-protocol-row"><label class="traditional-task-editor-inline-check"><input type="checkbox" data-destination-field="overrideResume" /> <span>Override Default Resume</span></label><label class="traditional-task-editor-inline-check" data-destination-dependent="overrideResume"><input type="checkbox" data-destination-field="resume" /> <span>Resume partial transfers (if possible)</span></label></div>
+                                                            <div class="traditional-task-editor-protocol-warning inline-alert warning-alert" data-traditional-task-editor-destination-sftp-resume-retry-warning hidden>Resume partial transfers requires a non-zero Retry Count.</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="traditional-task-editor-destination-host-panel" data-traditional-task-editor-destination-host-panel="file-attributes" hidden>
+                                                <div class="traditional-task-editor-form-card" data-destination-sftp-only hidden>
+                                                    <label class="traditional-task-editor-inline-check"><input type="checkbox" data-destination-field="overrideFileAttributes" /> <span>Override Default File Attributes</span></label>
+                                                    <div class="traditional-task-editor-dependent-option traditional-task-editor-file-attributes-options">
+                                                        <label class="traditional-task-editor-inline-check"><input type="checkbox" data-destination-field="setFileAttributes" /> <span>Set file permissions after upload</span></label>
+                                                        <div class="traditional-task-editor-permission-editor" data-destination-file-permission-editor>
+                                                            <div class="traditional-task-editor-permission-summary">
+                                                                <span>File permissions</span>
+                                                                <strong data-destination-file-permission-summary>Not set</strong>
+                                                            </div>
+                                                            <div class="traditional-task-editor-permission-grid" role="group" aria-label="SFTP destination file permissions">
+                                                                <span class="traditional-task-editor-permission-corner" aria-hidden="true"></span>
+                                                                <span class="traditional-task-editor-permission-column">User</span>
+                                                                <span class="traditional-task-editor-permission-column">Group</span>
+                                                                <span class="traditional-task-editor-permission-column">Others</span>
+
+                                                                <span class="traditional-task-editor-permission-row">Read</span>
+                                                                <label><input type="checkbox" data-destination-permission="user-read" data-permission-column="0" data-permission-bit="4" aria-label="User read" /></label>
+                                                                <label><input type="checkbox" data-destination-permission="group-read" data-permission-column="1" data-permission-bit="4" aria-label="Group read" /></label>
+                                                                <label><input type="checkbox" data-destination-permission="others-read" data-permission-column="2" data-permission-bit="4" aria-label="Others read" /></label>
+
+                                                                <span class="traditional-task-editor-permission-row">Write</span>
+                                                                <label><input type="checkbox" data-destination-permission="user-write" data-permission-column="0" data-permission-bit="2" aria-label="User write" /></label>
+                                                                <label><input type="checkbox" data-destination-permission="group-write" data-permission-column="1" data-permission-bit="2" aria-label="Group write" /></label>
+                                                                <label><input type="checkbox" data-destination-permission="others-write" data-permission-column="2" data-permission-bit="2" aria-label="Others write" /></label>
+
+                                                                <span class="traditional-task-editor-permission-row">Execute</span>
+                                                                <label><input type="checkbox" data-destination-permission="user-execute" data-permission-column="0" data-permission-bit="1" aria-label="User execute" /></label>
+                                                                <label><input type="checkbox" data-destination-permission="group-execute" data-permission-column="1" data-permission-bit="1" aria-label="Group execute" /></label>
+                                                                <label><input type="checkbox" data-destination-permission="others-execute" data-permission-column="2" data-permission-bit="1" aria-label="Others execute" /></label>
+                                                            </div>
+                                                            <input type="hidden" data-destination-field="destinationFileAttributes" />
+                                                            <small data-destination-file-permission-help>Choose the UNIX permissions to apply after upload.</small>
+                                                        </div>
+                                                    </div>
+                                                    <div class="traditional-task-editor-destination-transfer-divider"></div>
+                                                    <label class="traditional-task-editor-inline-check"><input type="checkbox" data-destination-field="overridePreserveFileTimestamp" /> <span>Override Default Preserve File Timestamp on Upload</span></label>
+                                                    <label class="traditional-task-editor-inline-check traditional-task-editor-dependent-option"><input type="checkbox" data-destination-field="preserveFileTimestamp" /> <span>Preserve File Timestamp on Upload</span></label>
+                                                </div>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="traditional-task-editor-workspace-panel" data-traditional-task-editor-workspace="schedules" hidden>
+                            <div class="traditional-task-editor-step-empty" data-traditional-task-editor-schedule-empty>
+                                <span class="icon" aria-hidden="true"><partial name="_Icon" model="@("calendar")" /></span>
+                                <h3>Select or add a Schedule</h3>
+                                <p>Select an existing schedule from the left or add a new schedule.</p>
+                            </div>
+
+                            <div data-traditional-task-editor-schedule-detail hidden>
+                                <div class="traditional-task-editor-workspace-heading">
+                                    <div>
+                                        <span class="traditional-task-editor-workspace-kicker" data-traditional-task-editor-schedule-kicker>Selected Schedule</span>
+                                        <h3 data-traditional-task-editor-schedule-title>Schedule</h3>
+                                        <p data-traditional-task-editor-schedule-heading-summary>Task will run: —</p>
+                                    </div>
+                                    <div class="traditional-task-editor-step-actions-control">
+                                        <button type="button" class="secondary-button traditional-task-editor-step-actions-button" data-traditional-task-editor-schedule-actions aria-haspopup="menu" aria-expanded="false" title="Schedule actions" aria-label="Schedule actions">⋯</button>
+                                        <div class="traditional-task-editor-step-actions-menu" data-traditional-task-editor-schedule-actions-menu role="menu" hidden>
+                                            <button type="button" role="menuitem" data-traditional-task-editor-schedule-action="clone">Clone Schedule</button>
+                                            <div class="task-row-action-divider" role="separator"></div>
+                                            <button type="button" role="menuitem" class="danger-menu-item" data-traditional-task-editor-schedule-action="delete">Delete Schedule</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="traditional-task-editor-schedule-readonly" data-traditional-task-editor-schedule-readonly hidden>
+                                    This MOVEit Multi schedule could not be matched safely to its companion overnight segment. MAUI will preserve it unchanged and keep it read-only.
+                                </div>
+
+                                <div class="traditional-task-editor-subtabs" role="tablist" aria-label="Schedule properties">
+                                    <button type="button" class="active" data-traditional-task-editor-schedule-tab="days">Days</button>
+                                    <button type="button" data-traditional-task-editor-schedule-tab="times">Times</button>
+                                    <button type="button" data-traditional-task-editor-schedule-tab="options">Options</button>
+                                </div>
+
+                                <div class="traditional-task-editor-schedule-panel" data-traditional-task-editor-schedule-panel="days">
+                                    <div class="traditional-task-editor-form-card">
+                                        <div class="traditional-task-editor-schedule-day-layout">
+                                            <div class="traditional-task-editor-schedule-day-tabs" role="tablist" aria-label="Schedule day selection">
+                                                <button type="button" class="active" data-traditional-task-editor-schedule-day-mode="week">Week</button>
+                                                <button type="button" data-traditional-task-editor-schedule-day-mode="month">Month</button>
+                                                <button type="button" data-traditional-task-editor-schedule-day-mode="custom">Custom</button>
+                                            </div>
+                                            <div class="traditional-task-editor-schedule-day-content">
+                                                <div data-traditional-task-editor-schedule-day-panel="week">
+                                                    <p class="field-help">Select the days of the week on which this schedule runs.</p>
+                                                    <div class="traditional-task-editor-schedule-choice-grid traditional-task-editor-schedule-week-grid">
+                                                        <button type="button" data-schedule-weekday="Monday">Mon</button>
+                                                        <button type="button" data-schedule-weekday="Tuesday">Tue</button>
+                                                        <button type="button" data-schedule-weekday="Wednesday">Wed</button>
+                                                        <button type="button" data-schedule-weekday="Thursday">Thu</button>
+                                                        <button type="button" data-schedule-weekday="Friday">Fri</button>
+                                                        <button type="button" data-schedule-weekday="Saturday">Sat</button>
+                                                        <button type="button" data-schedule-weekday="Sunday">Sun</button>
+                                                    </div>
+                                                </div>
+                                                <div data-traditional-task-editor-schedule-day-panel="month" hidden>
+                                                    <p class="field-help">Select the days of the month on which this schedule runs.</p>
+                                                    <div class="traditional-task-editor-schedule-choice-grid traditional-task-editor-schedule-month-grid">
+                                                        @for (var day = 1; day <= 31; day++)
+                                                        {
+                                                            <button type="button" data-schedule-monthday="@day">@day</button>
+                                                        }
+                                                    </div>
+                                                </div>
+                                                <div data-traditional-task-editor-schedule-day-panel="custom" hidden>
+                                                    <p class="field-help">Use existing MOVEit Date Lists to include or exclude specific dates.</p>
+                                                    <div class="traditional-task-editor-schedule-date-list-rows" data-traditional-task-editor-schedule-date-list-rows></div>
+                                                    <button type="button" class="secondary-button compact-button" data-traditional-task-editor-add-schedule-date-list>+ Add Date List</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="traditional-task-editor-schedule-panel" data-traditional-task-editor-schedule-panel="times" hidden>
+                                    <div class="traditional-task-editor-form-card">
+                                        <div class="traditional-task-editor-schedule-intervals" data-traditional-task-editor-schedule-intervals></div>
+                                        <button type="button" class="secondary-button compact-button" data-traditional-task-editor-add-schedule-time>+ Another Time</button>
+                                    </div>
+                                </div>
+
+                                <div class="traditional-task-editor-schedule-panel" data-traditional-task-editor-schedule-panel="options" hidden>
+                                    <div class="traditional-task-editor-form-card traditional-task-editor-schedule-options">
+                                        <label class="traditional-task-editor-inline-check"><input type="checkbox" data-schedule-field="onlyUntilFirstSuccess" /> <span>Repeat only until first success</span></label>
+                                        <label class="traditional-task-editor-inline-check"><input type="checkbox" data-schedule-field="failIfNoSuccessInSchedule" /> <span>Log failure if no files found during scheduled run</span></label>
+                                        <label class="traditional-task-editor-inline-check"><input type="checkbox" data-schedule-field="runEvenIfNotifications" /> <span>Poll for files even though file notifications are also enabled</span></label>
+                                    </div>
+                                </div>
+
+                                <div class="traditional-task-editor-schedule-hint" data-traditional-task-editor-schedule-summary>Task will run: —</div>
+
+                            </div>
+                        </div>
+
+                        <div class="traditional-task-editor-workspace-panel" data-traditional-task-editor-workspace="next-actions" hidden>
+                            <div class="traditional-task-editor-step-empty" data-traditional-task-editor-next-action-empty>
+                                <span class="icon" aria-hidden="true"><partial name="_Icon" model="@("mail")" /></span>
+                                <h3>Select or add a Next Action</h3>
+                                <p>Select an existing action from the left or add Send Email or Run Task.</p>
+                            </div>
+
+                            <div data-traditional-task-editor-next-action-detail hidden>
+                                <div class="traditional-task-editor-workspace-heading">
+                                    <div>
+                                        <span class="traditional-task-editor-workspace-kicker" data-traditional-task-editor-next-action-kicker>Selected Next Action</span>
+                                        <h3 data-traditional-task-editor-next-action-title>Next Action</h3>
+                                        <p data-traditional-task-editor-next-action-summary></p>
+                                    </div>
+                                    <div class="traditional-task-editor-step-actions-control">
+                                        <button type="button" class="secondary-button traditional-task-editor-step-actions-button" data-traditional-task-editor-next-action-actions aria-haspopup="menu" aria-expanded="false" title="Next Action actions" aria-label="Next Action actions">⋯</button>
+                                        <div class="traditional-task-editor-step-actions-menu" data-traditional-task-editor-next-action-actions-menu role="menu" hidden>
+                                            <button type="button" role="menuitem" data-traditional-task-editor-next-action-action="clone">Clone Next Action</button>
+                                            <div class="task-row-action-divider" role="separator"></div>
+                                            <button type="button" role="menuitem" class="danger-menu-item" data-traditional-task-editor-next-action-action="delete">Delete Next Action</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="traditional-task-editor-subtabs" role="tablist" aria-label="Next Action properties">
+                                    <button type="button" class="active" data-traditional-task-editor-next-action-tab="general">General</button>
+                                    <button type="button" data-traditional-task-editor-next-action-tab="message">Message</button>
+                                    <button type="button" data-traditional-task-editor-next-action-tab="parameters">Parameters</button>
+                                </div>
+
+                                <div class="traditional-task-editor-next-action-panel" data-traditional-task-editor-next-action-panel="general">
+                                    <div class="traditional-task-editor-form-card">
+                                        <div class="details-grid">
+                                            <div class="traditional-task-editor-next-action-conditions full-span" data-traditional-task-editor-next-action-conditions>
+                                                <fieldset class="task-notification-fieldset">
+                                                    <legend>Execute On</legend>
+                                                    <label><input type="checkbox" data-next-action-field="doIfSuccess" /> Success</label>
+                                                    <label><input type="checkbox" data-next-action-field="doIfFailure" /> Failure</label>
+                                                    <label><input type="checkbox" data-next-action-field="doIfNoAction" /> No Action</label>
+                                                </fieldset>
+                                                <fieldset class="task-notification-fieldset">
+                                                    <legend>Execute After</legend>
+                                                    <label><input type="radio" name="traditionalTaskNextActionDoAfter" value="Task" data-next-action-field="doAfter" /> Task</label>
+                                                    <label><input type="radio" name="traditionalTaskNextActionDoAfter" value="FileDone" data-next-action-field="doAfter" /> Each File</label>
+                                                </fieldset>
+                                            </div>
+                                            <label class="field-block full-span" data-traditional-task-editor-email-general><span>SMTP Host</span><select class="text-input" data-next-action-field="hostId" data-traditional-task-editor-next-action-smtp-host></select></label>
+                                            <label class="field-block full-span" data-traditional-task-editor-run-task-general><span>Task to Run</span><select class="text-input" data-next-action-field="taskId" data-traditional-task-editor-next-action-task></select></label>
+                                            <label class="traditional-task-editor-inline-check full-span" data-advanced-wait hidden><input type="checkbox" data-next-action-field="wait" /><span>Wait until this task is complete before continuing</span></label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="traditional-task-editor-next-action-panel" data-traditional-task-editor-next-action-panel="message" hidden>
+                                    <div class="traditional-task-editor-form-card traditional-task-editor-next-action-message-card">
+                                        <div class="details-grid">
+                                            <label class="field-block"><span>Format</span><select class="text-input" data-next-action-field="format" data-traditional-task-editor-next-action-format><option value="html">HTML</option><option value="text">Text</option></select></label>
+                                            <label class="field-block full-span"><span>Recipients</span><input class="text-input" data-next-action-field="addressTo" data-traditional-task-editor-next-action-recipients placeholder="user@example.com; team@example.com" /></label>
+                                            <label class="field-block full-span"><span>Subject</span><span class="task-notification-insert-row"><input class="text-input" data-next-action-field="subject" data-traditional-task-editor-next-action-subject /><select class="text-input task-notification-macro" data-traditional-task-editor-next-action-subject-macro aria-label="Insert macro into Subject"></select></span></label>
+                                            <div class="field-block full-span task-notification-message-field">
+                                                <span>Message Body</span>
+                                                <div class="task-notification-toolbar" data-traditional-task-editor-next-action-html-toolbar>
+                                                    <button type="button" data-next-action-command="bold" title="Bold"><strong>B</strong></button>
+                                                    <button type="button" data-next-action-command="italic" title="Italic"><em>I</em></button>
+                                                    <button type="button" data-next-action-command="underline" title="Underline"><u>U</u></button>
+                                                    <button type="button" data-next-action-command="insertUnorderedList" title="Bulleted list">• List</button>
+                                                    <button type="button" data-next-action-command="insertOrderedList" title="Numbered list">1. List</button>
+                                                    <button type="button" data-traditional-task-editor-next-action-link title="Insert link">Link</button>
+                                                    <button type="button" data-traditional-task-editor-next-action-html-toggle title="Edit HTML source">Source</button>
+                                                    <select class="text-input task-notification-macro" data-traditional-task-editor-next-action-body-macro aria-label="Insert macro into Message Body"></select>
+                                                    <div class="task-notification-template-picker">
+                                                        <button type="button" data-traditional-task-editor-next-action-template-button title="Load a saved Subject and Message Body template">Templates</button>
+                                                        <div class="task-notification-template-menu" data-traditional-task-editor-next-action-template-menu role="menu" hidden></div>
+                                                    </div>
+                                                    <button type="button" class="task-notification-save-template" data-traditional-task-editor-next-action-save-template title="Save Subject and Message Body as Template" aria-label="Save Subject and Message Body as Template">
+                                                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h12l2 2v16H5z"/><path d="M8 3v6h8V3M8 21v-7h8v7"/></svg>
+                                                    </button>
+                                                </div>
+                                                <div class="task-notification-editor" contenteditable="true" data-next-action-field="message" data-traditional-task-editor-next-action-html-editor role="textbox" aria-multiline="true"></div>
+                                                <textarea class="text-input task-notification-html-source" rows="10" data-next-action-field="messageSource" data-traditional-task-editor-next-action-html-source aria-label="HTML source" spellcheck="false" hidden></textarea>
+                                                <textarea class="text-input task-notification-textarea" rows="10" data-next-action-field="messageText" data-traditional-task-editor-next-action-text-editor hidden></textarea>
+                                            </div>
+                                        </div>
+                                        <p class="field-help">MOVEit can mark a Task failed if a Send Email Next Action cannot be completed. Use a reliable SMTP Host.</p>
+                                    </div>
+                                </div>
+
+                                <div class="traditional-task-editor-next-action-panel" data-traditional-task-editor-next-action-panel="parameters" hidden>
+                                    <div class="traditional-task-editor-form-card traditional-task-editor-parameter-layout">
+                                        <div class="traditional-task-editor-parameter-table" data-traditional-task-editor-next-action-parameter-table>
+                                            <div class="traditional-task-editor-parameter-header"><div>Name</div><div>Value</div><div></div></div>
+                                            <div data-traditional-task-editor-next-action-parameter-rows></div>
+                                        </div>
+                                        <div class="traditional-task-editor-empty-item traditional-task-editor-parameter-empty" data-traditional-task-editor-next-action-parameters-empty>No parameters are defined for this Run Task action.</div>
+                                        <div class="traditional-task-editor-parameter-actions"><button type="button" class="primary-button" data-traditional-task-editor-next-action-add-parameter>+ Add Parameter</button></div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="traditional-task-editor-panel" data-traditional-task-editor-panel="properties" hidden>
+                    <div class="traditional-task-editor-scroll-panel">
+                        <section class="maui-property-card details-section">
+                            <div class="details-section-heading maui-object-properties-heading">
+                                <div class="task-identity-row maui-object-identity" aria-label="Task identity">
+                                    <div class="task-identity-item"><span>Type</span><strong data-traditional-task-editor-type>Traditional</strong></div>
+                                    <div class="task-identity-item"><span>Task ID</span><strong data-traditional-task-editor-id>—</strong></div>
+                                </div>
+                                <span class="source-badge">MOVEit</span>
+                            </div>
+                            <div class="details-grid traditional-task-editor-properties-grid">
+                                <label class="field-block full-span"><span>Task Name</span><input class="text-input" maxlength="254" data-editor-field="name" data-traditional-task-editor-name /></label>
+                                <label class="field-block full-span"><span>Description</span><textarea class="text-input textarea-input" rows="3" data-editor-field="description" data-traditional-task-editor-description-field></textarea></label>
+                                <label class="field-block full-span"><span>Operator Notes</span><textarea class="text-input textarea-input" rows="3" data-editor-field="operatorNotes" data-traditional-task-editor-operator-notes></textarea></label>
+                                <label class="field-block full-span"><span>Resource Groups</span><input class="text-input" data-traditional-task-editor-resource-groups readonly /></label>
+                            </div>
+                        </section>
+
+
+                        <section class="maui-property-card details-section">
+                            <div class="details-section-heading"><h3>Organization</h3><span class="source-badge local-badge">MAUI</span></div>
+                            <div class="details-grid">
+                                <label class="field-block full-span"><span>Folder</span><select class="text-input" data-editor-field="folderId" data-traditional-task-editor-folder></select></label>
+                            </div>
+                        </section>
+
+                        <section class="maui-property-card details-section">
+                            <div class="details-section-heading"><h3>Additional Information</h3><span class="source-badge local-badge">MAUI</span></div>
+                            <div class="details-grid" data-traditional-task-editor-metadata-fields></div>
+                        </section>
+
+                        <section class="maui-property-card details-section audit-section">
+                            <div class="details-section-heading"><h3>Task Metadata</h3><span class="source-badge local-badge">MAUI</span></div>
+                            <div class="audit-grid" data-traditional-task-editor-audit></div>
+                        </section>
+                    </div>
+                </section>
+
+                <section class="traditional-task-editor-panel" data-traditional-task-editor-panel="advanced" hidden>
+                    <div class="traditional-task-editor-scroll-panel">
+                        <section class="maui-property-card details-section">
+                            <div class="traditional-task-editor-advanced-native">
+                                <label class="field-block traditional-task-editor-advanced-cache-names"><span>Cache File Names</span><select class="text-input" data-editor-field="cacheNames" data-traditional-task-editor-cache-names><option value="random">Use random names</option><option value="orig">Use original names</option></select></label>
+
+                                <label class="traditional-task-editor-inline-check"><input type="checkbox" data-editor-field="useDefaultStateCaching" data-traditional-task-editor-use-default-state-cache /> <span>Use default state cache settings</span></label>
+                                <div class="traditional-task-editor-state-cache-group" data-traditional-task-editor-state-cache-settings>
+                                    <strong>Keep this task's state information cached:</strong>
+                                    <input type="hidden" data-editor-field="stateCacheTime" data-traditional-task-editor-state-cache-time />
+                                    <label><input type="radio" name="traditionalTaskStateCacheMode" value="always" data-traditional-task-editor-state-cache-mode /> <span>Always</span></label>
+                                    <label><input type="radio" name="traditionalTaskStateCacheMode" value="task" data-traditional-task-editor-state-cache-mode /> <span>Until end of task run</span></label>
+                                    <label class="traditional-task-editor-state-cache-for-row">
+                                        <input type="radio" name="traditionalTaskStateCacheMode" value="for" data-traditional-task-editor-state-cache-mode />
+                                        <span>For</span>
+                                        <input type="number" class="text-input" min="1" step="1" data-traditional-task-editor-state-cache-for-value aria-label="State cache duration" />
+                                        <select class="text-input" data-editor-field="stateCacheUnit" data-traditional-task-editor-state-cache-unit aria-label="State cache duration unit"><option value="Minutes">Minutes</option><option value="Hours">Hours</option></select>
+                                        <span>after last task run</span>
+                                    </label>
+                                </div>
+
+                                <label class="traditional-task-editor-inline-check"><input type="checkbox" data-editor-field="autoRerun" data-traditional-task-editor-auto-rerun /> <span>Automatically re-run task if source download limits are encountered</span></label>
+
+                                <label class="traditional-task-editor-inline-check"><input type="checkbox" data-editor-field="useGlobalTaskLogRetention" data-traditional-task-editor-use-global-task-log-retention /> <span>Use global setting for task log retention</span></label>
+                                <label class="field-block full-span traditional-task-editor-task-log-retention-field" data-traditional-task-editor-task-log-retention-settings><span>Number of Task Logs Saved</span><input type="number" class="text-input" min="0" data-editor-field="taskLogsToKeep" data-traditional-task-editor-logs-to-keep /></label>
+                                <div class="inline-alert warning-alert traditional-task-editor-task-log-retention-warning" data-traditional-task-editor-task-log-retention-warning>Task logs may be deleted after a task's next run to reflect the reduced setting.</div>
+                            </div>
+                        </section>
+                    </div>
+                </section>
+
+                <section class="traditional-task-editor-panel" data-traditional-task-editor-panel="logs" hidden>
+                    <div class="traditional-task-editor-scroll-panel">
+                        <section class="details-section">
+                            <div class="task-logs-loading details-loading" data-traditional-task-editor-logs-loading hidden><span class="inline-spinner" aria-hidden="true"></span><span>Loading recent task logs…</span></div>
+                            <div class="inline-alert error-alert" data-traditional-task-editor-logs-error hidden></div>
+                            <div class="task-logs-empty" data-traditional-task-editor-logs-empty hidden>No recent task logs are available for this task.</div>
+                            <div class="task-logs-list" data-traditional-task-editor-logs-list hidden>
+                                <div class="task-logs-header" role="row">
+                                    <div role="columnheader">Result</div>
+                                    <div role="columnheader">Task Log</div>
+                                </div>
+                                <div class="task-logs-rows" data-traditional-task-editor-log-rows></div>
+                            </div>
+                        </section>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <div class="settings-footer traditional-task-editor-footer">
+            <div class="traditional-task-editor-footer-left">
+                <span class="traditional-task-editor-dirty-state" data-traditional-task-editor-dirty-state>No unsaved changes.</span>
+            </div>
+            <div class="traditional-task-editor-footer-actions">
+                <button type="button" class="secondary-button" data-traditional-task-editor-reload hidden>Reload Task</button>
+                <button type="button" class="secondary-button" data-traditional-task-editor-override hidden>Override Checkout</button>
+                <button type="button" class="secondary-button" data-traditional-task-editor-cancel>Close</button>
+                <button type="button" class="primary-button" data-traditional-task-editor-save disabled title="Save this Traditional Task to MOVEit Automation.">Save</button>
+            </div>
+        </div>
+    </div>
+</dialog>
+
+<dialog class="new-task-dialog traditional-task-editor-parameters-dialog" data-traditional-task-editor-parameters-dialog>
+    <div class="new-task-card traditional-task-editor-secondary-card">
+        <div class="settings-header">
+            <div><h2>Task Parameters</h2><p data-traditional-task-editor-parameters-task-name>Traditional Task</p></div>
+            <button type="button" class="dialog-close" data-traditional-task-editor-parameters-close aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body traditional-task-editor-secondary-body traditional-task-editor-parameter-layout">
+            <div class="traditional-task-editor-parameter-table" data-traditional-task-editor-parameter-table>
+                <div class="traditional-task-editor-parameter-header"><div>Name</div><div>Value</div><div></div></div>
+                <div data-traditional-task-editor-parameter-rows></div>
+            </div>
+            <div class="traditional-task-editor-empty-item traditional-task-editor-parameter-empty" data-traditional-task-editor-parameters-empty hidden>No task parameters are defined.</div>
+            <div class="traditional-task-editor-parameter-actions">
+                <button type="button" class="primary-button" data-traditional-task-editor-add-parameter>+ Add Parameter</button>
+            </div>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <span class="traditional-task-editor-secondary-note">Changes are applied to the Task editor and saved with the Task.</span>
+            <button type="button" class="primary-button" data-traditional-task-editor-parameters-close>Close</button>
+        </div>
+    </div>
+</dialog>
+
+<dialog class="new-task-dialog traditional-task-editor-add-parameter-dialog" data-traditional-task-editor-add-parameter-dialog>
+    <div class="new-task-card traditional-task-editor-small-card">
+        <div class="settings-header"><div><h2 data-traditional-task-editor-task-parameter-title>Add Parameter</h2><p data-traditional-task-editor-task-parameter-subtitle>Define a task-scoped parameter.</p></div><button type="button" class="dialog-close" data-traditional-task-editor-add-parameter-close aria-label="Close">×</button></div>
+        <div class="new-task-body">
+            <div class="inline-alert error-alert" data-traditional-task-editor-task-parameter-error hidden></div>
+            <p class="task-script-parameter-help" data-task-script-parameter-help hidden></p>
+            <div class="details-grid">
+                <label class="field-block full-span"><span>Parameter Name</span><input class="text-input" data-traditional-task-editor-new-parameter-name placeholder="Name" /></label>
+                <label class="field-block full-span"><span>Parameter Value</span><input class="text-input" data-traditional-task-editor-new-parameter-value placeholder="Value" /></label>
+                <label class="traditional-task-editor-inline-check full-span"><input type="checkbox" data-traditional-task-editor-new-parameter-secure /> <span>Secure parameter value</span></label>
+            </div>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-traditional-task-editor-add-parameter-close>Close</button>
+            <button type="button" class="primary-button" data-traditional-task-editor-task-parameter-save>Apply</button>
+        </div>
+    </div>
+</dialog>
+
+<dialog class="new-task-dialog traditional-task-editor-process-parameter-dialog" data-traditional-task-editor-process-parameter-dialog>
+    <div class="new-task-card traditional-task-editor-small-card">
+        <div class="settings-header">
+            <div><h2 data-traditional-task-editor-process-parameter-title>Process Parameter</h2><p data-traditional-task-editor-process-parameter-subtitle>Define a parameter for this Process step.</p></div>
+            <button type="button" class="dialog-close" data-traditional-task-editor-process-parameter-cancel aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body">
+            <div class="inline-alert error-alert" data-traditional-task-editor-process-parameter-error hidden></div>
+            <p class="task-script-parameter-help" data-process-script-parameter-help hidden></p>
+            <div class="details-grid">
+                <label class="field-block full-span"><span>Parameter Name</span><input class="text-input" data-traditional-task-editor-process-parameter-name placeholder="Name" /></label>
+                <label class="field-block full-span"><span>Parameter Value</span><input class="text-input" data-traditional-task-editor-process-parameter-value placeholder="Value" /></label>
+                <label class="traditional-task-editor-inline-check full-span"><input type="checkbox" data-traditional-task-editor-process-parameter-secure /> <span>Secure parameter value</span></label>
+            </div>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-traditional-task-editor-process-parameter-cancel>Close</button>
+            <button type="button" class="secondary-button" data-traditional-task-editor-process-parameter-reset hidden>Reset Value</button>
+            <button type="button" class="primary-button" data-traditional-task-editor-process-parameter-save>Apply</button>
+        </div>
+    </div>
+</dialog>
+
+<dialog class="new-task-dialog traditional-task-editor-next-action-parameter-dialog" data-traditional-task-editor-next-action-parameter-dialog>
+    <div class="new-task-card traditional-task-editor-small-card">
+        <div class="settings-header">
+            <div><h2 data-traditional-task-editor-next-action-parameter-title>Run Task Parameter</h2><p data-traditional-task-editor-next-action-parameter-subtitle>Define a parameter passed to the Task to Run.</p></div>
+            <button type="button" class="dialog-close" data-traditional-task-editor-next-action-parameter-cancel aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body">
+            <div class="inline-alert error-alert" data-traditional-task-editor-next-action-parameter-error hidden></div>
+            <div class="details-grid">
+                <label class="field-block full-span"><span>Parameter Name</span><input class="text-input" data-traditional-task-editor-next-action-parameter-name placeholder="Name" /></label>
+                <label class="field-block full-span"><span>Parameter Value</span><input class="text-input" data-traditional-task-editor-next-action-parameter-value placeholder="Value" /></label>
+                <label class="traditional-task-editor-inline-check full-span"><input type="checkbox" data-traditional-task-editor-next-action-parameter-secure /> <span>Secure parameter value</span></label>
+            </div>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-traditional-task-editor-next-action-parameter-cancel>Close</button>
+            <button type="button" class="primary-button" data-traditional-task-editor-next-action-parameter-save>Apply</button>
+        </div>
+    </div>
+</dialog>
+
+
+
+
+<dialog class="new-task-dialog traditional-task-editor-special-filters-dialog" data-traditional-task-editor-special-filters-dialog>
+    <div class="new-task-card traditional-task-editor-special-filters-card">
+        <div class="settings-header">
+            <div><h2>Edit Source Filters</h2><p data-traditional-task-editor-special-filters-subtitle>Source Special Filters</p></div>
+            <button type="button" class="dialog-close" data-traditional-task-editor-special-filters-cancel aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body traditional-task-editor-special-filters-body">
+            <div class="inline-alert error-alert" data-traditional-task-editor-special-filters-error hidden></div>
+            <div class="inline-alert info-alert" data-traditional-task-editor-special-filters-readonly hidden>This Source contains Special Filter criteria that MAUI does not recognize. The existing criteria will be preserved unchanged.</div>
+            <div class="traditional-task-editor-special-filter-match">
+                <strong>Filters:</strong>
+                <label><input type="radio" name="traditional-task-editor-special-filter-match" value="all" data-traditional-task-editor-special-filter-match checked /> <span>Match all</span></label>
+                <label><input type="radio" name="traditional-task-editor-special-filter-match" value="any" data-traditional-task-editor-special-filter-match /> <span>Match any</span></label>
+            </div>
+            <div class="traditional-task-editor-special-filter-grid">
+                <div class="traditional-task-editor-special-filter-header"><div>Filter</div><div>Condition</div><div>Value</div><div>Unit</div><div></div></div>
+                <div data-traditional-task-editor-special-filter-rows></div>
+            </div>
+            <div class="traditional-task-editor-special-filter-toolbar">
+                <button type="button" class="secondary-button compact-button" data-traditional-task-editor-special-filter-more>Add Filter</button>
+                <span class="field-help">Up to six filters. File Size values are stored by MOVEit as bytes.</span>
+            </div>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-traditional-task-editor-special-filters-cancel>Close</button>
+            <button type="button" class="primary-button" data-traditional-task-editor-special-filters-apply>Apply</button>
+        </div>
+    </div>
+</dialog>
+
+<dialog class="new-task-dialog" data-traditional-task-editor-source-timestamps-dialog>
+    <div class="new-task-card traditional-task-editor-secondary-card traditional-task-editor-source-timestamps-card">
+        <div class="settings-header">
+            <div><h2>Task Source Timestamps</h2><p data-traditional-task-editor-source-timestamps-host>Source Host</p></div>
+            <button type="button" class="dialog-close" data-traditional-task-editor-source-timestamps-close aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body traditional-task-editor-secondary-body traditional-task-editor-source-timestamps-body">
+            <div class="traditional-task-editor-source-timestamps-actions">
+                <button type="button" class="secondary-button compact-button" data-traditional-task-editor-source-timestamp-add>Add Timestamp</button>
+            </div>
+            <div class="inline-alert error-alert" data-traditional-task-editor-source-timestamps-error hidden></div>
+            <div class="traditional-task-editor-source-timestamps-loading" data-traditional-task-editor-source-timestamps-loading hidden><span class="inline-spinner" aria-hidden="true"></span><span>Loading source timestamps…</span></div>
+            <div class="traditional-task-editor-source-timestamp-table" data-traditional-task-editor-source-timestamps-table>
+                <div class="traditional-task-editor-source-timestamp-header">
+                    <div>Path</div><div>File mask</div><div>Timestamp</div><div></div>
+                </div>
+                <div data-traditional-task-editor-source-timestamp-rows></div>
+            </div>
+            <div class="traditional-task-editor-source-timestamp-empty" data-traditional-task-editor-source-timestamp-empty hidden>No timestamps recorded for this task source.</div>
+            <div class="traditional-task-editor-source-timestamps-status" data-traditional-task-editor-source-timestamps-status></div>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="primary-button" data-traditional-task-editor-source-timestamps-close>Close</button>
+        </div>
+    </div>
+</dialog>
+
+<dialog class="new-task-dialog" data-traditional-task-editor-source-timestamp-edit-dialog>
+    <div class="new-task-card traditional-task-editor-small-card">
+        <div class="settings-header">
+            <div><h2 data-traditional-task-editor-source-timestamp-edit-title>Add Source Timestamp</h2><p data-traditional-task-editor-source-timestamp-edit-host>Source Host</p></div>
+            <button type="button" class="dialog-close" data-traditional-task-editor-source-timestamp-edit-cancel aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body">
+            <div class="inline-alert error-alert" data-traditional-task-editor-source-timestamp-edit-error hidden></div>
+            <label class="field-block">
+                <span>Path</span>
+                <input class="text-input" type="text" data-traditional-task-editor-source-timestamp-path />
+            </label>
+            <label class="field-block">
+                <span>File mask</span>
+                <input class="text-input" type="text" data-traditional-task-editor-source-timestamp-mask />
+            </label>
+            <label class="field-block">
+                <span>Timestamp</span>
+                <input class="text-input" type="text" autocomplete="off" placeholder="YYYY-MM-DD HH:mm:ss" data-traditional-task-editor-source-timestamp-value />
+                <span class="field-help" data-traditional-task-editor-source-timestamp-help>Use MOVEit server-local time in YYYY-MM-DD HH:mm:ss format.</span>
+            </label>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-traditional-task-editor-source-timestamp-edit-cancel>Close</button>
+            <button type="button" class="primary-button" data-traditional-task-editor-source-timestamp-save>Save</button>
+        </div>
+    </div>
+</dialog>
+
+<dialog class="new-task-dialog traditional-task-editor-transfer-exceptions-dialog" data-traditional-task-editor-transfer-exceptions-dialog>
+    <div class="new-task-card traditional-task-editor-secondary-card traditional-task-editor-transfer-exceptions-card">
+        <div class="settings-header">
+            <div><h2>Edit Task Transfer Exceptions</h2><p data-traditional-task-editor-transfer-exceptions-task-name>Traditional Task</p></div>
+            <button type="button" class="dialog-close" data-traditional-task-editor-transfer-exceptions-close aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body traditional-task-editor-secondary-body traditional-task-editor-transfer-exceptions-body">
+            <div class="inline-alert info-alert">Future runs of this task will not attempt to retransmit the following files to the destinations that already received them during a partial transfer. Remove an entry to allow MOVEit to attempt those destinations again.</div>
+            <div class="inline-alert error-alert" data-traditional-task-editor-transfer-exceptions-error hidden></div>
+            <div class="traditional-task-editor-transfer-exceptions-loading" data-traditional-task-editor-transfer-exceptions-loading hidden><span class="inline-spinner" aria-hidden="true"></span><span>Loading transfer exceptions…</span></div>
+            <div class="traditional-task-editor-exception-table" data-traditional-task-editor-transfer-exceptions-table>
+                <div class="traditional-task-editor-exception-header">
+                    <div>Source</div><div>File</div><div>Size</div><div>Timestamp</div><div></div>
+                </div>
+                <div data-traditional-task-editor-transfer-exceptions-rows></div>
+            </div>
+            <div class="traditional-task-editor-exception-empty" data-traditional-task-editor-transfer-exceptions-empty hidden>No transfer exceptions are currently recorded for this task.</div>
+            <div class="traditional-task-editor-transfer-exceptions-status" data-traditional-task-editor-transfer-exceptions-status></div>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="primary-button" data-traditional-task-editor-transfer-exceptions-close>Close</button>
+        </div>
+    </div>
+</dialog>
+
+
+
+<dialog class="new-task-dialog" data-traditional-task-editor-next-action-link-dialog>
+    <div class="new-task-card task-notification-link-card">
+        <div class="settings-header">
+            <div><h2>Insert Link</h2><p>Add a link to the Send Email message.</p></div>
+            <button type="button" class="dialog-close" data-traditional-task-editor-next-action-link-cancel aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body">
+            <div class="inline-alert error-alert" data-traditional-task-editor-next-action-link-error hidden></div>
+            <label class="field-block">
+                <span>Link URL</span>
+                <input class="text-input" type="text" autocomplete="off" placeholder="https://example.com or mailto:user@example.com" data-traditional-task-editor-next-action-link-url />
+            </label>
+            <p class="field-help">Links must begin with http://, https://, or mailto:.</p>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-traditional-task-editor-next-action-link-cancel>Close</button>
+            <button type="button" class="primary-button" data-traditional-task-editor-next-action-link-confirm>Add Link</button>
+        </div>
+    </div>
+</dialog>
+
+
+@* Sync dialogs share the MAUI modal styles. Native screenshots define behavior only. *@
+<dialog class="new-task-dialog traditional-task-editor-sync-preview-dialog" data-sync-preview-dialog>
+    <div class="new-task-card">
+    <div class="settings-header"><div><h2>Sync Preview</h2><p data-sync-preview-task-name></p></div><button type="button" class="dialog-close" data-sync-preview-close aria-label="Close">×</button></div>
+    <div class="new-task-body">
+        <p>Planned file and folder actions for the next Task run.</p>
+        <div class="details-loading" data-sync-preview-loading hidden>Comparing Sync folders… Large folders may take several minutes.</div>
+        <div class="inline-alert error-alert" data-sync-preview-error role="alert" hidden></div>
+        <div class="traditional-task-editor-sync-preview-scroll">
+            <table class="traditional-task-editor-sync-preview-table">
+                <thead><tr><th colspan="3" scope="colgroup">Folder A</th><th rowspan="2" scope="col">Action</th><th colspan="3" scope="colgroup">Folder B</th></tr><tr><th scope="col">Path</th><th scope="col">Size</th><th scope="col">Timestamp</th><th scope="col">Path</th><th scope="col">Size</th><th scope="col">Timestamp</th></tr></thead>
+                <tbody data-sync-preview-rows></tbody>
+            </table>
+        </div>
+        <p class="field-help" data-sync-preview-empty hidden>No actions match the current view.</p>
+        <p class="field-help" data-sync-preview-status aria-live="polite"></p>
+        <div class="traditional-task-editor-sync-preview-tools">
+            <label class="traditional-task-editor-inline-check"><input type="checkbox" data-sync-preview-show-no-action /><span>Show “no action” entries</span></label>
+            <button type="button" class="secondary-button" data-sync-preview-initial>Change Initial Run Options</button>
+            <button type="button" class="secondary-button" data-sync-preview-refresh>Refresh</button>
+        </div>
+    </div>
+    <div class="settings-footer new-task-footer"><button type="button" class="secondary-button" data-sync-preview-close>Close</button><button type="button" class="primary-button" data-sync-preview-ok>OK</button></div>
+    </div>
+</dialog>
+<dialog class="new-task-dialog traditional-task-editor-sync-initial-dialog" data-sync-initial-dialog>
+    <div class="new-task-card">
+    <div class="settings-header"><div><h2>Initial Run Options</h2><p>Choose which files to copy when no saved Sync listing exists.</p></div><button type="button" class="dialog-close" data-sync-initial-close aria-label="Close">×</button></div>
+    <div class="new-task-body">
+        <div class="traditional-task-editor-sync-initial-options">
+            <label class="traditional-task-editor-inline-check"><input type="radio" name="maui-sync-initial-mode" value="-3" /><span>Consider files whose names match to be identical</span></label>
+            <label class="traditional-task-editor-inline-check"><input type="radio" name="maui-sync-initial-mode" value="-1" /><span>Consider files whose names and sizes match to be identical</span></label>
+            <label class="traditional-task-editor-inline-check"><input type="radio" name="maui-sync-initial-mode" value="custom" /><span>Match names and sizes only when timestamps are within this timespan</span></label>
+            <div class="details-grid traditional-task-editor-dependent-option" data-sync-initial-timespan>
+                <label class="field-block"><span>Timespan</span><input type="number" min="0" max="2147483647" step="1" class="text-input" data-sync-initial-value /></label>
+                <label class="field-block"><span>Unit</span><select class="text-input" data-sync-initial-unit><option value="1">Seconds</option><option value="60">Minutes</option><option value="3600">Hours</option><option value="86400">Days</option></select></label>
+            </div>
+            <label class="traditional-task-editor-inline-check"><input type="radio" name="maui-sync-initial-mode" value="-2" /><span>Copy all files from Folder A to Folder B, even when unchanged</span></label>
+        </div>
+        <div class="inline-alert error-alert" data-sync-initial-error role="alert" hidden></div>
+    </div>
+    <div class="settings-footer new-task-footer"><button type="button" class="secondary-button" data-sync-initial-close>Close</button><button type="button" class="primary-button" data-sync-initial-save>Save</button></div>
+    </div>
+</dialog>
+
+<dialog class="new-task-dialog" data-run-as-of-dialog>
+    <div class="new-task-card">
+        <div class="settings-header"><div><h2>Run As Of…</h2><p>Temporarily use a selected date and time for Source and Destination filenames and folders that use date-time macros.</p></div><button type="button" class="dialog-close" data-run-as-of-close aria-label="Close">×</button></div>
+        <div class="new-task-body">
+            <div class="inline-alert error-alert" data-run-as-of-error role="alert" hidden></div>
+            <div class="field-block">
+                <span id="run-as-of-date-label">Date and Time</span>
+                <div class="run-as-of-date-entry">
+                    <input type="datetime-local" class="text-input" step="1" required aria-labelledby="run-as-of-date-label" data-run-as-of-date />
+                    <button type="button" class="secondary-button run-as-of-date-toggle" aria-label="Choose date and time" aria-haspopup="dialog" aria-expanded="false" aria-controls="run-as-of-date-picker" data-run-as-of-picker-toggle>
+                        <span class="icon"><partial name="_Icon" model="@("calendar")" /></span>
+                    </button>
+                </div>
+                <div id="run-as-of-date-picker" class="run-as-of-date-picker" popover="auto" role="dialog" aria-label="Choose date and time" data-run-as-of-picker>
+                    <div class="run-as-of-date-navigation">
+                        <button type="button" class="run-as-of-date-arrow" aria-label="Previous month" data-run-as-of-picker-prev>‹</button>
+                        <select class="text-input" aria-label="Month" data-run-as-of-picker-month></select>
+                        <input type="number" class="text-input" min="1" max="9999" step="1" aria-label="Year" data-run-as-of-picker-year />
+                        <button type="button" class="run-as-of-date-arrow" aria-label="Next month" data-run-as-of-picker-next>›</button>
+                    </div>
+                    <div class="run-as-of-date-calendar" role="grid" aria-label="Calendar">
+                        <div role="row" class="run-as-of-date-weekdays"><span role="columnheader">Su</span><span role="columnheader">Mo</span><span role="columnheader">Tu</span><span role="columnheader">We</span><span role="columnheader">Th</span><span role="columnheader">Fr</span><span role="columnheader">Sa</span></div>
+                        <div class="run-as-of-date-days" role="rowgroup" data-run-as-of-picker-days></div>
+                    </div>
+                    <fieldset class="run-as-of-date-time"><legend>Time (24-hour)</legend>
+                        <label><span>Hour</span><input type="number" class="text-input" min="0" max="23" step="1" required data-run-as-of-picker-hour /></label>
+                        <label><span>Minute</span><input type="number" class="text-input" min="0" max="59" step="1" required data-run-as-of-picker-minute /></label>
+                        <label><span>Second</span><input type="number" class="text-input" min="0" max="59" step="1" required data-run-as-of-picker-second /></label>
+                    </fieldset>
+                    <p class="field-help error" role="alert" data-run-as-of-picker-error hidden></p>
+                    <div class="run-as-of-date-actions"><button type="button" data-run-as-of-picker-clear>Clear</button><button type="button" data-run-as-of-picker-ok>OK</button><button type="button" data-run-as-of-picker-today>Today</button></div>
+                </div>
+            </div>
+            <p class="field-help">The selected values replace date/time macros for this run. MAUI saves an Undo snapshot, runs the Task, and restores the original settings after completion.</p>
+            <div class="task-notification-progress"><progress max="100" value="0" data-run-as-of-progress aria-label="Run As Of progress"></progress><p data-run-as-of-status role="status" aria-live="polite"></p></div>
+        </div>
+        <div class="settings-footer"><button type="button" class="secondary-button" data-run-as-of-close>Close</button><button type="button" class="primary-button" data-run-as-of-run>Run</button></div>
+    </div>
+</dialog>

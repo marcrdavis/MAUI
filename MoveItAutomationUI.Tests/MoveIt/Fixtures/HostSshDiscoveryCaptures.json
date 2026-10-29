@@ -1,0 +1,10 @@
+{
+  "KeyExchange": {
+    "IPWorks": "curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group-exchange-sha256,diffie-hellman-group14-sha256,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group-exchange-sha1,diffie-hellman-group14-sha1,diffie-hellman-group1-sha1,gss-group14-sha256-toWM5Slw5Ew8Mqkay+al2g==,gss-group16-sha512-toWM5Slw5Ew8Mqkay+al2g==,gss-nistp256-sha256-toWM5Slw5Ew8Mqkay+al2g==,gss-curve25519-sha256-toWM5Slw5Ew8Mqkay+al2g==,gss-group14-sha1-toWM5Slw5Ew8Mqkay+al2g==,gss-gex-sha1-toWM5Slw5Ew8Mqkay+al2g==",
+    "WeOnlyDo": "ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group-exchange-sha256,diffie-hellman-group16-sha512,diffie-hellman-group14-sha256,diffie-hellman-group18-sha512,diffie-hellman-group-exchange-sha1,diffie-hellman-group1-sha1,diffie-hellman-group14-sha1,ext-info-c,kex-strict-c-v00@openssh.com"
+  },
+  "Encryption": {
+    "IPWorks": "aes256-ctr,aes192-ctr,aes128-ctr,aes256-cbc,aes192-cbc,aes128-cbc,3des-ctr,3des-cbc,blowfish-cbc,arcfour256,arcfour128,arcfour,cast128-cbc,aes256-gcm@openssh.com,aes128-gcm@openssh.com,chacha20-poly1305@openssh.com",
+    "WeOnlyDo": "aes128-ctr,aes128-gcm@openssh.com,aes128-cbc,chacha20-poly1305@openssh.com,aes192-ctr,aes192-cbc,aes256-ctr,aes256-gcm@openssh.com,aes256-cbc,3des-cbc,blowfish-cbc,rijndael128-cbc,rijndael192-cbc,rijndael256-cbc,rijndael-cbc@lysator.liu.se,des-cbc,des-cbc@ssh.com"
+  }
+}

@@ -1,0 +1,140 @@
+<!-- Author: Marc R. Davis (marcdavis@comcast.net); Project: MAUI - MOVEit Automation UI. -->
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AspNetCoreHostingModel>InProcess</AspNetCoreHostingModel>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>MoveItAutomationUI</RootNamespace>
+    <AssemblyName>MoveItAutomationUI</AssemblyName>
+    <Authors>Marc R. Davis (marcdavis@comcast.net)</Authors>
+    <Version>0.18.511-RC3</Version>
+    <AssemblyVersion>0.18.511.0</AssemblyVersion>
+    <FileVersion>0.18.511.0</FileVersion>
+    <InformationalVersion>0.18.511-RC3+build.20261029</InformationalVersion>
+
+    <!-- The test project is intentionally stored beneath the source root for packaging convenience.
+         Exclude its entire subtree from ASP.NET Core Web SDK default item globs so test source,
+         bin/obj output, and future test artifacts can never be treated as application content. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);MoveItAutomationUI.Tests\**;MoveItAutomationUI.Tests/**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <ItemGroup><EmbeddedResource Include="Templates/Scripts/*.ps1" /></ItemGroup>
+
+  <ItemGroup>
+    <!-- Allow the dedicated MAUI test assembly to verify narrow native-portability contract helpers
+         without widening those implementation details into MAUI's public runtime API. -->
+    <InternalsVisibleTo Include="MoveItAutomationUI.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Defense in depth: tests are compiled only by the dedicated test project. -->
+    <Compile Remove="MoveItAutomationUI.Tests\**\*.cs" />
+    <Content Remove="MoveItAutomationUI.Tests\**\*" />
+    <None Remove="MoveItAutomationUI.Tests\**\*" />
+    <EmbeddedResource Remove="MoveItAutomationUI.Tests\**\*" />
+  </ItemGroup>
+
+  <!-- Guard against nested test obj/AssemblyInfo.cs entering the main Web project's
+       Compile items, including after the test project has generated obj files.
+       Project-level Remove excludes normal test sources; this late removal also
+       covers compile items added later by imported SDK/build targets. -->
+  <Target Name="MauiExcludeNestedTestCompileItems" BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <Compile Remove="MoveItAutomationUI.Tests\**;MoveItAutomationUI.Tests/**;$(MSBuildProjectDirectory)\MoveItAutomationUI.Tests\**" />
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.31" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.13" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.31" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="LICENSE">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
+
+    <!-- Installation-owned configuration must never enter build/publish packages.
+         For a NEW installation only, create an existing {} file and grant its Modify ACL. -->
+    <Content Update="appsettings.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Never</CopyToPublishDirectory>
+    </Content>
+
+    <!-- Release metadata must replace older output even when destination timestamps are newer.
+         This does not change the separate installation-owned appsettings.json deployment rule. -->
+    <Content Update="appsettings.template.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+    </Content>
+
+    <!-- Maintained customized configuration variant. It is shipped for explicit administrator use and is not loaded automatically. -->
+    <Content Update="appsettings.custom.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+    </Content>
+
+    <Content Update="upgrade.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+    </Content>
+
+    <!-- Release-owned CSV / Excel Task import template. Available alongside the deployed app,
+         not inside wwwroot, so it is not automatically exposed as a public download. -->
+    <None Update="Templates\TaskImport\MAUI_ImportTasksTemplate.xlsx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
+
+    <!-- Host import templates follow the same release-owned /Templates layout as
+         TaskImport, including in dotnet publish / IIS deployment output. -->
+    <None Update="Templates\HostImport\MAUI_HostImportTemplate.xlsx;Templates\HostImport\MAUI_HostImportTemplate.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- Release-owned HTML email bodies supplied as text templates. -->
+  <ItemGroup>
+    <None Update="Templates\Email\*.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- Data is entirely installation-owned: recovery snapshots, checkout journals,
+       backups, SQLite files, cleanup state and machine-bound keys must never be
+       copied from a developer/runtime installation into another deployment. -->
+  <ItemGroup>
+    <Content Remove="Data\**\*" />
+    <None Remove="Data\**\*" />
+    <None Include="Data\README.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Build\Verify-ReleasePackage.ps1">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- Use Windows PowerShell 5.1, available on supported IIS/Visual Studio hosts.
+       Read-only checks fail before a mixed build/publish package reaches IIS.
+       Separate targets also validate Publish when NoBuild is used. -->
+  <Target Name="MauiVerifyBuildReleasePackage" AfterTargets="Build"
+          Condition="'$(OS)' == 'Windows_NT' and '$(DesignTimeBuild)' != 'true'">
+    <Exec Command="powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\Build\Verify-ReleasePackage.ps1&quot; -PackageDirectory &quot;$(TargetDir).&quot; -ExpectedVersion &quot;$(Version)&quot;" />
+  </Target>
+  <Target Name="MauiVerifyPublishedReleasePackage" AfterTargets="Publish"
+          Condition="'$(OS)' == 'Windows_NT' and '$(DesignTimeBuild)' != 'true' and '$(IsPublishable)' != 'false'">
+    <Exec Command="powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\Build\Verify-ReleasePackage.ps1&quot; -PackageDirectory &quot;$(PublishDir).&quot; -ExpectedVersion &quot;$(Version)&quot;" />
+  </Target>
+</Project>
+

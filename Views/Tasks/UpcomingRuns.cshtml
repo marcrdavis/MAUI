@@ -1,0 +1,85 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   This Razor file is part of the MAUI application. *@
+@model UpcomingRunsPageViewModel
+@{
+    ViewData["Title"] = "Upcoming Runs";
+    ViewData["GridDeferInitialLoad"] = true;
+}
+<div class="page-heading compact-heading">
+    <div>
+        <h1>Tasks <span class="heading-context">/ Upcoming Runs</span></h1>
+        <p>Projected scheduled Task occurrences for the next 24 hours. This is a forecast, not an execution queue; same-time Tasks may run concurrently, and manual, event-driven, chained, delayed, or make-up runs are not included.</p>
+    </div>
+</div>
+
+<div class="inline-alert error-alert" data-upcoming-runs-error hidden></div>
+
+<div class="inline-alert" data-upcoming-runs-warning hidden>
+    <span data-upcoming-runs-warning-text></span>
+</div>
+
+<partial name="_DataGrid" model="Model.Grid" />
+
+<form class="upcoming-runs-antiforgery" hidden>@Html.AntiForgeryToken()</form>
+<div data-upcoming-runs-config
+     data-login-url="@Url.Action("SessionExpired", "Account")"
+     data-refresh-url="@Url.Action("UpcomingRunsGrid", "Tasks")"
+     data-task-details-url="@Url.Action("Details", "Tasks")"
+     data-save-details-url="@Url.Action("SaveDetails", "Tasks")"
+     data-task-dependencies-url="@Url.Action("Dependencies", "Tasks")"
+     data-task-logs-url="@Url.Action("Logs", "Tasks")"
+     data-task-log-viewer-url="@Url.Action("LogViewer", "Tasks")"
+     data-run-task-now-url="@Url.Action("RunTaskNow", "Tasks")"
+     data-enable-tasks-url="@Url.Action("EnableTasks", "Tasks")"
+     data-disable-tasks-url="@Url.Action("DisableTasks", "Tasks")"
+     data-task-action-state-url="@Url.Action("ActionState", "Tasks")"
+     data-file-activity-report-url="@Url.Action("FileActivity", "Records")"
+     data-audit-report-url="@Url.Action("Audit", "Records")"
+     data-native-editor-session-url="@Url.Action("Session", "NativeEditor")"
+     data-prepare-task-edit-url="@Url.Action("PrepareTaskEdit", "Tasks")"
+     data-mark-task-edited-url="@Url.Action("MarkTaskEdited", "Tasks")"></div>
+
+<div class="task-row-action-menu" data-upcoming-task-row-action-menu role="menu" aria-label="Task actions" hidden>
+    <button type="button" role="menuitem" data-upcoming-task-row-command="information">Task Information</button>
+    <div class="task-row-action-divider" role="separator"></div>
+    <button type="button" role="menuitem" data-upcoming-task-row-command="details">View Run Details</button>
+    <button type="button" role="menuitem" data-upcoming-task-row-command="file-activity">View File Activity</button>
+    <button type="button" role="menuitem" data-upcoming-task-row-command="audit">View Audit Records</button>
+    <div class="task-row-action-divider" role="separator"></div>
+    <button type="button" role="menuitem" data-upcoming-task-row-command="copy-name">Copy Task Name</button>
+    <button type="button" role="menuitem" data-upcoming-task-row-command="edit">Edit Task</button>
+    <div class="task-row-action-divider" role="separator"></div>
+    <button type="button" role="menuitem" data-upcoming-task-row-command="toggle-enabled">Enable Task</button>
+    <button type="button" role="menuitem" data-upcoming-task-row-command="run">Run Task Now</button>
+</div>
+
+<dialog class="task-details-dialog report-details-dialog" data-upcoming-run-details-dialog>
+    <form method="dialog" class="task-details-card report-details-card">
+        <div class="settings-header">
+            <div>
+                <h2>Upcoming Run Details</h2>
+                <p>Projected values for this scheduled occurrence.</p>
+            </div>
+            <button type="submit" class="dialog-close" aria-label="Close">×</button>
+        </div>
+        <div class="report-details-body">
+            <table class="report-details-table" aria-label="Upcoming run details">
+                <thead>
+                    <tr><th>Field</th><th>Value</th></tr>
+                </thead>
+                <tbody data-upcoming-run-details-body></tbody>
+            </table>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="submit" class="secondary-button">Close</button>
+        </div>
+    </form>
+</dialog>
+
+<partial name="_TaskInformationDialog" />
+
+@section Scripts {
+    <script src="~/js/task-information.js" asp-append-version="true"></script>
+    <script src="~/js/upcoming-runs.js" asp-append-version="true"></script>
+}

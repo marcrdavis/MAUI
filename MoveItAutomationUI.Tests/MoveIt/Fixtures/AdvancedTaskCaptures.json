@@ -1,0 +1,1222 @@
+[
+  {
+    "Name": "adv2",
+    "ID": "937919810",
+    "AR": 0,
+    "Active": 0,
+    "Info": {
+      "Description": "",
+      "Notes": ""
+    },
+    "CacheNames": "random",
+    "UseDefStateCaching": 1,
+    "NextEID": 22,
+    "Watched": 0,
+    "InvalidOverride": 0,
+    "steps": [
+      {
+        "Source": {
+          "ID": "11",
+          "Disabled": 0,
+          "HostID": "201530181",
+          "Type": "Share",
+          "UseDefRetryCount": 1,
+          "RetryCount": 0,
+          "UseDefRetryTimeoutSecs": 1,
+          "RetryTimeoutSecs": 30,
+          "InvalidOverride": 0,
+          "FileMask": "*.*",
+          "ExFile": "",
+          "DeleteOrig": 0,
+          "RenameTo": "",
+          "DelRename": 1,
+          "NewFilesOnly": 0,
+          "Unzip": 0,
+          "RetryIfNoFiles": 0,
+          "Path": "",
+          "ExFo": "",
+          "SearchSubdirs": 0,
+          "UseDefRescanSecs": 1,
+          "RescanSecs": 0,
+          "UDMxFi": 1,
+          "MxFi": 0,
+          "UDMxBy": 1,
+          "MxBy": 0,
+          "UseDefWinCopyFileAPI": 1,
+          "UseWinCopyFileAPI": 1,
+          "Password": null,
+          "Account": null,
+          "ClientSecret": null,
+          "OAuthClientSecret": null
+        }
+      },
+      {
+        "For": {
+          "ID": "12",
+          "Disabled": 0,
+          "steps": [
+            {
+              "If": {
+                "ID": "13",
+                "Disabled": 0,
+                "When": [
+                  {
+                    "steps": [
+                      {
+                        "Destination": {
+                          "ID": "14",
+                          "Disabled": 0,
+                          "HostID": "161381609",
+                          "Type": "Share",
+                          "UseOrigName": 1,
+                          "FileName": "[OrigName]",
+                          "UseDefRetryCount": 1,
+                          "RetryCount": 0,
+                          "UseDefRetryTimeoutSecs": 1,
+                          "RetryTimeoutSecs": 30,
+                          "InvalidOverride": 0,
+                          "Path": "",
+                          "ForceDir": 1,
+                          "OverwriteOrig": 1,
+                          "UseRelativeSubdirs": 1,
+                          "UseDefWinCopyFileAPI": 1,
+                          "UseWinCopyFileAPI": 1,
+                          "Zip": 0,
+                          "UseDefPreserveFileTimestamp": 1,
+                          "PreserveFileTimestamp": 0,
+                          "Password": null,
+                          "Account": null,
+                          "ClientSecret": null,
+                          "OAuthClientSecret": null
+                        }
+                      }
+                    ],
+                    "__parentStepId": "13",
+                    "__branchIndex": 0,
+                    "Criteria": {
+                      "And": {
+                        "comp": [
+                          {
+                            "a": "[OrigName]",
+                            "b": "file1.txt",
+                            "test": "MASK"
+                          },
+                          {
+                            "a": "[FileSize]",
+                            "b": 0,
+                            "test": "NGT"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "If": {
+                "ID": "15",
+                "Disabled": 0,
+                "When": [
+                  {
+                    "steps": [
+                      {
+                        "Comment": {
+                          "ID": "16",
+                          "Disabled": 0,
+                          "Text": "do something"
+                        }
+                      }
+                    ],
+                    "__parentStepId": "15",
+                    "__branchIndex": 0,
+                    "Criteria": {
+                      "Or": {
+                        "comp": [
+                          {
+                            "a": "[OrigName]",
+                            "b": "file2.txt",
+                            "test": "MASK"
+                          },
+                          {
+                            "a": "[OrigName]",
+                            "b": "file3.txt",
+                            "test": "MASK"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "If": {
+                "ID": "17",
+                "Disabled": 0,
+                "When": [
+                  {
+                    "steps": [
+                      {
+                        "Comment": {
+                          "ID": "18",
+                          "Disabled": 0,
+                          "Text": "Do something else"
+                        }
+                      }
+                    ],
+                    "__parentStepId": "17",
+                    "__branchIndex": 0,
+                    "Criteria": {
+                      "And": {
+                        "comp": [
+                          {
+                            "a": "[FileDateStamp]",
+                            "b": "[DateSubtract([Now],1H)]",
+                            "test": "DGT"
+                          },
+                          {
+                            "a": "[ErrorCodeFile]",
+                            "b": 0,
+                            "test": "NEQ"
+                          },
+                          {
+                            "a": "[ErrorCodeTask]",
+                            "b": 0,
+                            "test": "NEQ"
+                          },
+                          {
+                            "a": "[macro]",
+                            "b": "somevalue",
+                            "test": "NEQ"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "RunTask": {
+                "ID": "19",
+                "Disabled": 0,
+                "TaskID": "498499684",
+                "Wait": 1
+              }
+            },
+            {
+              "UpdOrig": {
+                "ID": "20",
+                "Disabled": 0,
+                "Action": "r",
+                "RenameTo": "[OrigName].bak",
+                "DelRename": 1
+              }
+            }
+          ]
+        }
+      },
+      {
+        "Comment": {
+          "ID": "21",
+          "Disabled": 0,
+          "Text": "End comment"
+        }
+      }
+    ],
+    "TT": "COS",
+    "Group": []
+  },
+  {
+    "Name": "adv2",
+    "ID": "937919810",
+    "AR": 0,
+    "Active": 0,
+    "Info": {
+      "Description": "",
+      "Notes": ""
+    },
+    "CacheNames": "random",
+    "UseDefStateCaching": 1,
+    "NextEID": 23,
+    "Watched": 0,
+    "InvalidOverride": 0,
+    "steps": [
+      {
+        "Source": {
+          "ID": "11",
+          "Disabled": 0,
+          "HostID": "201530181",
+          "Type": "Share",
+          "UseDefRetryCount": 1,
+          "RetryCount": 0,
+          "UseDefRetryTimeoutSecs": 1,
+          "RetryTimeoutSecs": 30,
+          "InvalidOverride": 0,
+          "FileMask": "*.*",
+          "ExFile": "",
+          "DeleteOrig": 0,
+          "RenameTo": "",
+          "DelRename": 1,
+          "NewFilesOnly": 0,
+          "Unzip": 0,
+          "RetryIfNoFiles": 0,
+          "Path": "",
+          "ExFo": "",
+          "SearchSubdirs": 0,
+          "UseDefRescanSecs": 1,
+          "RescanSecs": 0,
+          "UDMxFi": 1,
+          "MxFi": 0,
+          "UDMxBy": 1,
+          "MxBy": 0,
+          "UseDefWinCopyFileAPI": 1,
+          "UseWinCopyFileAPI": 1,
+          "Password": null,
+          "Account": null,
+          "ClientSecret": null,
+          "OAuthClientSecret": null
+        }
+      },
+      {
+        "For": {
+          "ID": "12",
+          "Disabled": 0,
+          "steps": [
+            {
+              "If": {
+                "ID": "13",
+                "Disabled": 0,
+                "When": [
+                  {
+                    "steps": [
+                      {
+                        "Destination": {
+                          "ID": "14",
+                          "Disabled": 0,
+                          "HostID": "161381609",
+                          "Type": "Share",
+                          "UseOrigName": 1,
+                          "FileName": "[OrigName]",
+                          "UseDefRetryCount": 1,
+                          "RetryCount": 0,
+                          "UseDefRetryTimeoutSecs": 1,
+                          "RetryTimeoutSecs": 30,
+                          "InvalidOverride": 0,
+                          "Path": "",
+                          "ForceDir": 1,
+                          "OverwriteOrig": 1,
+                          "UseRelativeSubdirs": 1,
+                          "UseDefWinCopyFileAPI": 1,
+                          "UseWinCopyFileAPI": 1,
+                          "Zip": 0,
+                          "UseDefPreserveFileTimestamp": 1,
+                          "PreserveFileTimestamp": 0,
+                          "Password": null,
+                          "Account": null,
+                          "ClientSecret": null,
+                          "OAuthClientSecret": null
+                        }
+                      }
+                    ],
+                    "__parentStepId": "13",
+                    "__branchIndex": 0,
+                    "Criteria": {
+                      "And": {
+                        "comp": [
+                          {
+                            "a": "[OrigName]",
+                            "b": "file1.txt",
+                            "test": "MASK"
+                          },
+                          {
+                            "a": "[FileSize]",
+                            "b": 0,
+                            "test": "NGT"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "If": {
+                "ID": "15",
+                "Disabled": 0,
+                "When": [
+                  {
+                    "steps": [
+                      {
+                        "Comment": {
+                          "ID": "16",
+                          "Disabled": 0,
+                          "Text": "do something"
+                        }
+                      }
+                    ],
+                    "__parentStepId": "15",
+                    "__branchIndex": 0,
+                    "Criteria": {
+                      "Or": {
+                        "comp": [
+                          {
+                            "a": "[OrigName]",
+                            "b": "file2.txt",
+                            "test": "MASK"
+                          },
+                          {
+                            "a": "[OrigName]",
+                            "b": "file3.txt",
+                            "test": "MASK"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "If": {
+                "ID": "17",
+                "Disabled": 0,
+                "When": [
+                  {
+                    "steps": [
+                      {
+                        "Comment": {
+                          "ID": "18",
+                          "Disabled": 0,
+                          "Text": "Do something else"
+                        }
+                      }
+                    ],
+                    "__parentStepId": "17",
+                    "__branchIndex": 0,
+                    "Criteria": {
+                      "And": {
+                        "comp": [
+                          {
+                            "a": "[FileDateStamp]",
+                            "b": "[DateSubtract([Now],1H)]",
+                            "test": "DGT"
+                          },
+                          {
+                            "a": "[ErrorCodeFile]",
+                            "b": 0,
+                            "test": "NEQ"
+                          },
+                          {
+                            "a": "[ErrorCodeTask]",
+                            "b": 0,
+                            "test": "NEQ"
+                          },
+                          {
+                            "a": "[macro]",
+                            "b": "somevalue",
+                            "test": "NEQ"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "RunTask": {
+                "ID": "19",
+                "Disabled": 0,
+                "TaskID": "498499684",
+                "Wait": 1
+              }
+            },
+            {
+              "Comment": {
+                "ID": "22",
+                "Disabled": 0,
+                "Text": "I inserted this here"
+              }
+            },
+            {
+              "UpdOrig": {
+                "ID": "20",
+                "Disabled": 0,
+                "Action": "r",
+                "RenameTo": "[OrigName].bak",
+                "DelRename": 1
+              }
+            }
+          ]
+        }
+      },
+      {
+        "Comment": {
+          "ID": "21",
+          "Disabled": 0,
+          "Text": "End comment"
+        }
+      }
+    ],
+    "TT": "COS",
+    "Group": []
+  },
+  {
+    "Name": "adv2",
+    "ID": "937919810",
+    "AR": 0,
+    "Active": 0,
+    "Info": {
+      "Description": "",
+      "Notes": ""
+    },
+    "CacheNames": "random",
+    "UseDefStateCaching": 1,
+    "NextEID": 23,
+    "Watched": 0,
+    "InvalidOverride": 0,
+    "steps": [
+      {
+        "Comment": {
+          "ID": "21",
+          "Disabled": 0,
+          "Text": "End comment"
+        }
+      },
+      {
+        "Source": {
+          "ID": "11",
+          "Disabled": 0,
+          "HostID": "201530181",
+          "Type": "Share",
+          "UseDefRetryCount": 1,
+          "RetryCount": 0,
+          "UseDefRetryTimeoutSecs": 1,
+          "RetryTimeoutSecs": 30,
+          "InvalidOverride": 0,
+          "FileMask": "*.*",
+          "ExFile": "",
+          "DeleteOrig": 0,
+          "RenameTo": "",
+          "DelRename": 1,
+          "NewFilesOnly": 0,
+          "Unzip": 0,
+          "RetryIfNoFiles": 0,
+          "Path": "",
+          "ExFo": "",
+          "SearchSubdirs": 0,
+          "UseDefRescanSecs": 1,
+          "RescanSecs": 0,
+          "UDMxFi": 1,
+          "MxFi": 0,
+          "UDMxBy": 1,
+          "MxBy": 0,
+          "UseDefWinCopyFileAPI": 1,
+          "UseWinCopyFileAPI": 1,
+          "Password": null,
+          "Account": null,
+          "ClientSecret": null,
+          "OAuthClientSecret": null
+        }
+      },
+      {
+        "For": {
+          "ID": "12",
+          "Disabled": 0,
+          "steps": [
+            {
+              "If": {
+                "ID": "13",
+                "Disabled": 0,
+                "When": [
+                  {
+                    "steps": [
+                      {
+                        "Destination": {
+                          "ID": "14",
+                          "Disabled": 0,
+                          "HostID": "161381609",
+                          "Type": "Share",
+                          "UseOrigName": 1,
+                          "FileName": "[OrigName]",
+                          "UseDefRetryCount": 1,
+                          "RetryCount": 0,
+                          "UseDefRetryTimeoutSecs": 1,
+                          "RetryTimeoutSecs": 30,
+                          "InvalidOverride": 0,
+                          "Path": "",
+                          "ForceDir": 1,
+                          "OverwriteOrig": 1,
+                          "UseRelativeSubdirs": 1,
+                          "UseDefWinCopyFileAPI": 1,
+                          "UseWinCopyFileAPI": 1,
+                          "Zip": 0,
+                          "UseDefPreserveFileTimestamp": 1,
+                          "PreserveFileTimestamp": 0,
+                          "Password": null,
+                          "Account": null,
+                          "ClientSecret": null,
+                          "OAuthClientSecret": null
+                        }
+                      }
+                    ],
+                    "__parentStepId": "13",
+                    "__branchIndex": 0,
+                    "Criteria": {
+                      "And": {
+                        "comp": [
+                          {
+                            "a": "[OrigName]",
+                            "b": "file1.txt",
+                            "test": "MASK"
+                          },
+                          {
+                            "a": "[FileSize]",
+                            "b": 0,
+                            "test": "NGT"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "If": {
+                "ID": "15",
+                "Disabled": 0,
+                "When": [
+                  {
+                    "steps": [
+                      {
+                        "Comment": {
+                          "ID": "16",
+                          "Disabled": 0,
+                          "Text": "do something"
+                        }
+                      }
+                    ],
+                    "__parentStepId": "15",
+                    "__branchIndex": 0,
+                    "Criteria": {
+                      "Or": {
+                        "comp": [
+                          {
+                            "a": "[OrigName]",
+                            "b": "file2.txt",
+                            "test": "MASK"
+                          },
+                          {
+                            "a": "[OrigName]",
+                            "b": "file3.txt",
+                            "test": "MASK"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "If": {
+                "ID": "17",
+                "Disabled": 0,
+                "When": [
+                  {
+                    "steps": [
+                      {
+                        "Comment": {
+                          "ID": "18",
+                          "Disabled": 0,
+                          "Text": "Do something else"
+                        }
+                      }
+                    ],
+                    "__parentStepId": "17",
+                    "__branchIndex": 0,
+                    "Criteria": {
+                      "And": {
+                        "comp": [
+                          {
+                            "a": "[FileDateStamp]",
+                            "b": "[DateSubtract([Now],1H)]",
+                            "test": "DGT"
+                          },
+                          {
+                            "a": "[ErrorCodeFile]",
+                            "b": 0,
+                            "test": "NEQ"
+                          },
+                          {
+                            "a": "[ErrorCodeTask]",
+                            "b": 0,
+                            "test": "NEQ"
+                          },
+                          {
+                            "a": "[macro]",
+                            "b": "somevalue",
+                            "test": "NEQ"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "RunTask": {
+                "ID": "19",
+                "Disabled": 0,
+                "TaskID": "498499684",
+                "Wait": 1
+              }
+            },
+            {
+              "Comment": {
+                "ID": "22",
+                "Disabled": 0,
+                "Text": "I inserted this here"
+              }
+            },
+            {
+              "UpdOrig": {
+                "ID": "20",
+                "Disabled": 0,
+                "Action": "r",
+                "RenameTo": "[OrigName].bak",
+                "DelRename": 1
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "TT": "COS",
+    "Group": []
+  },
+  {
+    "Name": "adv2",
+    "ID": "937919810",
+    "AR": 0,
+    "Active": 0,
+    "Info": {
+      "Description": "",
+      "Notes": ""
+    },
+    "CacheNames": "random",
+    "UseDefStateCaching": 1,
+    "NextEID": 24,
+    "Watched": 0,
+    "InvalidOverride": 0,
+    "steps": [
+      {
+        "Comment": {
+          "ID": "21",
+          "Disabled": 0,
+          "Text": "End comment"
+        }
+      },
+      {
+        "Comment": {
+          "ID": "23",
+          "Disabled": 0,
+          "Text": "End comment"
+        }
+      },
+      {
+        "Source": {
+          "ID": "11",
+          "Disabled": 0,
+          "HostID": "201530181",
+          "Type": "Share",
+          "UseDefRetryCount": 1,
+          "RetryCount": 0,
+          "UseDefRetryTimeoutSecs": 1,
+          "RetryTimeoutSecs": 30,
+          "InvalidOverride": 0,
+          "FileMask": "*.*",
+          "ExFile": "",
+          "DeleteOrig": 0,
+          "RenameTo": "",
+          "DelRename": 1,
+          "NewFilesOnly": 0,
+          "Unzip": 0,
+          "RetryIfNoFiles": 0,
+          "Path": "",
+          "ExFo": "",
+          "SearchSubdirs": 0,
+          "UseDefRescanSecs": 1,
+          "RescanSecs": 0,
+          "UDMxFi": 1,
+          "MxFi": 0,
+          "UDMxBy": 1,
+          "MxBy": 0,
+          "UseDefWinCopyFileAPI": 1,
+          "UseWinCopyFileAPI": 1,
+          "Password": null,
+          "Account": null,
+          "ClientSecret": null,
+          "OAuthClientSecret": null
+        }
+      },
+      {
+        "For": {
+          "ID": "12",
+          "Disabled": 0,
+          "steps": [
+            {
+              "If": {
+                "ID": "13",
+                "Disabled": 0,
+                "When": [
+                  {
+                    "steps": [
+                      {
+                        "Destination": {
+                          "ID": "14",
+                          "Disabled": 0,
+                          "HostID": "161381609",
+                          "Type": "Share",
+                          "UseOrigName": 1,
+                          "FileName": "[OrigName]",
+                          "UseDefRetryCount": 1,
+                          "RetryCount": 0,
+                          "UseDefRetryTimeoutSecs": 1,
+                          "RetryTimeoutSecs": 30,
+                          "InvalidOverride": 0,
+                          "Path": "",
+                          "ForceDir": 1,
+                          "OverwriteOrig": 1,
+                          "UseRelativeSubdirs": 1,
+                          "UseDefWinCopyFileAPI": 1,
+                          "UseWinCopyFileAPI": 1,
+                          "Zip": 0,
+                          "UseDefPreserveFileTimestamp": 1,
+                          "PreserveFileTimestamp": 0,
+                          "Password": null,
+                          "Account": null,
+                          "ClientSecret": null,
+                          "OAuthClientSecret": null
+                        }
+                      }
+                    ],
+                    "__parentStepId": "13",
+                    "__branchIndex": 0,
+                    "Criteria": {
+                      "And": {
+                        "comp": [
+                          {
+                            "a": "[OrigName]",
+                            "b": "file1.txt",
+                            "test": "MASK"
+                          },
+                          {
+                            "a": "[FileSize]",
+                            "b": 0,
+                            "test": "NGT"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "If": {
+                "ID": "15",
+                "Disabled": 0,
+                "When": [
+                  {
+                    "steps": [
+                      {
+                        "Comment": {
+                          "ID": "16",
+                          "Disabled": 0,
+                          "Text": "do something"
+                        }
+                      }
+                    ],
+                    "__parentStepId": "15",
+                    "__branchIndex": 0,
+                    "Criteria": {
+                      "Or": {
+                        "comp": [
+                          {
+                            "a": "[OrigName]",
+                            "b": "file2.txt",
+                            "test": "MASK"
+                          },
+                          {
+                            "a": "[OrigName]",
+                            "b": "file3.txt",
+                            "test": "MASK"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "If": {
+                "ID": "17",
+                "Disabled": 0,
+                "When": [
+                  {
+                    "steps": [
+                      {
+                        "Comment": {
+                          "ID": "18",
+                          "Disabled": 0,
+                          "Text": "Do something else"
+                        }
+                      }
+                    ],
+                    "__parentStepId": "17",
+                    "__branchIndex": 0,
+                    "Criteria": {
+                      "And": {
+                        "comp": [
+                          {
+                            "a": "[FileDateStamp]",
+                            "b": "[DateSubtract([Now],1H)]",
+                            "test": "DGT"
+                          },
+                          {
+                            "a": "[ErrorCodeFile]",
+                            "b": 0,
+                            "test": "NEQ"
+                          },
+                          {
+                            "a": "[ErrorCodeTask]",
+                            "b": 0,
+                            "test": "NEQ"
+                          },
+                          {
+                            "a": "[macro]",
+                            "b": "somevalue",
+                            "test": "NEQ"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "RunTask": {
+                "ID": "19",
+                "Disabled": 0,
+                "TaskID": "498499684",
+                "Wait": 1
+              }
+            },
+            {
+              "Comment": {
+                "ID": "22",
+                "Disabled": 0,
+                "Text": "I inserted this here"
+              }
+            },
+            {
+              "UpdOrig": {
+                "ID": "20",
+                "Disabled": 0,
+                "Action": "r",
+                "RenameTo": "[OrigName].bak",
+                "DelRename": 1
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "TT": "COS",
+    "Group": []
+  },
+  {
+    "Name": "adv2",
+    "ID": "937919810",
+    "AR": 0,
+    "Active": 0,
+    "Info": {
+      "Description": "",
+      "Notes": ""
+    },
+    "CacheNames": "random",
+    "UseDefStateCaching": 1,
+    "NextEID": 26,
+    "Watched": 0,
+    "InvalidOverride": 0,
+    "steps": [
+      {
+        "Comment": {
+          "ID": "21",
+          "Disabled": 0,
+          "Text": "End comment"
+        }
+      },
+      {
+        "Comment": {
+          "ID": "23",
+          "Disabled": 0,
+          "Text": "End comment"
+        }
+      },
+      {
+        "Source": {
+          "ID": "11",
+          "Disabled": 0,
+          "HostID": "201530181",
+          "Type": "Share",
+          "UseDefRetryCount": 1,
+          "RetryCount": 0,
+          "UseDefRetryTimeoutSecs": 1,
+          "RetryTimeoutSecs": 30,
+          "InvalidOverride": 0,
+          "FileMask": "*.*",
+          "ExFile": "",
+          "DeleteOrig": 0,
+          "RenameTo": "",
+          "DelRename": 1,
+          "NewFilesOnly": 0,
+          "Unzip": 0,
+          "RetryIfNoFiles": 0,
+          "Path": "",
+          "ExFo": "",
+          "SearchSubdirs": 0,
+          "UseDefRescanSecs": 1,
+          "RescanSecs": 0,
+          "UDMxFi": 1,
+          "MxFi": 0,
+          "UDMxBy": 1,
+          "MxBy": 0,
+          "UseDefWinCopyFileAPI": 1,
+          "UseWinCopyFileAPI": 1,
+          "Password": null,
+          "Account": null,
+          "ClientSecret": null,
+          "OAuthClientSecret": null
+        }
+      },
+      {
+        "For": {
+          "ID": "12",
+          "Disabled": 0,
+          "steps": [
+            {
+              "If": {
+                "ID": "13",
+                "Disabled": 0,
+                "When": [
+                  {
+                    "steps": [
+                      {
+                        "Destination": {
+                          "ID": "14",
+                          "Disabled": 0,
+                          "HostID": "161381609",
+                          "Type": "Share",
+                          "UseOrigName": 1,
+                          "FileName": "[OrigName]",
+                          "UseDefRetryCount": 1,
+                          "RetryCount": 0,
+                          "UseDefRetryTimeoutSecs": 1,
+                          "RetryTimeoutSecs": 30,
+                          "InvalidOverride": 0,
+                          "Path": "",
+                          "ForceDir": 1,
+                          "OverwriteOrig": 1,
+                          "UseRelativeSubdirs": 1,
+                          "UseDefWinCopyFileAPI": 1,
+                          "UseWinCopyFileAPI": 1,
+                          "Zip": 0,
+                          "UseDefPreserveFileTimestamp": 1,
+                          "PreserveFileTimestamp": 0,
+                          "Password": null,
+                          "Account": null,
+                          "ClientSecret": null,
+                          "OAuthClientSecret": null
+                        }
+                      }
+                    ],
+                    "__parentStepId": "13",
+                    "__branchIndex": 0,
+                    "Criteria": {
+                      "And": {
+                        "comp": [
+                          {
+                            "a": "[OrigName]",
+                            "b": "file1.txt",
+                            "test": "MASK"
+                          },
+                          {
+                            "a": "[FileSize]",
+                            "b": 0,
+                            "test": "NGT"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "If": {
+                "ID": "15",
+                "Disabled": 0,
+                "When": [
+                  {
+                    "steps": [
+                      {
+                        "Comment": {
+                          "ID": "16",
+                          "Disabled": 0,
+                          "Text": "do something"
+                        }
+                      }
+                    ],
+                    "__parentStepId": "15",
+                    "__branchIndex": 0,
+                    "Criteria": {
+                      "Or": {
+                        "comp": [
+                          {
+                            "a": "[OrigName]",
+                            "b": "file2.txt",
+                            "test": "MASK"
+                          },
+                          {
+                            "a": "[OrigName]",
+                            "b": "file3.txt",
+                            "test": "MASK"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "If": {
+                "ID": "17",
+                "Disabled": 0,
+                "When": [
+                  {
+                    "steps": [
+                      {
+                        "Comment": {
+                          "ID": "18",
+                          "Disabled": 0,
+                          "Text": "Do something else"
+                        }
+                      }
+                    ],
+                    "__parentStepId": "17",
+                    "__branchIndex": 0,
+                    "Criteria": {
+                      "And": {
+                        "comp": [
+                          {
+                            "a": "[FileDateStamp]",
+                            "b": "[DateSubtract([Now],1H)]",
+                            "test": "DGT"
+                          },
+                          {
+                            "a": "[ErrorCodeFile]",
+                            "b": 0,
+                            "test": "NEQ"
+                          },
+                          {
+                            "a": "[ErrorCodeTask]",
+                            "b": 0,
+                            "test": "NEQ"
+                          },
+                          {
+                            "a": "[macro]",
+                            "b": "somevalue",
+                            "test": "NEQ"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "steps": [
+                      {
+                        "Comment": {
+                          "ID": "24",
+                          "Disabled": 0,
+                          "Text": "Failure?"
+                        }
+                      }
+                    ],
+                    "__parentStepId": "17",
+                    "__branchIndex": 1,
+                    "Criteria": {
+                      "comp": {
+                        "a": "[ErrorCodeFile]",
+                        "b": 0,
+                        "test": "NNE"
+                      }
+                    }
+                  }
+                ],
+                "Otherwise": {
+                  "steps": [
+                    {
+                      "Comment": {
+                        "ID": "25",
+                        "Disabled": 0,
+                        "Text": "Something else"
+                      }
+                    }
+                  ],
+                  "__parentStepId": "17",
+                  "__branchIndex": 2
+                }
+              }
+            },
+            {
+              "RunTask": {
+                "ID": "19",
+                "Disabled": 0,
+                "TaskID": "498499684",
+                "Wait": 1
+              }
+            },
+            {
+              "Comment": {
+                "ID": "22",
+                "Disabled": 0,
+                "Text": "I inserted this here"
+              }
+            },
+            {
+              "UpdOrig": {
+                "ID": "20",
+                "Disabled": 0,
+                "Action": "r",
+                "RenameTo": "[OrigName].bak",
+                "DelRename": 1
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "TT": "COS",
+    "Group": []
+  }
+]

@@ -1,0 +1,128 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   Experimental MAUI Host Editor shell with common save infrastructure and profile-gated protocol editing. *@
+<dialog class="maui-host-editor-dialog" data-host-editor-dialog>
+    <div class="maui-host-editor-shell">
+        <header class="maui-host-editor-header">
+            <div class="maui-host-editor-title-wrap">
+                <div class="maui-host-editor-icon" data-host-editor-icon aria-hidden="true">H</div>
+                <div>
+                    <div class="maui-host-editor-kicker">HOST EDITOR</div>
+                    <h2 data-host-editor-title>Host</h2>
+                    <p data-host-editor-subtitle></p>
+                </div>
+            </div>
+            <button type="button" class="dialog-close maui-host-editor-close" data-host-editor-close aria-label="Close">×</button>
+        </header>
+
+        <div class="task-details-tabs maui-host-editor-tabs-row" role="tablist" aria-label="Host editor sections">
+            <button type="button" class="task-details-tab maui-host-editor-tab active" role="tab" aria-selected="true" data-host-editor-tab="configuration">Host</button>
+            <button type="button" class="task-details-tab maui-host-editor-tab" role="tab" aria-selected="false" data-host-editor-tab="information">Properties</button>
+            <button type="button" class="task-details-tab maui-host-editor-tab" role="tab" aria-selected="false" data-host-editor-tab="tasks">Tasks</button>
+            <div class="maui-host-editor-tab-actions">
+                <label class="maui-host-editor-auto-save" title="Automatically save writable changes to MOVEit Automation">
+                    <span>Auto Save</span><span class="configuration-switch"><input type="checkbox" data-host-editor-auto-save /><span aria-hidden="true"></span></span>
+                </label>
+                <div class="maui-host-editor-actions-wrap">
+                    <button type="button" class="secondary-button maui-host-editor-actions" data-host-editor-actions aria-haspopup="menu" aria-expanded="false">
+                        Actions <span class="button-caret" aria-hidden="true">⌄</span>
+                    </button>
+                    <div class="maui-host-editor-actions-menu" data-host-editor-actions-menu role="menu" hidden>
+                        <button type="button" role="menuitem" data-host-editor-test disabled>Test Host</button>
+                        <button type="button" role="menuitem" data-host-editor-browse hidden>Browse Host</button>
+                        <div class="task-row-action-divider" role="separator"></div>
+                        <button type="button" role="menuitem" data-host-editor-undo>Undo Last Change</button>
+                        <button type="button" role="menuitem" data-host-editor-clone>Clone Host</button>
+                        <button type="button" role="menuitem" data-host-editor-export>Export Host</button>
+                        <div class="task-row-action-divider" role="separator"></div>
+                        <button type="button" role="menuitem" class="danger-menu-item" data-host-editor-delete>Delete Host</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="maui-host-editor-workspace">
+            <div class="maui-host-editor-loading" data-host-editor-loading>
+                <span class="inline-spinner" aria-hidden="true"></span>
+                <span>Loading Host information…</span>
+            </div>
+
+            <main class="maui-host-editor-body" data-host-editor-content hidden>
+                <section class="maui-host-editor-panel" data-host-editor-panel="information" hidden>
+                <div class="maui-property-card maui-host-editor-card">
+                    <div class="details-section-heading maui-object-properties-heading">
+                        <div class="task-identity-row maui-object-identity" aria-label="Host identity">
+                            <div class="task-identity-item"><span>Type</span><strong data-host-editor-type></strong></div>
+                            <div class="task-identity-item"><span>Host ID</span><strong data-host-editor-id></strong></div>
+                        </div>
+                        <span class="source-badge">MOVEit</span>
+                    </div>
+                    <div class="maui-host-editor-form-grid" data-host-editor-information-fields></div>
+                </div>
+                <div class="maui-property-card maui-host-editor-card">
+                    <div class="maui-host-editor-card-heading"><div><h3>Additional Information</h3><p>MAUI-managed metadata stored separately from the MOVEit Host definition.</p></div><span class="source-badge local-badge">MAUI</span></div>
+                    <div class="maui-host-editor-form-grid" data-host-editor-metadata></div>
+                    <div class="maui-host-editor-audit-section">
+                        <div class="maui-host-editor-audit-heading"><h4>Host Metadata</h4></div>
+                        <div class="maui-host-editor-audit-grid" data-host-editor-audit></div>
+                    </div>
+                </div>
+                </section>
+
+                <section class="maui-host-editor-panel" data-host-editor-panel="configuration">
+                <template data-host-editor-settings-icon><span class="icon" aria-hidden="true"><partial name="_Icon" model="@("settings")" /></span></template>
+                <aside class="maui-host-editor-rail" aria-label="Host configuration sections">
+                    <div class="maui-host-editor-subtabs" data-host-editor-config-tabs role="tablist" aria-orientation="vertical" aria-label="Host configuration sections"></div>
+                </aside>
+                <div class="maui-host-editor-properties">
+                <div class="maui-property-card maui-host-editor-card maui-host-editor-config-card" id="maui-host-config-panel" role="tabpanel">
+                    <div class="maui-host-editor-card-heading"><div><h3 data-host-editor-config-title>General</h3><p data-host-editor-config-description>MOVEit Host configuration.</p></div></div>
+                    <div class="maui-host-editor-form-grid" data-host-editor-config-fields></div>
+                </div>
+                </div>
+                </section>
+
+                <section class="maui-host-editor-panel" data-host-editor-panel="tasks" hidden>
+                <div class="maui-property-card maui-host-editor-card">
+                    <div class="maui-host-editor-card-heading"><div><h3>Assigned Tasks</h3><p>Visible Tasks that reference this Host.</p></div><span class="maui-host-editor-count" data-host-editor-task-count>0</span></div>
+                    <div class="maui-host-editor-empty" data-host-editor-tasks-empty>No visible Tasks currently reference this Host.</div>
+                    <div class="maui-host-editor-task-list" data-host-editor-tasks hidden></div>
+                </div>
+                </section>
+
+            </main>
+        </div>
+
+        <div class="settings-footer maui-host-editor-footer">
+            <div class="maui-host-editor-footer-left">
+                <span class="maui-host-editor-dirty-state" data-host-editor-dirty-state role="status" aria-live="polite" aria-atomic="true"></span>
+                <span class="maui-host-editor-error" data-host-editor-error role="alert" aria-live="assertive" hidden></span>
+            </div>
+            <div class="maui-host-editor-footer-actions">
+                <button type="button" class="secondary-button" data-host-editor-reload hidden>Reload Host</button>
+                <button type="button" class="secondary-button" data-host-editor-override hidden>Override Checkout</button>
+                <button type="button" class="secondary-button" data-host-editor-cancel>Close</button>
+                <button type="button" class="primary-button" data-host-editor-save disabled>Save</button>
+            </div>
+        </div>
+    </div>
+</dialog>
+
+<dialog class="maui-host-picker-dialog" data-host-editor-picker aria-labelledby="maui-host-picker-title">
+    <div class="maui-host-picker-card">
+        <header class="maui-host-picker-header">
+            <div><span class="maui-host-editor-kicker">HOST EDITOR</span><h3 id="maui-host-picker-title" data-host-picker-title>Select</h3></div>
+            <button type="button" class="dialog-close" data-host-picker-cancel aria-label="Close">×</button>
+        </header>
+        <div class="maui-host-picker-body">
+            <div class="inline-alert error-alert" data-host-picker-error hidden></div>
+            <div class="maui-host-picker-loading" data-host-picker-loading hidden><span class="inline-spinner" aria-hidden="true"></span> Loading…</div>
+            <div class="maui-host-picker-list" data-host-picker-list role="listbox" aria-label="Available selections"></div>
+        </div>
+        <footer class="settings-footer maui-host-picker-footer">
+            <button type="button" class="secondary-button" data-host-picker-refresh>Refresh</button>
+            <div><button type="button" class="secondary-button" data-host-picker-cancel>Cancel</button><button type="button" class="primary-button" data-host-picker-ok disabled>OK</button></div>
+        </footer>
+    </div>
+</dialog>
+

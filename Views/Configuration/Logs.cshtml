@@ -1,0 +1,16 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   This Razor file is part of the MAUI application. *@
+@model GridViewModel
+@{
+    ViewData["Title"] = "Logs";
+}
+
+<div class="page-heading compact-heading">
+    <div>
+        <h1>Logs</h1>
+        <p>MAUI application log events stored in the metadata database. Retention is configured under Configuration &gt; Settings &gt; General.</p>
+    </div>
+</div>
+
+<partial name="_DataGrid" model="Model" />

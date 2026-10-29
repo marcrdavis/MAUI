@@ -1,0 +1,202 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   This Razor file is part of the MAUI application. *@
+@{
+    ViewData["Title"] = "Dashboard";
+}
+<div class="dashboard-page"
+     data-dashboard
+     data-summary-url="@Url.Action("Summary", "Home")"
+     data-file-activity-url="@Url.Action("FileActivitySummary", "Home")"
+     data-running-url="@Url.Action("Running", "Home")"
+     data-expiration-url="@Url.Action("ExpirationSummary", "Home")"
+     data-summary-refresh-seconds="60"
+     data-running-idle-refresh-seconds="10"
+     data-running-active-refresh-seconds="3">
+    <div class="page-heading dashboard-heading">
+        <div>
+            <h1>Dashboard</h1>
+            <p>Operational status at a glance.</p>
+        </div>
+        <div class="dashboard-live-tools">
+            <div class="dashboard-live-container">
+                <span class="live-indicator" data-dashboard-live><span></span><strong>Live</strong></span>
+                <span class="dashboard-live-divider" aria-hidden="true"></span>
+                <span class="task-last-refresh" data-dashboard-last-refresh aria-live="polite">Last Refresh: --:--:--</span>
+                <div class="menu-control task-refresh-menu" data-menu>
+                    <button type="button"
+                            class="task-refresh-clock-button"
+                            data-menu-button
+                            aria-haspopup="menu"
+                            aria-expanded="false"
+                            aria-label="Dashboard refresh options"
+                            title="Dashboard refresh options">
+                        <span class="icon"><partial name="_Icon" model="@("clock")" /></span>
+                    </button>
+                    <div class="dropdown-menu dropdown-right task-refresh-menu-panel" data-menu-panel>
+                        <button type="button" data-dashboard-refresh-toggle>Pause Refresh</button>
+                        <button type="button" data-dashboard-refresh-now>Refresh Now</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="inline-alert error-alert" data-dashboard-error hidden></div>
+
+    <div class="license-capacity-alerts" data-dashboard-license-capacity hidden>
+        <div class="inline-alert license-capacity-alert" data-dashboard-task-license-alert hidden>
+            <strong data-dashboard-task-license-title>Warning:</strong>
+            <span data-dashboard-task-license-message></span>
+            <a href="@Url.Action("Index", "Tasks", new { filter = "all" })">View Tasks →</a>
+        </div>
+        <div class="inline-alert license-capacity-alert" data-dashboard-host-license-alert hidden>
+            <strong data-dashboard-host-license-title>Warning:</strong>
+            <span data-dashboard-host-license-message></span>
+            <a href="@Url.Action("Index", "Hosts", new { filter = "all" })">View Hosts →</a>
+        </div>
+    </div>
+
+    <div class="inline-alert dashboard-running-volume-alert" data-dashboard-running-volume-alert hidden>
+        <strong data-dashboard-running-volume-title>Attention:</strong>
+        <span data-dashboard-running-volume-message></span>
+    </div>
+
+    <div class="inline-alert dashboard-expiration-alert" data-dashboard-expiration-alert hidden>
+        <strong>Warning:</strong>
+        <span data-dashboard-expiration-message></span>
+        <a asp-controller="Resources" asp-action="KeysAndCerts">View Keys &amp; Certificates →</a>
+    </div>
+
+    <div class="dashboard-summary-grid">
+        <section class="panel-card dashboard-summary-card dashboard-task-summary">
+            <div class="panel-header dashboard-card-header">
+                <div><h2>Tasks</h2><p>Current inventory and latest task results during the past 24 hours.</p></div>
+                <a class="text-link" href="@Url.Action("Index", "Tasks", new { filter = "all" })">View all Tasks →</a>
+            </div>
+            <div class="dashboard-kpi-row dashboard-task-kpis">
+                <a class="dashboard-kpi dashboard-kpi-link"
+                   asp-controller="Tasks" asp-action="Index" asp-route-filter="all"
+                   title="View all Tasks">
+                    <span>Total Tasks</span><strong data-dashboard-total-tasks>—</strong>
+                </a>
+                <a class="dashboard-kpi dashboard-kpi-link status-running"
+                   asp-controller="Tasks" asp-action="Index" asp-route-filter="running"
+                   title="View running Tasks">
+                    <span>Running</span><strong data-dashboard-running-tasks>—</strong>
+                </a>
+                <a class="dashboard-kpi dashboard-kpi-link status-failed"
+                   asp-controller="Records" asp-action="TaskRun" asp-route-dashboardView="failed"
+                   title="View failed Task Runs from the past 24 hours">
+                    <span>Failed</span><strong data-dashboard-failed-task-runs>—</strong><small>Past 24 hours</small>
+                </a>
+                <a class="dashboard-kpi dashboard-kpi-link status-success"
+                   asp-controller="Records" asp-action="TaskRun" asp-route-dashboardView="successful"
+                   title="View successful Task Runs from the past 24 hours">
+                    <span>Successful</span><strong data-dashboard-success-task-runs>—</strong><small>Past 24 hours</small>
+                </a>
+                <a class="dashboard-kpi dashboard-kpi-link status-warning"
+                   asp-controller="Records" asp-action="TaskRun" asp-route-dashboardView="no-transfers"
+                   title="View Task Runs with no transfers from the past 24 hours">
+                    <span>No Transfer</span><strong data-dashboard-no-transfer-task-runs>—</strong><small>Past 24 hours</small>
+                </a>
+            </div>
+        </section>
+
+        <section class="panel-card dashboard-summary-card dashboard-file-summary">
+            <div class="panel-header dashboard-card-header">
+                <div><h2>File Activity</h2><p>Transfer activity during the past 24 hours.</p></div>
+                <a class="text-link" asp-controller="Records" asp-action="FileActivity">View report →</a>
+            </div>
+            <div class="dashboard-kpi-row dashboard-file-kpis">
+                <a class="dashboard-kpi dashboard-kpi-link status-failed"
+                   asp-controller="Records" asp-action="FileActivity" asp-route-dashboardView="failed"
+                   title="View failed File Activity from the past 24 hours">
+                    <span>Failed</span><strong data-dashboard-failed-file-activity>—</strong><small>Past 24 hours</small>
+                </a>
+                <a class="dashboard-kpi dashboard-kpi-link status-success"
+                   asp-controller="Records" asp-action="FileActivity" asp-route-dashboardView="successful"
+                   title="View successful File Activity from the past 24 hours">
+                    <span>Successful</span><strong data-dashboard-success-file-activity>—</strong><small>Past 24 hours</small>
+                </a>
+            </div>
+        </section>
+
+        <section class="panel-card dashboard-summary-card dashboard-host-summary">
+            <div class="panel-header dashboard-card-header">
+                <div><h2>Hosts</h2><p>Visible to current user.</p></div>
+                <a class="text-link" href="@Url.Action("Index", "Hosts", new { filter = "all" })">View all Hosts →</a>
+            </div>
+            <a class="dashboard-host-count dashboard-kpi dashboard-kpi-link"
+               asp-controller="Hosts" asp-action="Index" asp-route-filter="all"
+               title="View all Hosts">
+                <span>Total Hosts</span><strong data-dashboard-hosts>—</strong>
+            </a>
+        </section>
+    </div>
+
+    <section class="panel-card dashboard-wide-panel dashboard-running-panel">
+        <div class="panel-header">
+            <div><h2>Currently Running</h2><p>Live task execution status from MOVEit Automation.</p></div>
+            <a class="text-link" href="@Url.Action("Index", "Tasks", new { filter = "running" })">View all running →</a>
+        </div>
+        <div class="dashboard-table-scroll">
+            <table class="dashboard-table">
+                <thead>
+                    <tr><th>Task Name</th><th>Started</th><th>Started By</th><th>Current Status</th></tr>
+                </thead>
+                <tbody data-dashboard-running-body>
+                    <tr><td colspan="4" class="dashboard-table-empty">Loading running tasks...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <div class="dashboard-activity-grid">
+        <section class="panel-card dashboard-activity-panel dashboard-recent-panel">
+            <div class="panel-header">
+                <div><h2>Recent Task Activity</h2><p>Latest Task Runs reported by MOVEit Automation.</p></div>
+                <a class="text-link" asp-controller="Records" asp-action="TaskRun">View Task Runs →</a>
+            </div>
+            <div class="dashboard-table-scroll">
+                <table class="dashboard-table">
+                    <thead>
+                        <tr><th>Task Name</th><th>Last Run</th><th>Status</th><th>Files</th><th>Size</th></tr>
+                    </thead>
+                    <tbody data-dashboard-recent-body>
+                        <tr><td colspan="5" class="dashboard-table-empty">Loading recent task activity...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel-card dashboard-activity-panel dashboard-transfer-panel">
+            <div class="panel-header dashboard-transfer-header">
+                <div><h2>Transfer Activity Trend</h2><p>Files transferred and total data volume by hour during the past <span data-dashboard-transfer-lookback>24</span> hours.</p></div>
+                <a class="text-link" asp-controller="Records" asp-action="TaskRun">View Task Runs →</a>
+            </div>
+            <div class="dashboard-transfer-summary" aria-label="24-hour transfer totals">
+                <div class="dashboard-transfer-stat">
+                    <span>Files Transferred</span>
+                    <strong data-dashboard-transfer-files>—</strong>
+                </div>
+                <div class="dashboard-transfer-stat">
+                    <span>Data Transferred</span>
+                    <strong data-dashboard-transfer-bytes>—</strong>
+                </div>
+                <div class="dashboard-transfer-legend" aria-hidden="true">
+                    <span><i class="dashboard-transfer-bar-key"></i>Files</span>
+                    <span><i class="dashboard-transfer-line-key"></i>Data</span>
+                </div>
+            </div>
+            <div class="dashboard-transfer-chart" data-dashboard-transfer-chart>
+                <div class="dashboard-chart-empty">Loading transfer activity...</div>
+            </div>
+        </section>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script src="~/js/dashboard.js" asp-append-version="true"></script>
+}

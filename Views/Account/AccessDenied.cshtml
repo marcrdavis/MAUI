@@ -1,0 +1,19 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   This Razor file is part of the MAUI application. *@
+@{
+    ViewData["Title"] = "Access Denied";
+}
+
+<div class="page-heading">
+    <div>
+        <h1>Access Denied</h1>
+        <p>Your MAUI role does not permit access to this area.</p>
+    </div>
+</div>
+
+<section class="panel-card access-denied-card">
+    <h2>Administrator access required</h2>
+    <p>Configuration settings are restricted to MAUI administrators. You can continue using the operational areas of MAUI and your personal Preferences.</p>
+    <a class="primary-button access-denied-link" asp-controller="Home" asp-action="Index">Return to Dashboard</a>
+</section>

@@ -1,0 +1,113 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI *@
+@model GroupsAndPermissionsPageViewModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Groups and Permissions";
+    var permissions = new[] {
+        (Key: "TaskRun", Label: "Run", Resource: "Tasks"),
+        (Key: "TaskAddEditDelete", Label: "Add/Edit/Delete", Resource: "Tasks"),
+        (Key: "TaskEditExisting", Label: "Edit Existing", Resource: "Tasks"),
+        (Key: "HostAddEditDelete", Label: "Add/Edit/Delete", Resource: "Hosts"),
+        (Key: "ScriptAddEditDelete", Label: "Add/Edit/Delete", Resource: "Scripts"),
+        (Key: "SSLAddEditDelete", Label: "Add/Edit/Delete", Resource: "TLS Certs"),
+        (Key: "SSHAddEditDelete", Label: "Add/Edit/Delete", Resource: "SSH Keys"),
+        (Key: "PGPAddEditDelete", Label: "Add/Edit/Delete", Resource: "PGP Keys")
+    };
+}
+<link rel="stylesheet" href="~/css/groups-and-permissions.css" asp-append-version="true" />
+<div class="page-heading compact-heading">
+    <div><h1>Groups and Permissions</h1><p>Review Resource Groups and their assigned MOVEit user groups.</p></div>
+</div>
+<div class="grid-load-shell">
+<section class="data-workspace permissions-workspace" data-permissions-grid
+         data-editor-url="@Url.Action("ResourceGroupEditor", "Resources")"
+         data-delete-preflight-url="@Url.Action("PreflightDeleteResourceGroup", "Resources")"
+         data-delete-url="@Url.Action("DeleteResourceGroup", "Resources")"
+         data-resolve-url="@Url.Action("ResolveResourceGroupMembers", "Resources")"
+         data-save-url="@Url.Action("SaveResourceGroup", "Resources")"
+         data-user-groups-url="@Url.Action("ResourceGroupUserGroups", "Resources")"
+         data-add-user-groups-url="@Url.Action("AddResourceGroupUserGroups", "Resources")"
+         data-remove-user-group-url="@Url.Action("RemoveResourceGroupUserGroup", "Resources")"
+         data-save-permissions-url="@Url.Action("SaveResourceGroupPermissions", "Resources")"
+         data-inventory-url="@Url.Action("ResourceGroupPermissions", "Resources")"
+         data-login-url="@Url.Action("SessionExpired", "Account")"
+         data-default-page-size="@Model.DefaultPageSize"
+         data-page-sizes="@JsonSerializer.Serialize(Model.PageSizeOptions)">
+    <div class="inline-alert error-alert" data-permissions-error role="alert" hidden></div>
+    <div class="sticky-grid-tools">
+        <div class="grid-search-row">
+            <label class="search-box">
+                <span class="icon"><partial name="_Icon" model="@("search")" /></span>
+                <input type="search" data-permissions-search aria-label="Search resource group and user-group names" placeholder="Search resource group and user-group names" autocomplete="off" />
+            </label>
+            <span class="grid-count" data-permissions-count aria-live="polite">Loading Resource Groups…</span>
+        </div>
+        <div class="grid-toolbar">
+            <div class="toolbar-group">
+                <div class="menu-control" data-menu>
+                    <button type="button" class="toolbar-button primary-toolbar icon-text-button grid-actions-button" data-menu-button aria-haspopup="menu" aria-expanded="false"><span>Actions</span><span class="button-caret">⌄</span></button>
+                    <div class="dropdown-menu dropdown-left" data-menu-panel>
+                        <button type="button" data-permissions-new>New Resource Group</button>
+                        <div class="dropdown-divider"></div>
+                        <button type="button" data-permissions-export data-grid-export-csv disabled>Export View to CSV</button>
+                        <button type="button" data-permissions-print data-grid-print-view disabled>Print View</button>
+                    </div>
+                </div>
+            </div>
+            <div class="toolbar-group toolbar-right">
+                <div class="task-refresh-control" data-permissions-refresh-control>
+                    <span class="task-last-refresh" data-permissions-refreshed aria-live="polite">Last Refresh: --:--:--</span>
+                    <div class="menu-control task-refresh-menu" data-menu data-permissions-refresh-menu>
+                        <button type="button" class="task-refresh-clock-button" data-menu-button data-permissions-refresh-clock aria-haspopup="menu" aria-expanded="false" aria-label="Resource Group refresh options" title="Resource Group refresh options">
+                            <span class="icon"><partial name="_Icon" model="@("clock")" /></span>
+                        </button>
+                        <div class="dropdown-menu dropdown-right task-refresh-menu-panel" data-menu-panel>
+                            <button type="button" data-permissions-refresh-toggle>Pause Refresh</button>
+                            <button type="button" data-permissions-refresh>Refresh Now</button>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="toolbar-button icon-text-button" data-permissions-reset title="Clear column filters"><span class="icon"><partial name="_Icon" model="@("filterx")" /></span><span>Clear filters</span></button>
+                <button type="button" class="toolbar-button icon-text-button" data-permissions-settings><span class="icon"><partial name="_Icon" model="@("columns")" /></span>Grid Settings</button>
+            </div>
+        </div>
+    </div>
+    <div class="table-card">
+        <div class="table-scroll permissions-scroll" tabindex="0" aria-label="Resource Group permissions; scroll horizontally for all columns">
+            <table class="data-grid-table permissions-table" aria-label="Resource Group permission assignments" aria-busy="true">
+                <colgroup><col class="permissions-name-column" />@foreach (var permission in permissions) { <col /> }</colgroup>
+                <thead>
+                    <tr class="permissions-resource-headers"><th rowspan="2" scope="col" data-permissions-name-header aria-sort="ascending"><button class="sort-button" type="button" data-permissions-sort><span>Name</span><span class="sort-indicator" data-permissions-sort-indicator aria-hidden="true">↑</span></button></th><th colspan="3" scope="colgroup">Tasks</th><th scope="col">Hosts</th><th scope="col">Scripts</th><th scope="col">TLS Certs</th><th scope="col">SSH Keys</th><th scope="col">PGP Keys</th></tr>
+                    <tr class="column-header-row">@foreach (var permission in permissions) { <th scope="col" data-permission-column="@permission.Key" data-export-label="@permission.Resource - @permission.Label">@permission.Label</th> }</tr>
+                    <tr class="column-filter-row"><th></th>@foreach (var permission in permissions) { <th><select data-permissions-filter="@permission.Key" aria-label="@permission.Resource @permission.Label summary filter"><option value="">Any</option><option>All</option><option>Some</option><option>None</option></select></th> }</tr>
+                </thead>
+                <tbody data-permissions-body><tr><td colspan="9" class="permissions-empty">Loading Resource Groups…</td></tr></tbody>
+            </table>
+        </div>
+        <div class="grid-pager permissions-pager">
+            <div><span data-permissions-summary data-pager-summary aria-live="polite"></span></div>
+            <div class="pager-controls">
+                <label>Rows <select data-permissions-rows data-page-size aria-label="Resource Groups per page">@foreach (var size in Model.PageSizeOptions) { <option value="@size">@size</option> }</select></label>
+                <button type="button" class="pager-button" data-permissions-previous data-page-prev disabled aria-label="Previous page">‹</button>
+                <span data-permissions-page data-page-indicator aria-live="polite">1 / 1</span>
+                <button type="button" class="pager-button" data-permissions-next data-page-next disabled aria-label="Next page">›</button>
+            </div>
+        </div>
+    </div>
+    <partial name="_ResourceGroupEditorDialogs" />
+    <partial name="_ResourceGroupUserGroupDialogs" />
+    <dialog class="settings-dialog" data-permissions-settings-dialog aria-labelledby="permissions-settings-title">
+        <form class="settings-card" data-permissions-settings-form>
+            <div class="settings-header"><div><h2 id="permissions-settings-title">Grid Settings</h2><p>All permission columns remain visible. Rows per page counts Resource Groups.</p></div><button type="button" class="dialog-close" data-permissions-settings-close aria-label="Close">×</button></div>
+            <div class="permissions-settings-body"><div class="inline-alert error-alert" data-permissions-settings-error role="alert" hidden></div><label class="field-block"><span>Rows per page</span><select class="text-input compact-input" data-permissions-page-size>@foreach (var size in Model.PageSizeOptions) { <option value="@size">@size</option> }</select></label><p class="permissions-help">Uses your shared grid rows-per-page preference.</p></div>
+            <div class="settings-footer"><button type="button" class="secondary-button" data-permissions-settings-close>Close</button><button type="submit" class="primary-button" data-permissions-settings-save>Save</button></div>
+        </form>
+    </dialog>
+</section>
+</div>
+@section Scripts {
+    <script src="~/js/groups-and-permissions.js" asp-append-version="true"></script>
+    <script src="~/js/resource-group-editor.js" asp-append-version="true"></script>
+    <script src="~/js/resource-group-user-groups.js" asp-append-version="true"></script>
+}

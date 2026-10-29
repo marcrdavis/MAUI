@@ -1,0 +1,16 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net) *@
+@{
+    var lastRefreshUtc = ViewData["DateListLastRefreshUtc"] is System.DateTimeOffset value ? value.ToString("O") : string.Empty;
+}
+<div class="task-refresh-control" data-date-list-refresh-control data-last-refresh-utc="@lastRefreshUtc">
+    <span class="task-last-refresh" data-date-list-last-refresh aria-live="polite">Last Refresh: --:--:--</span>
+    <div class="menu-control task-refresh-menu" data-menu>
+        <button type="button" class="task-refresh-clock-button" data-menu-button data-date-list-refresh-clock aria-label="Date List refresh options" title="Date List refresh options">
+            <span class="icon"><partial name="_Icon" model="@("clock")" /></span>
+        </button>
+        <div class="dropdown-menu dropdown-right task-refresh-menu-panel" data-menu-panel>
+            <button type="button" data-date-list-refresh-toggle>Pause Refresh</button>
+            <button type="button" data-date-list-refresh-now>Refresh Now</button>
+        </div>
+    </div>
+</div>

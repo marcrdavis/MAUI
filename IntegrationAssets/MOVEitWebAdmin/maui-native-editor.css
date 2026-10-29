@@ -1,0 +1,897 @@
+/*
+ * Author: Marc R. Davis (marcdavis@comcast.net)
+ * Project: MAUI - MOVEit Automation UI
+ * These styles are part of the MAUI application.
+ */
+
+/*
+ * MAUI Native Editor Theme
+ * ------------------------
+ * This stylesheet visually aligns MOVEit Automation Web Admin pages launched from MAUI
+ * with the MAUI application's typography, colors, spacing, controls, and surfaces.
+ *
+ * The stylesheet is intentionally scoped behind:
+ *
+ *       body.maui-native-editor
+ *
+ * Keeps the normal MOVEit UI unchanged when this CSS is merely loaded. maui-integration.js
+ * adds or removes this class when MAUI launches a native editor.
+ *
+ * Designs these overrides against MOVEit Automation 2025.x Task Details / Advanced Task UI.
+ * Stable MOVEit / Bootstrap / Kendo classes are used where possible, while Angular-generated
+ * _ngcontent-* attributes, and load this stylesheet after the normal MOVEit styles.
+ */
+
+/* ==========================================================================
+   MAUI design tokens
+   ========================================================================== */
+
+body.maui-native-editor {
+    --maui-font: "Segoe UI Variable", "Segoe UI", Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+
+    --maui-accent: #3e8ac7;
+    --maui-accent-strong: #1e5a8a;
+    --maui-accent-soft: #eef0ff;
+    --maui-teal: #149c99;
+
+    --maui-success: #188960;
+    --maui-danger: #dc4c64;
+    --maui-warning: #c88216;
+
+    --maui-bg: #f5f7fb;
+    --maui-surface: #ffffff;
+    --maui-surface-2: #f9fafc;
+    --maui-surface-3: #eef1f6;
+
+    --maui-text: #1f2433;
+    --maui-text-soft: #5f687a;
+    --maui-text-faint: #8a93a4;
+
+    --maui-border: #dde2eb;
+    --maui-border-strong: #cbd2de;
+
+    --maui-radius-sm: 8px;
+    --maui-radius-md: 12px;
+    --maui-radius-lg: 16px;
+
+    --maui-shadow-soft: 0 3px 12px rgba(34, 40, 61, .06);
+    --maui-shadow: 0 12px 32px rgba(34, 40, 61, .10);
+    --maui-focus-ring: 0 0 0 3px rgba(62, 138, 199, .16);
+
+    margin: 0;
+    min-height: 100vh;
+    background: var(--maui-bg) !important;
+    color: var(--maui-text) !important;
+    font-family: var(--maui-font) !important;
+    font-size: 14px;
+}
+
+/* Normalizes inherited typography without disrupting Font Awesome icons. */
+body.maui-native-editor button,
+body.maui-native-editor input,
+body.maui-native-editor select,
+body.maui-native-editor textarea,
+body.maui-native-editor .btn,
+body.maui-native-editor .dropdown-menu,
+body.maui-native-editor .popover,
+body.maui-native-editor .tooltip {
+    font-family: var(--maui-font) !important;
+}
+
+body.maui-native-editor a {
+    color: var(--maui-accent);
+}
+
+body.maui-native-editor a:hover,
+body.maui-native-editor a:focus {
+    color: var(--maui-accent-strong);
+}
+
+/* The stronger MAUI accent is used for the active MOVEit pill navigation state. */
+body.maui-native-editor .nav-pills .nav-item.active .nav-link,
+body.maui-native-editor .nav-pills .nav-item.active .nav-link:hover,
+body.maui-native-editor .nav-pills .nav-item.active .nav-link:focus {
+    background-color: #1e5a8a !important;
+    border-color: #1e5a8a !important;
+}
+
+/* ==========================================================================
+   Optional native MOVEit chrome
+   ========================================================================== */
+
+/*
+ * Keeps HideNav behavior in maui-integration.js and use this fallback to keep the
+ * native-editor presentation stable if a route briefly renders its chrome.
+ */
+body.maui-native-editor .ipsmica_nav_main {
+    display: none !important;
+}
+
+/*
+ * Removes native keys and certs editor navigation/actions that MAUI owns.
+ * These selectors are intentionally exact so unrelated MOVEit controls remain available.
+ */
+body.maui-native-editor a[uisref="resourcesKeyscerts"] {
+    display: none !important;
+}
+
+body.maui-native-editor button#btn_deletekeycert {
+    display: none !important;
+}
+
+body.maui-native-editor button#btn_exportkeycert {
+    margin-right: 63px !important;
+}
+
+/*
+ * Removes native datelists editor navigation/actions that MAUI owns.
+ * These selectors are intentionally exact so unrelated MOVEit controls remain available.
+ */
+body.maui-native-editor a[uisref="resourcesDatelists"] {
+    display: none !important;
+}
+
+body.maui-native-editor button#btn_deletedatelist {
+    display: none !important;
+}
+
+body.maui-native-editor button#btn_exportdatelist {
+    margin-right: 63px !important;
+}
+
+/*
+ * Removes native Host-editor navigation/actions that MAUI owns.
+ * These selectors are intentionally exact so unrelated MOVEit controls remain available.
+ */
+body.maui-native-editor a[uisref="hosts"],
+body.maui-native-editor button#btn_dropdown_hostactions,
+body.maui-native-editor div#deleteTask {
+    display: none !important;
+}
+
+/*
+ * Removes native Script-editor navigation/actions that MAUI owns while retaining
+ * the Script Actions dropdown for non-destructive native operations.
+ */
+body.maui-native-editor a[uisref="resourcesScripts"] {
+    display: none !important;
+}
+
+body.maui-native-editor button#btn_dropdown_scriptactions {
+    margin-right: 63px !important;
+}
+
+body.maui-native-editor div#deletescript {
+    display: none !important;
+}
+
+/*
+ * Distinguishes the shared MOVEit backlink id by uiSref: the Task Editor link
+ * has no uiSref, while Task Details does. Hides only the editor backlink.
+ */
+body.maui-native-editor .ipsmica_backlink {
+    padding: 0 0 20px 70px !important;
+}
+
+body.maui-native-editor .ipsmica_backlink > a#lnk-back-top:not([uisref]) {
+    display: none !important;
+}
+
+/*
+ * Retains MAUI navbar branding here in case Intentionally show the navbar
+ * while the MAUI body class is active.
+ */
+body.maui-native-editor .ipsmica_nav_main {
+    background: #171b2c !important;
+    border: 0 !important;
+    box-shadow: 0 3px 18px rgba(20, 25, 43, .14);
+}
+
+body.maui-native-editor .ipsmica_nav_main .navbar-brand {
+    min-width: 92px;
+    padding-left: 18px;
+}
+
+body.maui-native-editor .ipsmica_nav_main .navbar-brand #app_logo_image {
+    display: none !important;
+}
+
+body.maui-native-editor .ipsmica_nav_main .navbar-brand::after {
+    content: "MAUI";
+    color: #fff;
+    font-size: 17px;
+    font-weight: 750;
+    letter-spacing: .02em;
+}
+
+body.maui-native-editor .ipsmica_nav_main .nav-link,
+body.maui-native-editor .ipsmica_nav_main .dropdown-toggle {
+    color: #c7ccdc !important;
+    font-weight: 600;
+}
+
+body.maui-native-editor .ipsmica_nav_main .nav-item.active > .nav-link,
+body.maui-native-editor .ipsmica_nav_main .nav-link:hover {
+    color: #fff !important;
+}
+
+/* Removes vendor/product-tour visual noise from MAUI-launched editor windows. */
+body.maui-native-editor pendo-bell,
+body.maui-native-editor .pendo-resource-center-badge-notification-bubble {
+    display: none !important;
+}
+
+/* ==========================================================================
+   Page shell / task detail layout
+   ========================================================================== */
+
+body.maui-native-editor .moveit-layout-container,
+body.maui-native-editor .ipsmica_container {
+    background: var(--maui-bg) !important;
+}
+
+body.maui-native-editor .ipsmica_container {
+    padding: 0 !important;
+}
+
+body.maui-native-editor .ipsmica-detail {
+    color: var(--maui-text) !important;
+}
+
+body.maui-native-editor .ipsmica-detail__main {
+    background: transparent !important;
+}
+
+body.maui-native-editor .ipsmica-detail__header {
+    margin-bottom: 18px !important;
+    padding: 20px 22px !important;
+    background: var(--maui-surface) !important;
+    border: 1px solid var(--maui-border) !important;
+    border-radius: var(--maui-radius-lg) !important;
+    box-shadow: var(--maui-shadow-soft) !important;
+}
+
+body.maui-native-editor .header_title,
+body.maui-native-editor .header_subtitle {
+    color: var(--maui-text) !important;
+}
+
+body.maui-native-editor .header_title_text {
+    color: var(--maui-text) !important;
+    font-family: var(--maui-font) !important;
+    font-size: 24px !important;
+    font-weight: 730 !important;
+    letter-spacing: -.025em;
+    line-height: 1.2;
+}
+
+body.maui-native-editor .header_subtitle {
+    margin-top: 8px !important;
+}
+
+body.maui-native-editor .header_subtitle_text,
+body.maui-native-editor .task_header_subtitle_desc,
+body.maui-native-editor .task_header_info,
+body.maui-native-editor .task_header_info_status {
+    color: var(--maui-text-soft) !important;
+    font-size: 13px !important;
+}
+
+body.maui-native-editor .task_schedulestatus_label {
+    color: var(--maui-text-faint) !important;
+}
+
+body.maui-native-editor .task_schedulestatus {
+    color: var(--maui-text-soft) !important;
+    font-weight: 650;
+}
+
+/* Styles the main editor and right-side activity/log surfaces here. */
+body.maui-native-editor .ipsmica-detail__content-main,
+body.maui-native-editor .ipsmica-detail__content-side {
+    background: transparent !important;
+}
+
+body.maui-native-editor .ipsmica-detail__content-header {
+    background: transparent !important;
+    color: var(--maui-text-soft) !important;
+    border: 0 !important;
+    margin: 0 0 8px !important;
+    padding: 0 2px !important;
+    font-size: 18px !important;
+    font-weight: 750 !important;
+    letter-spacing: .055em;
+    text-transform: uppercase;
+}
+
+body.maui-native-editor .ipsmica-detail__content.task_content {
+    background: var(--maui-surface) !important;
+    border: 1px solid var(--maui-border) !important;
+    border-radius: var(--maui-radius-md) !important;
+    box-shadow: var(--maui-shadow-soft) !important;
+}
+
+/* ==========================================================================
+   Task hints and action strip
+   ========================================================================== */
+
+body.maui-native-editor .task_hints_actions_container {
+    padding: 14px 16px !important;
+    border-bottom: 1px solid var(--maui-border) !important;
+    background: var(--maui-surface-2) !important;
+}
+
+body.maui-native-editor .ipsmica_task_hint {
+    color: var(--maui-text-soft) !important;
+    background: var(--maui-accent-soft) !important;
+    border: 1px solid rgba(62, 138, 199, .18) !important;
+    border-radius: var(--maui-radius-sm) !important;
+    padding: 9px 11px !important;
+}
+
+body.maui-native-editor .ipsmica_task_hint strong {
+    color: var(--maui-text) !important;
+}
+
+body.maui-native-editor .ipsmica_task_hint a {
+    color: var(--maui-accent) !important;
+    font-weight: 650;
+}
+
+/* ==========================================================================
+   Buttons
+   ========================================================================== */
+
+body.maui-native-editor .btn {
+    min-height: 34px;
+    border-radius: var(--maui-radius-sm) !important;
+    font-size: 12px !important;
+    font-weight: 650 !important;
+    line-height: 1.4 !important;
+    transition: background-color .14s ease, border-color .14s ease, color .14s ease, box-shadow .14s ease, transform .08s ease;
+}
+
+body.maui-native-editor .btn:focus,
+body.maui-native-editor .btn.focus {
+    box-shadow: var(--maui-focus-ring) !important;
+}
+
+body.maui-native-editor .btn:active {
+    transform: translateY(1px);
+}
+
+body.maui-native-editor .btn-primary {
+    color: #fff !important;
+    background: var(--maui-accent) !important;
+    border-color: var(--maui-accent) !important;
+    box-shadow: none !important;
+}
+
+body.maui-native-editor .btn-primary:hover,
+body.maui-native-editor .btn-primary:focus {
+    background: var(--maui-accent-strong) !important;
+    border-color: var(--maui-accent-strong) !important;
+}
+
+body.maui-native-editor .btn-secondary,
+body.maui-native-editor .plain-button,
+body.maui-native-editor .settings-button {
+    color: var(--maui-text) !important;
+    background: var(--maui-surface) !important;
+    border: 1px solid var(--maui-border-strong) !important;
+    box-shadow: none !important;
+}
+
+body.maui-native-editor .btn-secondary:hover,
+body.maui-native-editor .plain-button:hover,
+body.maui-native-editor .settings-button:hover {
+    color: var(--maui-accent) !important;
+    background: var(--maui-surface-2) !important;
+    border-color: rgba(62, 138, 199, .45) !important;
+}
+
+body.maui-native-editor .context-menu-button {
+    color: var(--maui-text-soft) !important;
+    background: transparent !important;
+    border-radius: 7px !important;
+}
+
+body.maui-native-editor .context-menu-button:hover {
+    color: var(--maui-accent) !important;
+    background: var(--maui-surface-3) !important;
+}
+
+/* ==========================================================================
+   Dropdown menus / popovers
+   ========================================================================== */
+
+body.maui-native-editor .dropdown-menu,
+body.maui-native-editor .popover {
+    color: var(--maui-text) !important;
+    background: var(--maui-surface) !important;
+    border: 1px solid var(--maui-border) !important;
+    border-radius: 10px !important;
+    box-shadow: var(--maui-shadow) !important;
+    padding: 6px !important;
+}
+
+body.maui-native-editor .dropdown-item,
+body.maui-native-editor a.dropdown-link {
+    color: var(--maui-text) !important;
+    border-radius: 7px !important;
+}
+
+body.maui-native-editor .dropdown-item:hover,
+body.maui-native-editor .dropdown-item:focus,
+body.maui-native-editor a.dropdown-link:hover {
+    color: var(--maui-text) !important;
+    background: var(--maui-surface-3) !important;
+}
+
+body.maui-native-editor a.dropdown-link.action-link {
+    color: var(--maui-accent) !important;
+}
+
+/* ==========================================================================
+   Forms / task configuration dialogs
+   ========================================================================== */
+
+body.maui-native-editor input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+body.maui-native-editor select,
+body.maui-native-editor textarea,
+body.maui-native-editor .form-control,
+body.maui-native-editor .custom-select {
+    color: var(--maui-text) !important;
+    background: var(--maui-surface) !important;
+    border: 1px solid var(--maui-border-strong) !important;
+    border-radius: var(--maui-radius-sm) !important;
+    font-size: 13px !important;
+    box-shadow: none !important;
+}
+
+body.maui-native-editor input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+body.maui-native-editor select,
+body.maui-native-editor .form-control,
+body.maui-native-editor .custom-select {
+    min-height: 36px;
+}
+
+body.maui-native-editor textarea {
+    min-height: 76px;
+}
+
+body.maui-native-editor input:focus,
+body.maui-native-editor select:focus,
+body.maui-native-editor textarea:focus,
+body.maui-native-editor .form-control:focus,
+body.maui-native-editor .custom-select:focus {
+    border-color: var(--maui-accent) !important;
+    box-shadow: var(--maui-focus-ring) !important;
+    outline: none !important;
+}
+
+body.maui-native-editor input::placeholder,
+body.maui-native-editor textarea::placeholder {
+    color: var(--maui-text-faint) !important;
+}
+
+body.maui-native-editor label,
+body.maui-native-editor .control-label,
+body.maui-native-editor .form-label {
+    color: var(--maui-text-soft) !important;
+    font-size: 12px !important;
+    font-weight: 650 !important;
+}
+
+body.maui-native-editor .modal-content {
+    color: var(--maui-text) !important;
+    background: var(--maui-surface) !important;
+    border: 1px solid var(--maui-border) !important;
+    border-radius: 14px !important;
+    box-shadow: var(--maui-shadow) !important;
+}
+
+body.maui-native-editor .modal-header,
+body.maui-native-editor .modal-footer {
+    border-color: var(--maui-border) !important;
+}
+
+body.maui-native-editor .modal-header {
+    background: var(--maui-surface-2) !important;
+    border-radius: 14px 14px 0 0 !important;
+}
+
+body.maui-native-editor .modal-title {
+    color: var(--maui-text) !important;
+    font-weight: 700 !important;
+}
+
+/* ==========================================================================
+   Toggle / enable control
+   ========================================================================== */
+
+body.maui-native-editor .ips-enablebutton {
+    background: var(--maui-border-strong) !important;
+    border-color: var(--maui-border-strong) !important;
+    box-shadow: inset 0 0 0 1px rgba(31, 36, 51, .03);
+}
+
+body.maui-native-editor .ips-enablebutton.ips-enablebutton-state-on {
+    background: var(--maui-accent) !important;
+    border-color: var(--maui-accent) !important;
+}
+
+body.maui-native-editor .ips-enablebutton .ips-enablebutton-button {
+    box-shadow: 0 1px 4px rgba(34, 40, 61, .20);
+}
+
+body.maui-native-editor .ips-enablebutton .ips-enablebutton-text-on,
+body.maui-native-editor .ips-enablebutton .ips-enablebutton-text-off {
+    font-family: var(--maui-font) !important;
+}
+
+/* ==========================================================================
+   Task schedules
+   ========================================================================== */
+
+body.maui-native-editor .tasks_non_header {
+    color: var(--maui-text) !important;
+}
+
+body.maui-native-editor .ipsmica_task_subelement_section {
+    border-color: var(--maui-border) !important;
+}
+
+body.maui-native-editor .task_subelement_section_title {
+    color: var(--maui-text) !important;
+}
+
+body.maui-native-editor .task_subelement_list_container {
+    color: var(--maui-text-soft) !important;
+}
+
+body.maui-native-editor .list-group-item {
+    color: var(--maui-text-soft) !important;
+    background: var(--maui-surface) !important;
+    border-color: var(--maui-border) !important;
+}
+
+body.maui-native-editor .list-group-item:hover {
+    background: var(--maui-surface-2) !important;
+}
+
+/* ==========================================================================
+   Advanced Task tree / workflow designer
+   ========================================================================== */
+
+body.maui-native-editor #task_tree,
+body.maui-native-editor .tree-container {
+    color: var(--maui-text) !important;
+}
+
+body.maui-native-editor .tree-start,
+body.maui-native-editor .tree-end {
+    color: var(--maui-text-faint) !important;
+    font-size: 12px;
+    font-weight: 650;
+}
+
+body.maui-native-editor .tree-step,
+body.maui-native-editor .step-row,
+body.maui-native-editor .path-row,
+body.maui-native-editor .step-path,
+body.maui-native-editor .path-end,
+body.maui-native-editor .collapsed-link {
+    border-color: var(--maui-border-strong) !important;
+}
+
+body.maui-native-editor .step-description {
+    color: var(--maui-text-soft) !important;
+}
+
+body.maui-native-editor .step-description-text {
+    color: var(--maui-text-soft) !important;
+    font-family: var(--maui-font) !important;
+}
+
+body.maui-native-editor .expanded-comment,
+body.maui-native-editor .collapsed-comment {
+    color: var(--maui-teal) !important;
+}
+
+body.maui-native-editor .selection-box {
+    min-height: 34px;
+    padding: 4px 6px !important;
+    border-radius: var(--maui-radius-sm) !important;
+    border-color: transparent !important;
+    transition: background-color .12s ease, border-color .12s ease, box-shadow .12s ease;
+}
+
+body.maui-native-editor .selection-box:hover {
+    background: var(--maui-surface-2) !important;
+}
+
+body.maui-native-editor .selection-box.selected {
+    color: var(--maui-text) !important;
+    background: var(--maui-accent-soft) !important;
+    border-color: rgba(62, 138, 199, .38) !important;
+    box-shadow: inset 3px 0 0 var(--maui-accent);
+}
+
+body.maui-native-editor .selection-box.selected .step-description-text {
+    color: var(--maui-text) !important;
+}
+
+body.maui-native-editor .collapse-icon {
+    color: var(--maui-text-faint) !important;
+}
+
+body.maui-native-editor .collapse-icon:hover {
+    color: var(--maui-accent) !important;
+}
+
+body.maui-native-editor .collapse-icon::after {
+    background: var(--maui-surface) !important;
+}
+
+body.maui-native-editor .new-step .arrow-context-menu-button {
+    background: var(--maui-accent) !important;
+    border-radius: 4px 0 0 4px;
+}
+
+body.maui-native-editor .new-step .arrow-context-menu-button::before {
+    border-left-color: var(--maui-accent) !important;
+}
+
+body.maui-native-editor .new-step .add-new-step-placeholder,
+body.maui-native-editor .new-step_above .add-new-step-placeholder,
+body.maui-native-editor .new-step_below .add-new-step-placeholder {
+    color: var(--maui-accent) !important;
+}
+
+/* Preserves semantic icon colors while aligning common states to MAUI. */
+body.maui-native-editor .text-danger,
+body.maui-native-editor .failure,
+body.maui-native-editor .failed {
+    color: var(--maui-danger) !important;
+}
+
+body.maui-native-editor .success,
+body.maui-native-editor .text-success {
+    color: var(--maui-success) !important;
+}
+
+body.maui-native-editor .warning-container,
+body.maui-native-editor .warning {
+    color: var(--maui-warning) !important;
+}
+
+/* ==========================================================================
+   Task log / tables
+   ========================================================================== */
+
+body.maui-native-editor .log-list-container {
+    color: var(--maui-text) !important;
+}
+
+body.maui-native-editor table.table,
+body.maui-native-editor .k-grid {
+    color: var(--maui-text-soft) !important;
+    background: var(--maui-surface) !important;
+    border-color: var(--maui-border) !important;
+    font-family: var(--maui-font) !important;
+}
+
+body.maui-native-editor table.table thead th,
+body.maui-native-editor .k-grid .k-table-th,
+body.maui-native-editor .k-grid .k-grid-header,
+body.maui-native-editor .k-grid .k-table-th:hover {
+    color: var(--maui-text-soft) !important;
+    background: var(--maui-surface-2) !important;
+    border-color: var(--maui-border) !important;
+    font-weight: 650 !important;
+}
+
+body.maui-native-editor table.table td,
+body.maui-native-editor table.table th,
+body.maui-native-editor .k-grid .k-table-td {
+    border-color: var(--maui-border) !important;
+}
+
+body.maui-native-editor table.table tbody tr:hover,
+body.maui-native-editor .k-grid tbody tr:hover:not(.k-grid-norecords) {
+    background: var(--maui-surface-2) !important;
+}
+
+body.maui-native-editor .k-grid tbody tr td a.grid-anchor,
+body.maui-native-editor .k-pager .k-button-text,
+body.maui-native-editor kendo-pager .k-button-text {
+    color: var(--maui-accent) !important;
+}
+
+body.maui-native-editor .k-grid tbody tr td a.grid-anchor:hover {
+    color: var(--maui-accent-strong) !important;
+}
+
+body.maui-native-editor .k-grid .k-table-th:focus,
+body.maui-native-editor .k-grid .k-table-th:active {
+    background: var(--maui-surface-3) !important;
+}
+
+body.maui-native-editor .k-pager,
+body.maui-native-editor .k-grid .k-grid-pager {
+    color: var(--maui-text-soft) !important;
+    background: var(--maui-surface-2) !important;
+    border-color: var(--maui-border) !important;
+}
+
+/* ==========================================================================
+   Toasts / messages
+   ========================================================================== */
+
+body.maui-native-editor .toast-container .toast,
+body.maui-native-editor .toast-container > div {
+    color: var(--maui-text) !important;
+    background: var(--maui-surface) !important;
+    border: 1px solid var(--maui-border) !important;
+    border-radius: 10px !important;
+    box-shadow: var(--maui-shadow) !important;
+}
+
+body.maui-native-editor .toast-success {
+    border-left: 4px solid var(--maui-success) !important;
+}
+
+body.maui-native-editor .toast-error {
+    border-left: 4px solid var(--maui-danger) !important;
+}
+
+body.maui-native-editor .toast-warning {
+    border-left: 4px solid var(--maui-warning) !important;
+}
+
+/* ==========================================================================
+   Scrollbars
+   ========================================================================== */
+
+body.maui-native-editor * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--maui-border-strong) transparent;
+}
+
+body.maui-native-editor *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+body.maui-native-editor *::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+body.maui-native-editor *::-webkit-scrollbar-thumb {
+    background: var(--maui-border-strong);
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background-clip: padding-box;
+}
+
+body.maui-native-editor *::-webkit-scrollbar-thumb:hover {
+    background: var(--maui-text-faint);
+    border: 3px solid transparent;
+    background-clip: padding-box;
+}
+
+/* ==========================================================================
+   Compact native-editor refinements
+   ========================================================================== */
+
+body.maui-native-editor .tasks_non_header {
+    padding-bottom: 4px;
+}
+
+body.maui-native-editor #task_schedules,
+body.maui-native-editor #task_tree {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+}
+
+body.maui-native-editor #task_schedules {
+    padding-top: 15px !important;
+}
+
+body.maui-native-editor #task_tree {
+    padding-top: 8px !important;
+    padding-bottom: 20px !important;
+}
+
+/*
+ * Ends the MAUI Native Editor Theme overrides here.
+ */
+
+/* ==========================================================================
+   MAUI editor-local Undo Last Change
+   ========================================================================== */
+body.maui-native-editor .ipsmica-detail__header.maui-native-undo-host {
+    position: relative !important;
+}
+
+/* Reserve the header's right edge while the control is visible so native header
+   content remains inside its own layout area instead of sitting underneath MAUI. */
+body.maui-native-editor .ipsmica-detail__header.maui-native-undo-host--active {
+    padding-right: 178px !important;
+}
+
+body.maui-native-editor .maui-native-undo-button {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 2;
+    min-height: 34px;
+    padding: 7px 14px;
+    border: 1px solid var(--maui-accent-strong);
+    border-radius: var(--maui-radius-sm);
+    background: var(--maui-surface);
+    color: var(--maui-accent-strong);
+    font-family: var(--maui-font) !important;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.2;
+    box-shadow: var(--maui-shadow-soft);
+    cursor: pointer;
+}
+
+body.maui-native-editor .maui-native-undo-button:hover,
+body.maui-native-editor .maui-native-undo-button:focus {
+    background: var(--maui-accent-strong);
+    color: #fff;
+    outline: none;
+    box-shadow: var(--maui-focus-ring), var(--maui-shadow-soft);
+}
+
+body.maui-native-editor .maui-native-undo-button:disabled {
+    cursor: default;
+    opacity: .6;
+}
+
+body.maui-native-editor .maui-native-undo-dialog {
+    position: fixed;
+    inset: 0;
+    z-index: 2147483500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(31, 36, 51, .34);
+}
+
+body.maui-native-editor .maui-native-undo-dialog[hidden] {
+    display: none !important;
+}
+
+body.maui-native-editor .maui-native-undo-dialog__panel {
+    width: min(520px, calc(100vw - 48px));
+    padding: 22px;
+    border: 1px solid var(--maui-border);
+    border-radius: var(--maui-radius-md);
+    background: var(--maui-surface);
+    box-shadow: var(--maui-shadow);
+}
+
+body.maui-native-editor .maui-native-undo-dialog__title {
+    margin-bottom: 10px;
+    color: var(--maui-text);
+    font-size: 18px;
+    font-weight: 750;
+}
+
+body.maui-native-editor .maui-native-undo-dialog__message {
+    color: var(--maui-text-soft);
+    line-height: 1.5;
+}
+
+body.maui-native-editor .maui-native-undo-dialog__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 20px;
+}

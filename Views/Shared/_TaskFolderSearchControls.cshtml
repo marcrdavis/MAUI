@@ -1,0 +1,67 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   This Razor file is part of the MAUI application. *@
+@using MoveItAutomationUI.Models
+@inject MoveItAutomationUI.Services.MoveIt.IMoveItSessionService TaskFolderSession
+@{
+    var canManageFolders = TaskFolderSession.Get()?.Info?.IsAdmin == true;
+    var folders = ViewData["TaskFolders"] as IReadOnlyList<TaskFolderOption> ?? System.Array.Empty<TaskFolderOption>();
+    var selectedFolderId = ViewData["TaskSelectedFolderId"] is int value ? value : (int?)null;
+    var activeFilter = ViewData["TaskActiveFilter"]?.ToString() ?? "all";
+    var selectedFolder = selectedFolderId.HasValue
+        ? folders.FirstOrDefault(folder => folder.Id == selectedFolderId.Value)
+        : null;
+    var selectedLabel = selectedFolder?.DisplayName ?? "All Tasks";
+    var reportEditId = Context.Request.Query["reportEdit"].ToString();
+}
+<div class="task-grid-scope-controls">
+    <form method="get" asp-controller="Tasks" asp-action="Index" class="task-folder-filter-form-inline">
+        <input type="hidden" name="filter" value="@activeFilter" />
+        @if (!string.IsNullOrWhiteSpace(reportEditId))
+        {
+            <input type="hidden" name="reportEdit" value="@reportEditId" />
+        }
+        <div class="menu-control task-folder-tree-select" data-menu>
+            <button type="button"
+                    class="task-folder-tree-button"
+                    data-menu-button
+                    aria-label="Task folder"
+                    aria-haspopup="menu">
+                <span class="task-folder-tree-button-icon icon"><partial name="_Icon" model="@(selectedFolderId.HasValue ? "folder" : "tasks")" /></span>
+                <span class="task-folder-tree-button-text" title="@selectedLabel">@selectedLabel</span>
+                <span class="task-folder-tree-caret" aria-hidden="true">⌄</span>
+            </button>
+            <div class="dropdown-menu task-folder-tree-menu dropdown-left" data-menu-panel role="menu" aria-label="Task folders">
+                <button type="submit"
+                        name="folderId"
+                        value=""
+                        role="menuitemradio"
+                        aria-checked="@(!selectedFolderId.HasValue ? "true" : "false")"
+                        class="task-folder-tree-option root-option @(!selectedFolderId.HasValue ? "selected" : string.Empty)">
+                    <span class="task-folder-tree-option-icon icon"><partial name="_Icon" model="@("tasks")" /></span>
+                    <span class="task-folder-tree-option-label">All Tasks</span>
+                </button>
+                @foreach (var folder in folders)
+                {
+                    var isSelected = selectedFolderId == folder.Id;
+                    <button type="submit"
+                            name="folderId"
+                            value="@folder.Id"
+                            role="menuitemradio"
+                            aria-checked="@(isSelected ? "true" : "false")"
+                            class="task-folder-tree-option @(isSelected ? "selected" : string.Empty)"
+                            style="--folder-depth:@folder.Depth">
+                        <span class="task-folder-tree-branch" aria-hidden="true"></span>
+                        <span class="task-folder-tree-option-icon icon"><partial name="_Icon" model="@("folder")" /></span>
+                        <span class="task-folder-tree-option-label">@folder.Name</span>
+                    </button>
+                }
+            </div>
+        </div>
+    </form>
+    <button type="button" class="secondary-button icon-text-button manage-folders-inline" data-folder-manager-open
+            disabled="@(!canManageFolders)" title="@(canManageFolders ? null : "Only MOVEit administrators can manage Task folders.")">
+        <span class="icon"><partial name="_Icon" model="@("folder")" /></span><span>Manage Folders</span>
+    </button>
+</div>
+

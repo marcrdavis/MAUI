@@ -1,0 +1,71 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   This Razor file is part of the MAUI application. *@
+@model ReportPageViewModel
+@{
+    var contextName = !string.IsNullOrWhiteSpace(Model.TaskId)
+        ? (string.IsNullOrWhiteSpace(Model.TaskName) ? Model.TaskId : Model.TaskName)
+        : (!string.IsNullOrWhiteSpace(Model.TargetId)
+            ? (string.IsNullOrWhiteSpace(Model.TargetName) ? Model.TargetId : Model.TargetName)
+            : string.Empty);
+    var headingTitle = string.IsNullOrWhiteSpace(contextName) ? Model.Title : $"{Model.Title} / {contextName}";
+    ViewData["Title"] = headingTitle;
+    ViewData["GridDeferInitialLoad"] = true;
+    ViewData["GridToolbarRightPrefixPartial"] = "_ReportRefreshControls";
+    ViewData["ReportLastRefreshUtc"] = Model.LastRefreshUtc;
+}
+<partial name="_ReportBackLink" model="Model" />
+<div class="page-heading compact-heading">
+    <div>
+        <h1>
+            @Model.Title
+            @if (!string.IsNullOrWhiteSpace(contextName))
+            {
+                <span class="heading-context">/ @contextName</span>
+            }
+        </h1>
+        <p>@Model.Description</p>
+    </div>
+</div>
+
+
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <div class="inline-alert error-alert">@Model.ErrorMessage</div>
+}
+
+<partial name="_DataGrid" model="Model.Grid" />
+<link rel="stylesheet" href="~/css/audit-changes.css" asp-append-version="true" />
+<partial name="_ReportRowDetails" />
+<partial name="_AuditChangesDialog" />
+
+<div data-report-page-config
+     data-batch-url="@Model.BatchUrl"
+     data-batch-size="@Model.BatchSize"
+     data-ui-refresh-seconds="@Model.UiRefreshIntervalSeconds"
+     data-maximum-entries="@Model.MaximumEntries"
+     data-current-offset="@Model.CurrentOffset"
+     data-current-cursor="@Model.CurrentCursor"
+     data-next-cursor="@Model.NextCursor"
+     data-has-more="@Model.HasMore.ToString().ToLowerInvariant()"
+     data-next-count="@Model.NextCount"
+     data-task-id="@Model.TaskId"
+     data-task-name="@Model.TaskName"
+     data-run-id="@Model.RunId"
+     data-run-nominal-start="@Model.RunNominalStart"
+     data-target-type="@Model.TargetType"
+     data-target-id="@Model.TargetId"
+     data-target-name="@Model.TargetName"
+     data-native-editor-session-url="@Url.Action("Session", "NativeEditor")"
+     data-login-url="@Url.Action("SessionExpired", "Account")"
+     data-prepare-task-edit-url="@Url.Action("PrepareTaskEdit", "Tasks")"
+     data-mark-task-edited-url="@Url.Action("MarkTaskEdited", "Tasks")"
+     data-task-run-report-url="@Url.Action("TaskRun", "Records")"
+     data-file-activity-report-url="@Url.Action("FileActivity", "Records")"
+     data-audit-report-url="@Url.Action("Audit", "Records")"></div>
+
+@section Scripts {
+<script src="~/js/audit-changes.js" asp-append-version="true"></script>
+<script src="~/js/records.js" asp-append-version="true"></script>
+}
+

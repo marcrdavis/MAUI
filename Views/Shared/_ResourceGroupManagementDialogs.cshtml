@@ -1,0 +1,51 @@
+@* Reusable MAUI Resource Group create/add dialogs. *@
+<dialog class="new-task-dialog" data-resource-group-create-dialog>
+    <div class="new-task-card resource-group-dialog-card">
+        <div class="settings-header">
+            <div><h2>Create Resource Group</h2><p>Create a MOVEit Resource Group containing the selected Tasks and their required dependencies.</p></div>
+            <button type="button" class="dialog-close" data-resource-group-create-cancel aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body resource-group-dialog-body">
+            <div class="inline-alert error-alert" data-resource-group-create-error hidden></div>
+            <div class="resource-group-loading details-loading" data-resource-group-create-loading role="status" aria-live="polite" aria-label="Loading selected Task dependencies" hidden><span class="inline-spinner" aria-hidden="true"></span><span>Loading...</span></div>
+            <div data-resource-group-create-content hidden>
+                <div class="details-grid">
+                    <label class="field-block full-span"><span>Name</span><input class="text-input" type="text" maxlength="254" autocomplete="off" data-resource-group-create-name /></label>
+                    <label class="field-block full-span"><span>Description</span><textarea class="text-input textarea-input" rows="3" maxlength="2000" data-resource-group-create-description></textarea></label>
+                </div>
+                <div class="resource-group-inventory-heading"><div><strong>Resources to include</strong><span data-resource-group-create-summary></span></div></div>
+                <div class="resource-group-inventory-table-wrap">
+                    <table class="resource-group-inventory-table"><thead><tr><th>Type</th><th>Name</th><th>ID</th></tr></thead><tbody data-resource-group-create-items></tbody></table>
+                </div>
+            </div>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-resource-group-create-cancel>Cancel</button>
+            <button type="button" class="primary-button" data-resource-group-create-confirm disabled>Create Group</button>
+        </div>
+    </div>
+</dialog>
+
+<dialog class="new-task-dialog" data-resource-group-add-dialog>
+    <div class="new-task-card resource-group-dialog-card">
+        <div class="settings-header">
+            <div><h2>Add to Resource Group</h2><p>Add the selected Tasks and their required dependencies to an existing MOVEit Resource Group.</p></div>
+            <button type="button" class="dialog-close" data-resource-group-add-cancel aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body resource-group-dialog-body">
+            <div class="inline-alert error-alert" data-resource-group-add-error hidden></div>
+            <div class="resource-group-loading details-loading" data-resource-group-add-loading role="status" aria-live="polite" aria-label="Loading Resource Groups and selected Task dependencies" hidden><span class="inline-spinner" aria-hidden="true"></span><span>Loading...</span></div>
+            <div data-resource-group-add-content hidden>
+                <label class="field-block full-span"><span>Resource Group</span><select class="text-input" data-resource-group-add-name></select></label>
+                <div class="resource-group-inventory-heading"><div><strong>Resources to include</strong><span data-resource-group-add-summary></span></div></div>
+                <div class="resource-group-inventory-table-wrap">
+                    <table class="resource-group-inventory-table"><thead><tr><th>Type</th><th>Name</th><th>ID</th></tr></thead><tbody data-resource-group-add-items></tbody></table>
+                </div>
+            </div>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-resource-group-add-cancel>Cancel</button>
+            <button type="button" class="primary-button" data-resource-group-add-confirm disabled>Add to Group</button>
+        </div>
+    </div>
+</dialog>

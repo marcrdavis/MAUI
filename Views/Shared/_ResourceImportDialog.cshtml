@@ -1,0 +1,29 @@
+@model ResourceImportDialogViewModel
+@{
+    var key = Model.Key;
+    var label = Model.Label;
+    var pluralLabel = label == "Date List" ? "Date Lists" : label + "s";
+}
+<dialog class="new-task-dialog task-import-dialog" data-resource-import-dialog="@key" data-resource-label="@label">
+    <form class="new-task-card task-import-card" data-resource-import-form>
+        <div class="settings-header">
+            <div><h2>Import @pluralLabel</h2><p>Import one or more @label configurations previously exported from MAUI.</p></div>
+            <button type="button" class="dialog-close" data-resource-import-close aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body">
+            <div class="inline-alert error-alert" data-resource-import-error hidden></div>
+
+            <label class="field-block full-span"><span>MAUI Export File</span><input class="text-input task-import-file" type="file" accept=".maui,application/zip,application/octet-stream" data-resource-import-file /><small>Select a .maui package. Maximum size: 50 MB.</small></label>
+            <fieldset class="new-task-type-fieldset">
+                <legend>Import As</legend>
+                <label class="new-task-type-card"><input type="radio" name="resourceImportMode-@key" value="create" checked data-resource-import-mode /><span class="new-task-type-copy"><strong>Create new @pluralLabel</strong><span>Create each imported @label using the name stored in the export file. If that name already exists, the package remains valid but this import mode cannot be used.</span></span></label>
+                <label class="new-task-type-card"><input type="radio" name="resourceImportMode-@key" value="overwrite" data-resource-import-mode /><span class="new-task-type-copy"><strong>Update existing @pluralLabel</strong><span>MAUI matches each exported @label to the existing @label with the same name and saves an Undo version before updating it. If a same-name @label is not available, the package remains valid but this import mode cannot be used.</span></span></label>
+            </fieldset>
+            <div class="task-import-validation" data-resource-import-validation hidden><strong>Validation</strong><div class="task-import-validation-list" data-resource-import-validation-list></div></div>
+            <label class="configuration-import-acknowledgement task-import-missing-ack" data-resource-import-metadata-ack-row hidden><input type="checkbox" data-resource-import-metadata-ack /><span>I understand that one or more MAUI custom metadata fields are unsupported or incompatible and will be ignored.</span></label>
+            <div class="inline-alert info-alert" data-resource-import-overwrite-info hidden><strong>Information:</strong> Existing same-name @pluralLabel will be updated from the export file. MAUI saves the current configuration as an Undo version before each update.</div>
+
+        </div>
+        <div class="settings-footer new-task-footer"><button type="button" class="secondary-button" data-resource-import-cancel>Cancel</button><button type="submit" class="primary-button" data-resource-import-submit disabled><span class="inline-spinner button-spinner" data-resource-import-spinner hidden aria-hidden="true"></span><span data-resource-import-submit-label>Import @pluralLabel</span></button></div>
+    </form>
+</dialog>

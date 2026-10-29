@@ -1,0 +1,65 @@
+@* Shared Host actions for the Hosts page and nested Host editors. *@
+<dialog class="task-details-dialog" data-host-test-dialog>
+    <div class="task-details-card host-test-dialog-card">
+        <div class="settings-header">
+            <div>
+                <h2 data-host-test-title>Test Hosts</h2>
+                <p>Tests supported Host connections one at a time using MOVEit Automation's saved Host configuration.</p>
+            </div>
+            <button type="button" class="dialog-close" data-host-test-close aria-label="Close">×</button>
+        </div>
+        <div class="task-details-body host-test-body">
+            <p class="settings-help" data-host-test-summary></p>
+            <div class="configuration-table-wrap host-test-table-wrap">
+                <table class="configuration-table host-test-table">
+                    <thead>
+                        <tr>
+                            <th>Host Name</th>
+                            <th>Type</th>
+                            <th>Destination</th>
+                            <th>Status</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody data-host-test-rows></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <div class="maui-modal-feedback" data-host-test-error data-maui-modal-feedback data-feedback-kind="error" role="alert" hidden></div>
+            <button type="button" class="secondary-button" data-host-test-cancel>Cancel</button>
+            <button type="button" class="primary-button" data-host-test-run>Run Tests Again</button>
+        </div>
+    </div>
+</dialog>
+
+<dialog class="new-task-dialog" data-delete-host-dialog>
+    <div class="new-task-card">
+        <div class="settings-header">
+            <div><h2 data-delete-host-title>Delete Host</h2><p>Deletes the selected Host or Hosts from MOVEit Automation. When available, MAUI saves a Recycle Bin recovery copy first.</p></div>
+            <button type="button" class="dialog-close" data-delete-host-no aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body">
+            <div class="inline-alert error-alert" data-delete-host-error hidden></div>
+
+            <p data-delete-host-message></p>
+            <div class="delete-object-list" data-delete-host-list hidden></div>
+            <p><strong>Are you sure you want to continue?</strong></p>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-delete-host-no>Cancel</button>
+            <button type="button" class="danger-button" data-delete-host-yes>Yes, Delete</button>
+        </div>
+    </div>
+</dialog>
+
+<dialog class="new-task-dialog" data-clone-host-dialog>
+    <form class="new-task-card" data-clone-host-form>
+        <div class="settings-header"><div><h2>Clone Host</h2><p>Create a new Host with the saved configuration of the selected Host.</p></div><button type="button" class="dialog-close" data-clone-host-cancel aria-label="Close">×</button></div>
+        <div class="new-task-body">
+            <div class="inline-alert error-alert" data-clone-host-error hidden></div>
+            <label class="field-block"><span>Host Name</span><input class="text-input" maxlength="254" autocomplete="off" data-clone-host-name required /></label>
+        </div>
+        <div class="settings-footer new-task-footer"><button type="button" class="secondary-button" data-clone-host-cancel>Cancel</button><button type="submit" class="primary-button" data-clone-host-submit>Create Host</button></div>
+    </form>
+</dialog>

@@ -1,0 +1,62 @@
+/* Advanced Task presentation uses the shared modal controls, colors and feedback. */
+.traditional-task-editor-dialog.is-advanced-task { width:calc(100vw - 56px); }
+.is-advanced-task .traditional-task-editor-task-panel { grid-template-columns:var(--task-editor-rail-size) minmax(0,1fr); }
+.is-advanced-task.advanced-flow-visible .traditional-task-editor-task-panel { grid-template-columns:var(--task-editor-rail-size) minmax(0,var(--advanced-flow-size,40%)) 8px minmax(0,1fr); }
+.is-advanced-task .traditional-task-editor-rail { width:auto; min-width:0; overflow-x:hidden; }
+.is-advanced-task .traditional-task-editor-rail-heading strong { overflow-wrap:anywhere; }
+.is-advanced-task .traditional-task-editor-rail-items { padding-left:18px; }
+.is-advanced-task .advanced-task-editor-flow-pane { min-width:0; min-height:0; padding:10px; display:flex; flex-direction:column; overflow:hidden; }
+.is-advanced-task .advanced-task-editor-flow-pane[hidden] { display:none; }
+.advanced-flow-tree-scroll { overflow:auto; min-height:0; flex:1; padding:6px 0; }
+.advanced-task-flow { min-width:0; outline:none; }
+.advanced-task-flow-terminal { display:table; margin:10px auto; padding:5px 16px; border-radius:999px; font-size:12px; font-weight:700; }
+.advanced-task-flow-start { background:color-mix(in srgb,var(--success) 12%,var(--surface)); color:var(--success,#23784b); border:1px solid currentColor; }
+.advanced-task-flow-end { background:var(--danger-soft,#fce9e9); color:var(--danger,#bc3b3b); border:1px solid currentColor; }
+.advanced-task-flow-item { min-width:0; outline:none; }
+.advanced-task-flow-row { display:flex; align-items:center; gap:6px; padding:8px 6px; margin:4px 0; border:1px solid var(--border); border-radius:8px; background:var(--surface); cursor:pointer; min-width:0; }
+.advanced-task-flow-item[aria-selected=true] > .advanced-task-flow-row { border-color:var(--accent); background:var(--surface-2); }
+.advanced-task-flow-item:focus-visible > .advanced-task-flow-row { outline:2px solid var(--accent); outline-offset:1px; }
+.advanced-task-flow-toggle { display:inline-flex; align-items:center; justify-content:center; line-height:1; border:0; background:transparent; color:var(--text); cursor:pointer; padding:0; width:18px; flex:0 0 18px; }
+.advanced-task-flow-spacer { width:18px; flex:0 0 18px; }
+.advanced-task-flow-symbol { color:var(--accent); font-size:17px; width:18px; flex:0 0 18px; text-align:center; }
+.advanced-task-flow-symbol svg { display:block; width:18px; height:18px; }
+.advanced-task-flow-copy { flex:1; min-width:0; }
+.advanced-task-flow-label { display:block; font-size:13px; overflow-wrap:anywhere; }
+.advanced-task-flow-summary { display:block; font-size:12px; color:var(--text-soft); overflow-wrap:anywhere; margin-top:3px; }
+.advanced-task-flow-group { margin-left:10px; padding-left:8px; border-left:1px dashed var(--border); }
+.advanced-task-flow-disabled { font-size:10px; color:var(--text-soft); max-width:65px; overflow-wrap:anywhere; }
+.advanced-task-flow-empty { font-size:13px; color:var(--text-soft); padding:12px; }
+.advanced-flow-step-actions { flex:0 0 32px; min-width:32px; min-height:30px; padding:0 6px; }
+.advanced-flow-step-menu { position:fixed; right:auto; z-index:160; min-width:240px; max-width:calc(100vw - 16px); max-height:calc(100vh - 16px); overflow:auto; }
+.advanced-flow-divider { display:none; }
+.is-advanced-task.advanced-flow-visible .advanced-flow-divider { display:block; min-height:0; cursor:col-resize; touch-action:none; background:var(--surface-2); border-left:1px solid var(--border); border-right:1px solid var(--border); }
+.advanced-flow-divider:hover:not(:disabled),.advanced-flow-divider:focus-visible { background:var(--accent-soft); outline:2px solid var(--accent); outline-offset:-2px; }
+.advanced-flow-insert { display:block; border:0; background:transparent; color:var(--accent); cursor:pointer; min-height:22px; width:100%; text-align:left; padding-left:14px; }
+.advanced-flow-insert:hover:not(:disabled),.advanced-flow-insert:focus-visible { background:var(--accent-soft); outline:1px dashed var(--accent); }
+[data-advanced-inspector] { min-width:0; }
+[data-advanced-inspector] h3 { margin:0 0 16px; font-size:17px; font-weight:720; overflow-wrap:anywhere; }
+[data-advanced-inspector] .field-block { margin:12px 0; }
+[data-advanced-inspector] textarea { min-height:140px; }
+.advanced-criterion { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(0,1.2fr) minmax(0,1fr) 36px; align-items:start; gap:12px; padding:16px 0; border-bottom:1px solid var(--border); }
+[data-advanced-inspector] .advanced-criterion .field-block { margin:0; }
+.advanced-criterion-remove { grid-column:4; grid-row:1; margin-top:20px; min-height:42px; padding:0; font-size:20px; display:inline-flex; align-items:center; justify-content:center; line-height:1; }
+.advanced-criterion .field-help { grid-column:1 / -1; margin:0; }
+.advanced-criterion-add { margin-top:16px; }
+.is-advanced-task [data-advanced-wait] { margin:0; }
+.is-advanced-task [data-traditional-task-editor-step-count],
+.is-advanced-task [data-traditional-task-editor-step-actions],
+.is-advanced-task [data-traditional-task-editor-next-action-actions] { display:none; }
+.advanced-mobile-navigation { display:none; }
+@media(max-width:1200px) {
+ .traditional-task-editor-dialog.is-advanced-task { width:calc(100vw - 24px); }
+ .is-advanced-task .traditional-task-editor-task-panel,
+ .is-advanced-task.advanced-flow-visible .traditional-task-editor-task-panel { grid-template-columns:minmax(0,1fr); grid-template-rows:auto minmax(0,1fr); }
+ .is-advanced-task .traditional-task-editor-rail { display:flex; flex-wrap:wrap; border-right:0; border-bottom:1px solid var(--border); }
+ .is-advanced-task .traditional-task-editor-rail-section { flex:1; min-width:130px; }
+ .is-advanced-task .traditional-task-editor-workspace { min-height:0; overflow:auto; }
+ .is-advanced-task .advanced-task-editor-flow-pane { border-bottom:1px solid var(--border); }
+ .is-advanced-task .advanced-mobile-navigation { display:flex; gap:8px; align-items:center; }
+ .is-advanced-task.advanced-flow-visible .advanced-flow-divider { display:none; }
+ .is-advanced-task[data-advanced-view=flow].advanced-flow-visible .traditional-task-editor-workspace,
+ .is-advanced-task[data-advanced-view=properties].advanced-flow-visible [data-advanced-flow-pane] { display:none; }
+}

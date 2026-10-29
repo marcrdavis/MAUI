@@ -1,0 +1,16 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net) *@
+@{
+    var lastRefreshUtc = ViewData["GlobalParameterLastRefreshUtc"] is System.DateTimeOffset value ? value.ToString("O") : string.Empty;
+}
+<div class="task-refresh-control" data-global-parameter-refresh-control data-last-refresh-utc="@lastRefreshUtc">
+    <span class="task-last-refresh" data-global-parameter-last-refresh aria-live="polite">Last Refresh: --:--:--</span>
+    <div class="menu-control task-refresh-menu" data-menu>
+        <button type="button" class="task-refresh-clock-button" data-menu-button data-global-parameter-refresh-clock aria-label="Global Parameter refresh options" title="Global Parameter refresh options">
+            <span class="icon"><partial name="_Icon" model="@("clock")" /></span>
+        </button>
+        <div class="dropdown-menu dropdown-right task-refresh-menu-panel" data-menu-panel>
+            <button type="button" data-global-parameter-refresh-toggle>Pause Refresh</button>
+            <button type="button" data-global-parameter-refresh-now>Refresh Now</button>
+        </div>
+    </div>
+</div>

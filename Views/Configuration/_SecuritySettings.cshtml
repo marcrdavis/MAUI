@@ -1,0 +1,38 @@
+@model ConfigurationSettingsViewModel
+
+<section class="configuration-section" data-config-section="security" data-search-terms="security users administrators admin roles moveit username last login authorization access">
+    <div class="configuration-section-heading">
+        <div><h2>Security</h2><p>Control access to MAUI administration.</p></div>
+        <span class="configuration-state-badge live">Live Settings</span>
+    </div>
+    <div class="configuration-warning-card">
+        <strong>MOVEit authentication remains authoritative</strong>
+        <p>MAUI does not store user passwords. MAUI Admin/User roles are stored separately in the MAUI metadata database and do not change MOVEit permissions.</p>
+    </div>
+    <div class="panel-card configuration-card">
+        <div class="configuration-card-heading row-heading">
+            <div><h3>MAUI Users</h3><p>Manage MAUI roles. Admins can manage application settings and all Reports; Users can manage their own Reports and personal Preferences.</p></div>
+            <button type="button" class="secondary-button" data-add-security-user>+ Add User</button>
+        </div>
+        <div class="configuration-security-table" data-security-user-list>
+            <div class="configuration-security-header" aria-hidden="true">
+                <span>MOVEit Username</span><span>Role</span><span>Last Login</span><span>Actions</span>
+            </div>
+            @foreach (var securityUser in Model.SecurityUsers)
+            {
+                var lastLoginIso = securityUser.LastLoginUtc?.ToString("O") ?? string.Empty;
+                var lastLoginText = securityUser.LastLoginUtc?.ToString("u") ?? "Never";
+                <div class="configuration-security-row" data-security-user data-security-original="true" data-security-username="@securityUser.Username">
+                    <input class="text-input configuration-locked-input" value="@securityUser.Username" readonly maxlength="128" data-security-field="username" />
+                    <select class="text-input" data-security-field="role">
+                        <option value="User" selected="@(securityUser.Role.Equals("User", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">User</option>
+                        <option value="Admin" selected="@(securityUser.Role.Equals("Admin", StringComparison.OrdinalIgnoreCase) ? "selected" : null)">Admin</option>
+                    </select>
+                    <span class="configuration-last-login" data-security-last-login data-utc="@lastLoginIso">@lastLoginText</span>
+                    <button type="button" class="configuration-remove-button" data-remove-security-user>Remove</button>
+                </div>
+            }
+        </div>
+        <div class="configuration-security-note">SecurityUsers in the MAUI metadata database is the role authority. The first successfully authenticated user becomes Admin; later unseen users are added as User. At least one Admin must remain configured. Removing an automatically enrolled User does not block MOVEit authentication; if they sign in again, MAUI will add them back as User.</div>
+    </div>
+</section>

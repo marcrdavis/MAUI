@@ -1,0 +1,294 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   This Razor file is part of the MAUI application. *@
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+@model QuickTransferPageViewModel
+@{
+    ViewData["Title"] = "Quick Transfer";
+    var useMauiHostEditor = bool.TryParse(Configuration["Editors:UseMauiHostEditor:Value"], out var hostEditorEnabled) && hostEditorEnabled;
+}
+<div class="page-heading compact-heading">
+    <div>
+        <h1>Transfers <span class="heading-context">/ Quick Transfer</span></h1>
+        <p>Create and run a one-time file transfer using existing MOVEit Hosts.</p>
+    </div>
+</div>
+
+<form class="task-antiforgery" hidden>@Html.AntiForgeryToken()</form>
+
+<div class="quick-transfer-page"
+     data-quick-transfer-config
+     data-references-url="@Url.Action("References", "QuickTransfers")"
+     data-browse-url="@Url.Action("Browse", "QuickTransfers")"
+     data-prepare-url="@Url.Action("Prepare", "QuickTransfers")"
+     data-transfer-url="@Url.Action("Transfer", "QuickTransfers")"
+     data-cancel-url="@Url.Action("Cancel", "QuickTransfers")"
+     data-status-url="@Url.Action("Status", "QuickTransfers")"
+     data-preflight-stage-url="@Url.Action("PreflightStage", "Tasks")"
+     data-create-host-url="@Url.Action("CreateHost", "Hosts")"
+     data-native-editor-session-url="@Url.Action("Session", "NativeEditor")"
+     data-session-expired-url="@Url.Action("SessionExpired", "Account")"
+     data-login-url="@Url.Action("SessionExpired", "Account")"
+     data-host-editor-shell-url="@Url.Action("Shell", "HostEditor")"
+     data-host-editor-save-url="@Url.Action("Save", "HostEditor")"
+     data-host-editor-fingerprint-url="@Url.Action("Fingerprint", "HostEditor")"
+     data-host-editor-certificates-url="@Url.Action("Certificates", "HostEditor")"
+     data-host-editor-document-libraries-url="@Url.Action("DocumentLibraries", "HostEditor")"
+     data-test-host-url="@Url.Action("TestHost", "Hosts")"
+     data-clone-host-url="@Url.Action("CloneHost", "Hosts")"
+     data-export-host-url="@Url.Action("ExportHost", "Hosts")"
+     data-preflight-delete-hosts-url="@Url.Action("PreflightDeleteHosts", "Hosts")"
+     data-delete-hosts-url="@Url.Action("DeleteHosts", "Hosts")"
+     data-pgp-licensed="@Model.PgpLicensed.ToString().ToLowerInvariant()"
+     data-confirmation-email-available="@Model.ConfirmationEmailAvailable.ToString().ToLowerInvariant()">
+
+    <div class="inline-alert error-alert" data-quick-transfer-error hidden="@(string.IsNullOrWhiteSpace(Model.LoadError) ? "hidden" : null)">@Model.LoadError</div>
+    <div class="inline-alert info-alert" data-quick-transfer-info hidden></div>
+
+    <div class="quick-transfer-workflow-grid">
+        <section class="quick-transfer-card quick-transfer-workflow-card" aria-labelledby="quick-transfer-source-heading">
+            <div class="quick-transfer-section-heading">
+                <div class="quick-transfer-step-number">1</div>
+                <div><h2 id="quick-transfer-source-heading">Source</h2><p>Select the Host, folder, and file or filespec.</p></div>
+            </div>
+            <div class="quick-transfer-panel-fields">
+                <label class="field-block">
+                    <span>Source Host</span>
+                    <div class="quick-transfer-control-row quick-transfer-host-row">
+                        <select class="text-input" data-quick-source-host>
+                            <option value="">Select Source Host</option>
+                            @foreach (var host in Model.SourceHosts)
+                            {
+                                <option value="@host.Id" data-host-type="@host.TypeCode" data-root-kind="@host.RootKind" data-browse-supported="@host.BrowseSupported.ToString().ToLowerInvariant()">@host.Name — @host.Type</option>
+                            }
+                        </select>
+                        <button type="button" class="secondary-button" data-quick-new-host="source">+ New Host</button>
+                    </div>
+                </label>
+
+                <label class="field-block">
+                    <span>Folder</span>
+                    <div class="quick-transfer-control-row">
+                        <input class="text-input" type="text" autocomplete="off" data-quick-source-path />
+                        <button type="button" class="secondary-button" data-quick-browse="source">Browse...</button>
+                    </div>
+                    <small data-quick-source-root-summary hidden></small>
+                </label>
+
+                <label class="field-block">
+                    <span>Filename / Filespec</span>
+                    <div class="quick-transfer-control-row quick-transfer-file-row">
+                        <input class="text-input" type="text" autocomplete="off" placeholder="*.csv" data-quick-source-file />
+                        <select class="text-input task-notification-macro quick-transfer-macro-select" data-quick-macro-select="source" aria-label="Insert macro into Source Filename / Filespec"></select>
+                    </div>
+                    <small>Wildcards and supported MOVEit macros may be used.</small>
+                </label>
+                <label class="new-task-auto-format quick-transfer-inline-option">
+                    <input type="checkbox" data-quick-delete-source-after-success />
+                    <span>Delete Source File After Successful Transfer</span>
+                </label>
+            </div>
+        </section>
+
+        <section class="quick-transfer-card quick-transfer-workflow-card" aria-labelledby="quick-transfer-processing-heading">
+            <div class="quick-transfer-section-heading">
+                <div class="quick-transfer-step-number">2</div>
+                <div><h2 id="quick-transfer-processing-heading">Processing</h2><p>Optionally apply PGP processing to each file.</p></div>
+            </div>
+            <fieldset class="new-task-type-fieldset quick-transfer-processing-options">
+                <legend>File Processing</legend>
+                <label class="new-task-type-card">
+                    <input type="radio" name="quickProcessingMode" value="none" checked />
+                    <span class="new-task-type-copy"><strong>No Encryption</strong><span>Transfer without PGP processing.</span></span>
+                </label>
+                <label class="new-task-type-card @(Model.PgpLicensed ? "" : "disabled-card")"
+                       data-quick-pgp-processing-option="encrypt"
+                       aria-disabled="@(!Model.PgpLicensed).ToString().ToLowerInvariant()"
+                       title="@(Model.PgpLicensed ? null : "The connected MOVEit Automation license does not include PGP. PGP processing is disabled in Quick Transfer.")">
+                    <input type="radio" name="quickProcessingMode" value="encrypt" disabled="@(Model.PgpLicensed ? null : "disabled")" />
+                    <span class="new-task-type-copy"><strong>Encrypt</strong><span>Encrypt using the selected PGP key.</span></span>
+                </label>
+                <label class="new-task-type-card @(Model.PgpLicensed ? "" : "disabled-card")"
+                       data-quick-pgp-processing-option="decrypt"
+                       aria-disabled="@(!Model.PgpLicensed).ToString().ToLowerInvariant()"
+                       title="@(Model.PgpLicensed ? null : "The connected MOVEit Automation license does not include PGP. PGP processing is disabled in Quick Transfer.")">
+                    <input type="radio" name="quickProcessingMode" value="decrypt" disabled="@(Model.PgpLicensed ? null : "disabled")" />
+                    <span class="new-task-type-copy"><strong>Decrypt</strong><span>Use MOVEit PGP Decrypt.</span></span>
+                </label>
+            </fieldset>
+            <label class="field-block quick-transfer-pgp-key" data-quick-pgp-row hidden>
+                <span>PGP Key</span>
+                <select class="text-input" data-quick-pgp-key>
+                    <option value="">Select PGP Key</option>
+                    @foreach (var key in Model.PgpKeys)
+                    {
+                        var detail = string.IsNullOrWhiteSpace(key.Uid) ? key.PublicPrivate : $"{key.Uid} — {key.PublicPrivate}";
+                        <option value="@key.Id">@key.Name@(string.IsNullOrWhiteSpace(detail) ? "" : $" — {detail}")</option>
+                    }
+                </select>
+            </label>
+        </section>
+
+        <section class="quick-transfer-card quick-transfer-workflow-card" aria-labelledby="quick-transfer-destination-heading">
+            <div class="quick-transfer-section-heading">
+                <div class="quick-transfer-step-number">3</div>
+                <div><h2 id="quick-transfer-destination-heading">Destination</h2><p>Select where MOVEit should place the file.</p></div>
+            </div>
+            <div class="quick-transfer-panel-fields">
+                <label class="field-block">
+                    <span>Destination Host</span>
+                    <div class="quick-transfer-control-row quick-transfer-host-row">
+                        <select class="text-input" data-quick-destination-host>
+                            <option value="">Select Destination Host</option>
+                            @foreach (var host in Model.DestinationHosts)
+                            {
+                                <option value="@host.Id" data-host-type="@host.TypeCode" data-root-kind="@host.RootKind" data-browse-supported="@host.BrowseSupported.ToString().ToLowerInvariant()">@host.Name — @host.Type</option>
+                            }
+                        </select>
+                        <button type="button" class="secondary-button" data-quick-new-host="destination">+ New Host</button>
+                    </div>
+                </label>
+
+                <label class="field-block">
+                    <span>Folder</span>
+                    <div class="quick-transfer-control-row">
+                        <input class="text-input" type="text" autocomplete="off" data-quick-destination-path />
+                        <button type="button" class="secondary-button" data-quick-browse="destination">Browse...</button>
+                    </div>
+                    <small data-quick-destination-root-summary hidden></small>
+                </label>
+
+                <label class="field-block">
+                    <span>Filename</span>
+                    <div class="quick-transfer-control-row quick-transfer-file-row">
+                        <input class="text-input" type="text" autocomplete="off" data-quick-destination-file />
+                        <select class="text-input task-notification-macro quick-transfer-macro-select" data-quick-macro-select="destination" aria-label="Insert macro into Destination Filename"></select>
+                    </div>
+                    <small>Leave blank to use the source filename.</small>
+                </label>
+                <label class="new-task-auto-format quick-transfer-inline-option">
+                    <input type="checkbox" data-quick-overwrite-existing checked />
+                    <span>Overwrite Existing File</span>
+                </label>
+            </div>
+        </section>
+    </div>
+
+    <section class="quick-transfer-card quick-transfer-options-card" aria-labelledby="quick-transfer-options-heading">
+        <div class="quick-transfer-section-heading quick-transfer-section-heading-compact">
+            <div><h2 id="quick-transfer-options-heading">Task Options</h2><p>Keep the request as a reusable Traditional Task or remove the temporary Task after success.</p></div>
+        </div>
+        <div class="quick-transfer-options-list">
+            <label class="quick-transfer-switch-row">
+                <input type="checkbox" data-quick-persist-task />
+                <span><strong>Create Traditional Task from this request</strong><small>Keep the generated task after this transfer.</small></span>
+            </label>
+            <label class="quick-transfer-switch-row">
+                <input type="checkbox" data-quick-delete-temp checked />
+                <span><strong>Delete temporary task after successful transfer</strong><small>Failed, cancelled, and no-transfer tasks are retained for troubleshooting.</small></span>
+            </label>
+            <label class="quick-transfer-switch-row" title="@(Model.ConfirmationEmailAvailable ? "Send a summary after MOVEit confirms a successful transfer." : Model.ConfirmationEmailUnavailableReason)">
+                <input type="checkbox" data-quick-confirm-email @(Model.ConfirmationEmailAvailable ? null : "disabled") />
+                <span><strong>Send Transfer Confirmation Email</strong><small>Notify recipients after a successful transfer.</small></span>
+            </label>
+            <div class="quick-transfer-task-name" data-quick-confirm-recipients-row hidden>
+                <label class="field-block">
+                    <span>Recipient Email Address(es)</span>
+                    <input class="text-input" type="text" maxlength="4000" autocomplete="off" placeholder="user@company.com; team@company.com" data-quick-confirm-recipients />
+                    <small>Separate multiple email addresses with commas or semicolons.</small>
+                </label>
+            </div>
+            <div class="quick-transfer-task-name" data-quick-task-name-row hidden>
+                <label class="field-block">
+                    <span>Task Name</span>
+                    <input class="text-input" type="text" maxlength="254" autocomplete="off" data-quick-task-name />
+                </label>
+                <label class="new-task-auto-format" title="When enabled, converts the name to uppercase and replaces spaces with underscores. Example: My Task → MY_TASK.">
+                    <input type="checkbox" data-quick-task-auto-format @(Model.AutoFormatNewTaskHostNames ? "checked" : null) />
+                    <span>Auto Format Name</span>
+                </label>
+            </div>
+        </div>
+    </section>
+
+    <section class="quick-transfer-status-card" data-quick-status-card aria-live="polite">
+        <div class="quick-transfer-status-header">
+            <div class="quick-transfer-status-copy"><h2>Transfer Status</h2><p data-quick-status-message>Ready to transfer.</p></div>
+            <span class="status-pill" data-quick-status-state data-state="ready">Ready</span>
+        </div>
+        <div class="quick-transfer-status-body">
+            <div class="quick-transfer-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-quick-progress>
+                <div class="quick-transfer-progress-bar" data-quick-progress-bar></div>
+            </div>
+            <div class="quick-transfer-status-grid">
+                <div class="quick-transfer-status-summary-row">
+                    <div class="quick-transfer-status-row quick-transfer-status-task"><span>Task</span><strong data-quick-status-task>—</strong></div>
+                    <div class="quick-transfer-status-row"><span>Files</span><strong data-quick-status-files>—</strong></div>
+                    <div class="quick-transfer-status-row"><span>Transferred</span><strong data-quick-status-bytes>—</strong></div>
+                </div>
+            </div>
+        </div>
+        <div class="settings-footer quick-transfer-status-footer">
+            <button type="button" class="secondary-button" data-quick-preflight>Preflight</button>
+            <button type="button" class="primary-button" data-quick-transfer>Transfer</button>
+        </div>
+    </section>
+</div>
+
+
+
+<dialog class="new-task-dialog task-preflight-dialog" data-quick-preflight-dialog>
+    <div class="new-task-card task-preflight-card">
+        <div class="settings-header">
+            <div><h2>Task Preflight Checks</h2><p data-quick-preflight-subtitle>Validate the Quick Transfer Task configuration and dependencies without running the Task.</p></div>
+            <button type="button" class="dialog-close" data-quick-preflight-close aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body task-preflight-body">
+            <div class="task-preflight-stages" data-quick-preflight-stages aria-label="Preflight stages">
+                <div class="task-preflight-stage" data-quick-preflight-stage="task"><span class="task-preflight-stage-icon"><partial name="_Icon" model="@("tasks")" /></span><span>Task</span></div>
+                <div class="task-preflight-stage" data-quick-preflight-stage="hosts"><span class="task-preflight-stage-icon"><partial name="_Icon" model="@("host")" /></span><span>Hosts</span></div>
+                <div class="task-preflight-stage" data-quick-preflight-stage="resources"><span class="task-preflight-stage-icon"><partial name="_Icon" model="@("script")" /></span><span>Resources</span></div>
+                <div class="task-preflight-stage" data-quick-preflight-stage="certificates"><span class="task-preflight-stage-icon"><partial name="_Icon" model="@("key")" /></span><span>Certificates / Keys</span></div>
+                <div class="task-preflight-stage" data-quick-preflight-stage="notifications"><span class="task-preflight-stage-icon"><partial name="_Icon" model="@("mail")" /></span><span>Notifications</span></div>
+                <div class="task-preflight-stage" data-quick-preflight-stage="scheduling"><span class="task-preflight-stage-icon"><partial name="_Icon" model="@("calendar")" /></span><span>Scheduling</span></div>
+                <div class="task-preflight-stage" data-quick-preflight-stage="configuration"><span class="task-preflight-stage-icon"><partial name="_Icon" model="@("settings")" /></span><span>Configuration</span></div>
+                <div class="task-preflight-stage" data-quick-preflight-stage="runtime"><span class="task-preflight-stage-icon"><partial name="_Icon" model="@("clock")" /></span><span>Runtime</span></div>
+            </div>
+            <div class="task-preflight-summary" data-quick-preflight-summary>Preflight has not started.</div>
+            <div class="task-preflight-results-wrap">
+                <table class="task-preflight-results-table">
+                    <thead><tr><th>Result</th><th>Check</th><th>Details</th></tr></thead>
+                    <tbody data-quick-preflight-results></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-quick-preflight-close>Close</button>
+            <button type="button" class="primary-button" data-quick-preflight-run-again>Run Preflight Again</button>
+        </div>
+    </div>
+</dialog>
+
+<partial name="_NewHostDialog" model="Model.AutoFormatNewTaskHostNames" />
+@if (useMauiHostEditor)
+{
+    <partial name="Editors/_HostEditorDialog" />
+    <partial name="_HostActionDialogs" />
+    <div data-host-portability-root>
+        <partial name="_NativePortabilityExportDialog" model='new NativePortabilityDialogViewModel { ObjectType = "Host", PluralLabel = "Hosts" }' />
+    </div>
+}
+
+@section Scripts {
+    <script src="~/js/shared/traditional-task-field-macros.js" asp-append-version="true"></script>
+    @if (useMauiHostEditor)
+    {
+        <link rel="stylesheet" href="~/css/editors/host-editor.css" asp-append-version="true" />
+        <script src="~/js/native-portability.js" asp-append-version="true"></script>
+        <script src="~/js/shared/host-actions.js" asp-append-version="true"></script>
+        <script src="~/js/editors/host-editor.js" asp-append-version="true"></script>
+        <script src="~/js/editors/task-host-editor.js" asp-append-version="true"></script>
+    }
+    <script src="~/js/shared/new-host-dialog.js" asp-append-version="true"></script>
+    <script src="~/js/quick-transfer.js" asp-append-version="true"></script>
+}

@@ -1,0 +1,58 @@
+@* Group configuration and dependency-aware member selection; no MAUI properties/metadata page. *@
+<dialog class="new-task-dialog script-editor-dialog resource-group-editor" data-group-editor aria-labelledby="group-editor-title">
+    <form class="new-task-card script-editor-card" data-group-form novalidate>
+        <header class="script-editor-header">
+            <div class="script-editor-title-wrap"><span class="script-editor-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7V5a1 1 0 0 1 1-1h5l2 3h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z"/><circle cx="10" cy="11" r="2"/><path d="M6 17v-1a4 4 0 0 1 8 0v1M16 10h2M16 14h2"/></svg></span><div><h2 id="group-editor-title" data-group-title>New Resource Group</h2><p data-group-subtitle>Choose the resources to include in this Resource Group.</p></div></div>
+            <button type="button" class="dialog-close" data-group-close aria-label="Close">×</button>
+        </header>
+        <div class="new-task-body script-editor-body">
+            <div class="details-loading" data-group-loading role="status" hidden><span class="inline-spinner" aria-hidden="true"></span><span>Loading...</span></div>
+            <div class="inline-alert error-alert" data-group-error role="alert" hidden></div>
+            <div class="resource-group-fields" data-group-content>
+                <label class="field-block"><span>Group Name</span><input type="text" class="text-input" maxlength="254" autocomplete="off" data-group-name required /></label>
+                <label class="field-block"><span>Description</span><textarea class="text-input textarea-input" rows="2" maxlength="2000" data-group-description></textarea></label>
+                <div class="resource-group-members">
+                    <h3>Members</h3>
+                    <div class="task-details-tabs resource-group-tabs" role="tablist" aria-label="Resource Group members">
+                        <button type="button" class="task-details-tab active" data-group-tab="task" id="group-task-tab" role="tab" aria-controls="group-member-panel" aria-selected="true">Tasks</button>
+                        <button type="button" class="task-details-tab" data-group-tab="host" id="group-host-tab" role="tab" aria-controls="group-member-panel" aria-selected="false" tabindex="-1">Hosts</button>
+                        <button type="button" class="task-details-tab" data-group-tab="script" id="group-script-tab" role="tab" aria-controls="group-member-panel" aria-selected="false" tabindex="-1">Scripts</button>
+                        <button type="button" class="task-details-tab" data-group-tab="ssh" id="group-ssh-tab" role="tab" aria-controls="group-member-panel" aria-selected="false" tabindex="-1">SSH Keys</button>
+                        <button type="button" class="task-details-tab" data-group-tab="ssl" id="group-ssl-tab" role="tab" aria-controls="group-member-panel" aria-selected="false" tabindex="-1">TLS Certs</button>
+                        <button type="button" class="task-details-tab" data-group-tab="pgp" id="group-pgp-tab" role="tab" aria-controls="group-member-panel" aria-selected="false" tabindex="-1">PGP Keys</button>
+                    </div>
+                    <div id="group-member-panel" role="tabpanel" aria-labelledby="group-task-tab" class="resource-group-member-panel">
+                        <div class="resource-group-member-list" data-group-items></div>
+                        <div class="resource-group-member-tools"><span data-group-member-count></span><button type="button" class="secondary-button" data-group-add>Add Tasks</button></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="settings-footer new-task-footer"><span class="resource-group-status" data-group-status role="status" aria-live="polite"></span><button type="button" class="secondary-button" data-group-close>Cancel</button><button type="submit" class="primary-button" data-group-save>Create Group</button></div>
+    </form>
+</dialog>
+<dialog class="new-task-dialog resource-group-picker" data-group-picker aria-labelledby="group-picker-title">
+    <form class="new-task-card" data-group-picker-form>
+        <div class="settings-header"><div><h2 id="group-picker-title" data-group-picker-title>Add Tasks</h2><p>Select the resources to add to this Resource Group.</p></div><button type="button" class="dialog-close" data-group-picker-close aria-label="Close">×</button></div>
+        <div class="new-task-body resource-group-picker-body">
+            <div class="inline-alert error-alert" data-group-picker-error role="alert" hidden></div>
+            <label class="search-box"><span class="icon"><partial name="_Icon" model="@("search")" /></span><input type="search" data-group-picker-search placeholder="Search id, name or description" aria-label="Search available resources" /></label>
+            <div class="resource-group-picker-table"><table class="resource-group-inventory-table"><thead><tr><th><input type="checkbox" data-group-picker-all aria-label="Select all matching resources" /></th><th>ID</th><th>Name</th><th>Description</th></tr></thead><tbody data-group-picker-items></tbody></table></div>
+        </div>
+        <div class="settings-footer new-task-footer"><span class="resource-group-status" data-group-picker-count></span><button type="button" class="secondary-button" data-group-picker-close>Cancel</button><button type="submit" class="primary-button" data-group-picker-add disabled>Add</button></div>
+    </form>
+</dialog>
+
+<dialog class="new-task-dialog script-editor-dialog" data-group-delete-dialog aria-labelledby="group-delete-title">
+    <form class="new-task-card" data-group-delete-form>
+        <header class="script-editor-header"><div><h2 id="group-delete-title">Delete Resource Group</h2><p>Delete this Resource Group from MOVEit.</p></div><button type="button" class="dialog-close" data-group-delete-close aria-label="Close">×</button></header>
+        <div class="new-task-body">
+            <div class="details-loading" role="status" data-group-delete-loading hidden><span class="inline-spinner" aria-hidden="true"></span><span>Loading Resource Group…</span></div>
+            <div class="inline-alert error-alert" role="alert" data-group-delete-error hidden></div>
+            <label class="field-block"><span>Resource Group</span><input class="text-input" data-group-delete-name readonly /></label>
+            <label class="field-block"><span>Description</span><textarea class="text-input textarea-input" rows="2" data-group-delete-description readonly></textarea></label>
+            <p class="permissions-help">The Tasks, Hosts, Scripts, Keys and Certificates in this Resource Group will be retained. This cannot be undone.</p>
+        </div>
+        <div class="settings-footer new-task-footer"><button type="button" class="secondary-button" data-group-delete-close>Cancel</button><button type="submit" class="danger-button" data-group-delete-confirm disabled>Delete Resource Group</button></div>
+    </form>
+</dialog>

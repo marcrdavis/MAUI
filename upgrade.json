@@ -1,0 +1,1035 @@
+{
+  "ManifestVersion": 1,
+  "Description": "Add opt-in Task JSON value editing and reviewed bulk replacements.",
+  "TargetVersion": "0.18.511-RC3",
+  "MinimumSupportedVersion": "0.16.77-integration",
+  "RequiredSchemaVersion": 1,
+  "RequiredConfigurationVersion": 1,
+  "RestartRequired": false,
+  "SchemaMigrations": [
+    {
+      "FromVersion": 0,
+      "ToVersion": 1,
+      "Description": "Create the initial MAUI metadata schema.",
+      "Operations": [
+        {
+          "Operation": "CreateTable",
+          "Table": "MauiSchemaVersion",
+          "Columns": [
+            {
+              "Name": "Id",
+              "Type": "Integer",
+              "Nullable": false
+            },
+            {
+              "Name": "Version",
+              "Type": "Integer",
+              "Nullable": false
+            },
+            {
+              "Name": "UpdatedUtc",
+              "Type": "DateTime",
+              "Nullable": false
+            }
+          ],
+          "PrimaryKey": {
+            "Name": "PK_MauiSchemaVersion",
+            "Columns": [
+              "Id"
+            ]
+          }
+        },
+        {
+          "Operation": "CreateTable",
+          "Table": "MetadataFolders",
+          "Columns": [
+            {
+              "Name": "Id",
+              "Type": "Integer",
+              "Nullable": false,
+              "PrimaryKey": true,
+              "AutoIncrement": true
+            },
+            {
+              "Name": "EnvironmentKey",
+              "Type": "String",
+              "Length": 64,
+              "Nullable": false
+            },
+            {
+              "Name": "ObjectType",
+              "Type": "String",
+              "Length": 64,
+              "Nullable": false
+            },
+            {
+              "Name": "ParentId",
+              "Type": "Integer",
+              "Nullable": true
+            },
+            {
+              "Name": "Name",
+              "Type": "String",
+              "Length": 200,
+              "Nullable": false
+            }
+          ],
+          "ForeignKeys": [
+            {
+              "Name": "FK_MetadataFolders_MetadataFolders_ParentId",
+              "Columns": [
+                "ParentId"
+              ],
+              "PrincipalTable": "MetadataFolders",
+              "PrincipalColumns": [
+                "Id"
+              ],
+              "OnDelete": "Restrict"
+            }
+          ]
+        },
+        {
+          "Operation": "CreateIndex",
+          "Table": "MetadataFolders",
+          "Name": "IX_MetadataFolders_ParentId",
+          "IndexColumns": [
+            "ParentId"
+          ],
+          "Unique": false
+        },
+        {
+          "Operation": "CreateIndex",
+          "Table": "MetadataFolders",
+          "Name": "IX_MetadataFolders_EnvironmentKey_ObjectType_ParentId_Name",
+          "IndexColumns": [
+            "EnvironmentKey",
+            "ObjectType",
+            "ParentId",
+            "Name"
+          ],
+          "Unique": true
+        },
+        {
+          "Operation": "CreateTable",
+          "Table": "MetadataObjects",
+          "Columns": [
+            {
+              "Name": "EnvironmentKey",
+              "Type": "String",
+              "Length": 64,
+              "Nullable": false
+            },
+            {
+              "Name": "ObjectType",
+              "Type": "String",
+              "Length": 64,
+              "Nullable": false
+            },
+            {
+              "Name": "ObjectId",
+              "Type": "String",
+              "Length": 256,
+              "Nullable": false
+            },
+            {
+              "Name": "FolderId",
+              "Type": "Integer",
+              "Nullable": true
+            },
+            {
+              "Name": "MetadataCreatedUtc",
+              "Type": "DateTime",
+              "Nullable": true
+            },
+            {
+              "Name": "MetadataCreatedBy",
+              "Type": "String",
+              "Nullable": false
+            },
+            {
+              "Name": "MetadataModifiedUtc",
+              "Type": "DateTime",
+              "Nullable": true
+            },
+            {
+              "Name": "MetadataModifiedBy",
+              "Type": "String",
+              "Nullable": false
+            },
+            {
+              "Name": "ConfigurationModifiedUtc",
+              "Type": "DateTime",
+              "Nullable": true
+            },
+            {
+              "Name": "ConfigurationModifiedBy",
+              "Type": "String",
+              "Nullable": false
+            }
+          ],
+          "PrimaryKey": {
+            "Name": "PK_MetadataObjects",
+            "Columns": [
+              "EnvironmentKey",
+              "ObjectType",
+              "ObjectId"
+            ]
+          },
+          "ForeignKeys": [
+            {
+              "Name": "FK_MetadataObjects_MetadataFolders_FolderId",
+              "Columns": [
+                "FolderId"
+              ],
+              "PrincipalTable": "MetadataFolders",
+              "PrincipalColumns": [
+                "Id"
+              ],
+              "OnDelete": "Restrict"
+            }
+          ]
+        },
+        {
+          "Operation": "CreateIndex",
+          "Table": "MetadataObjects",
+          "Name": "IX_MetadataObjects_FolderId",
+          "IndexColumns": [
+            "FolderId"
+          ],
+          "Unique": false
+        },
+        {
+          "Operation": "CreateTable",
+          "Table": "MetadataValues",
+          "Columns": [
+            {
+              "Name": "Id",
+              "Type": "Long",
+              "Nullable": false,
+              "PrimaryKey": true,
+              "AutoIncrement": true
+            },
+            {
+              "Name": "EnvironmentKey",
+              "Type": "String",
+              "Length": 64,
+              "Nullable": false
+            },
+            {
+              "Name": "ObjectType",
+              "Type": "String",
+              "Length": 64,
+              "Nullable": false
+            },
+            {
+              "Name": "ObjectId",
+              "Type": "String",
+              "Length": 256,
+              "Nullable": false
+            },
+            {
+              "Name": "FieldName",
+              "Type": "String",
+              "Length": 128,
+              "Nullable": false
+            },
+            {
+              "Name": "Value",
+              "Type": "String",
+              "Nullable": false
+            }
+          ]
+        },
+        {
+          "Operation": "CreateIndex",
+          "Table": "MetadataValues",
+          "Name": "IX_MetadataValues_EnvironmentKey_ObjectType_ObjectId_FieldName",
+          "IndexColumns": [
+            "EnvironmentKey",
+            "ObjectType",
+            "ObjectId",
+            "FieldName"
+          ],
+          "Unique": true
+        },
+        {
+          "Operation": "CreateTable",
+          "Table": "ConfigurationUndoSnapshots",
+          "Columns": [
+            {
+              "Name": "EnvironmentKey",
+              "Type": "String",
+              "Length": 64,
+              "Nullable": false
+            },
+            {
+              "Name": "ObjectType",
+              "Type": "String",
+              "Length": 64,
+              "Nullable": false
+            },
+            {
+              "Name": "ObjectId",
+              "Type": "String",
+              "Length": 256,
+              "Nullable": false
+            },
+            {
+              "Name": "UsernameKey",
+              "Type": "String",
+              "Length": 128,
+              "Nullable": false
+            },
+            {
+              "Name": "ObjectName",
+              "Type": "String",
+              "Length": 254,
+              "Nullable": false
+            },
+            {
+              "Name": "CreatedBy",
+              "Type": "String",
+              "Length": 128,
+              "Nullable": false
+            },
+            {
+              "Name": "CreatedUtc",
+              "Type": "DateTime",
+              "Nullable": false
+            },
+            {
+              "Name": "ObjectXml",
+              "Type": "String",
+              "Nullable": false
+            }
+          ],
+          "PrimaryKey": {
+            "Name": "PK_ConfigurationUndoSnapshots",
+            "Columns": [
+              "EnvironmentKey",
+              "ObjectType",
+              "ObjectId",
+              "UsernameKey"
+            ]
+          }
+        },
+        {
+          "Operation": "CreateIndex",
+          "Table": "ConfigurationUndoSnapshots",
+          "Name": "IX_ConfigurationUndoSnapshots_EnvironmentKey_ObjectType_CreatedUtc",
+          "IndexColumns": [
+            "EnvironmentKey",
+            "ObjectType",
+            "CreatedUtc"
+          ],
+          "Unique": false
+        },
+        {
+          "Operation": "CreateTable",
+          "Table": "RecycleBinItems",
+          "Columns": [
+            {
+              "Name": "Id",
+              "Type": "String",
+              "Length": 36,
+              "Nullable": false
+            },
+            {
+              "Name": "EnvironmentKey",
+              "Type": "String",
+              "Length": 64,
+              "Nullable": false
+            },
+            {
+              "Name": "ObjectType",
+              "Type": "String",
+              "Length": 64,
+              "Nullable": false
+            },
+            {
+              "Name": "OriginalObjectId",
+              "Type": "String",
+              "Length": 256,
+              "Nullable": false
+            },
+            {
+              "Name": "ObjectName",
+              "Type": "String",
+              "Length": 254,
+              "Nullable": false
+            },
+            {
+              "Name": "DeletedBy",
+              "Type": "String",
+              "Length": 128,
+              "Nullable": false
+            },
+            {
+              "Name": "DeletedByKey",
+              "Type": "String",
+              "Length": 128,
+              "Nullable": false
+            },
+            {
+              "Name": "DeletedUtc",
+              "Type": "DateTime",
+              "Nullable": false
+            },
+            {
+              "Name": "ObjectXml",
+              "Type": "String",
+              "Nullable": false
+            }
+          ],
+          "PrimaryKey": {
+            "Name": "PK_RecycleBinItems",
+            "Columns": [
+              "Id"
+            ]
+          }
+        },
+        {
+          "Operation": "CreateIndex",
+          "Table": "RecycleBinItems",
+          "Name": "IX_RecycleBinItems_EnvironmentKey_DeletedUtc",
+          "IndexColumns": [
+            "EnvironmentKey",
+            "DeletedUtc"
+          ],
+          "Unique": false
+        },
+        {
+          "Operation": "CreateIndex",
+          "Table": "RecycleBinItems",
+          "Name": "IX_RecycleBinItems_EnvironmentKey_DeletedByKey_DeletedUtc",
+          "IndexColumns": [
+            "EnvironmentKey",
+            "DeletedByKey",
+            "DeletedUtc"
+          ],
+          "Unique": false
+        },
+        {
+          "Operation": "CreateTable",
+          "Table": "SecurityUsers",
+          "Columns": [
+            {
+              "Name": "UsernameKey",
+              "Type": "String",
+              "Length": 128,
+              "Nullable": false
+            },
+            {
+              "Name": "Username",
+              "Type": "String",
+              "Length": 128,
+              "Nullable": false
+            },
+            {
+              "Name": "Role",
+              "Type": "String",
+              "Length": 16,
+              "Nullable": false
+            },
+            {
+              "Name": "LastLoginUtc",
+              "Type": "DateTime",
+              "Nullable": true
+            },
+            {
+              "Name": "CreatedUtc",
+              "Type": "DateTime",
+              "Nullable": false
+            },
+            {
+              "Name": "CreatedBy",
+              "Type": "String",
+              "Length": 128,
+              "Nullable": false
+            },
+            {
+              "Name": "ModifiedUtc",
+              "Type": "DateTime",
+              "Nullable": false
+            },
+            {
+              "Name": "ModifiedBy",
+              "Type": "String",
+              "Length": 128,
+              "Nullable": false
+            }
+          ],
+          "PrimaryKey": {
+            "Name": "PK_SecurityUsers",
+            "Columns": [
+              "UsernameKey"
+            ]
+          }
+        },
+        {
+          "Operation": "CreateIndex",
+          "Table": "SecurityUsers",
+          "Name": "IX_SecurityUsers_Role",
+          "IndexColumns": [
+            "Role"
+          ],
+          "Unique": false
+        },
+        {
+          "Operation": "CreateTable",
+          "Table": "UserPreferences",
+          "Columns": [
+            {
+              "Name": "EnvironmentKey",
+              "Type": "String",
+              "Length": 64,
+              "Nullable": false
+            },
+            {
+              "Name": "UsernameKey",
+              "Type": "String",
+              "Length": 128,
+              "Nullable": false
+            },
+            {
+              "Name": "Username",
+              "Type": "String",
+              "Length": 128,
+              "Nullable": false
+            },
+            {
+              "Name": "Theme",
+              "Type": "String",
+              "Length": 16,
+              "Nullable": false
+            },
+            {
+              "Name": "StartPage",
+              "Type": "String",
+              "Length": 32,
+              "Nullable": false
+            },
+            {
+              "Name": "GridPageSize",
+              "Type": "Integer",
+              "Nullable": false
+            },
+            {
+              "Name": "CreatedUtc",
+              "Type": "DateTime",
+              "Nullable": false
+            },
+            {
+              "Name": "ModifiedUtc",
+              "Type": "DateTime",
+              "Nullable": false
+            }
+          ],
+          "PrimaryKey": {
+            "Name": "PK_UserPreferences",
+            "Columns": [
+              "EnvironmentKey",
+              "UsernameKey"
+            ]
+          }
+        },
+        {
+          "Operation": "CreateIndex",
+          "Table": "UserPreferences",
+          "Name": "IX_UserPreferences_Username",
+          "IndexColumns": [
+            "Username"
+          ],
+          "Unique": false
+        },
+        {
+          "Operation": "CreateTable",
+          "Table": "UserGridPreferences",
+          "Columns": [
+            {
+              "Name": "EnvironmentKey",
+              "Type": "String",
+              "Length": 64,
+              "Nullable": false
+            },
+            {
+              "Name": "UsernameKey",
+              "Type": "String",
+              "Length": 128,
+              "Nullable": false
+            },
+            {
+              "Name": "Username",
+              "Type": "String",
+              "Length": 128,
+              "Nullable": false
+            },
+            {
+              "Name": "GridKey",
+              "Type": "String",
+              "Length": 64,
+              "Nullable": false
+            },
+            {
+              "Name": "LayoutJson",
+              "Type": "String",
+              "Nullable": false
+            },
+            {
+              "Name": "CreatedUtc",
+              "Type": "DateTime",
+              "Nullable": false
+            },
+            {
+              "Name": "ModifiedUtc",
+              "Type": "DateTime",
+              "Nullable": false
+            }
+          ],
+          "PrimaryKey": {
+            "Name": "PK_UserGridPreferences",
+            "Columns": [
+              "EnvironmentKey",
+              "UsernameKey",
+              "GridKey"
+            ]
+          }
+        },
+        {
+          "Operation": "CreateIndex",
+          "Table": "UserGridPreferences",
+          "Name": "IX_UserGridPreferences_EnvironmentKey_Username",
+          "IndexColumns": [
+            "EnvironmentKey",
+            "Username"
+          ],
+          "Unique": false
+        },
+        {
+          "Operation": "CreateTable",
+          "Table": "ApplicationLogs",
+          "Columns": [
+            {
+              "Name": "Id",
+              "Type": "Long",
+              "Nullable": false,
+              "PrimaryKey": true,
+              "AutoIncrement": true
+            },
+            {
+              "Name": "TimestampUtc",
+              "Type": "UtcDateTime",
+              "Nullable": false
+            },
+            {
+              "Name": "Level",
+              "Type": "String",
+              "Length": 16,
+              "Nullable": false
+            },
+            {
+              "Name": "Category",
+              "Type": "String",
+              "Length": 256,
+              "Nullable": false
+            },
+            {
+              "Name": "EventId",
+              "Type": "Integer",
+              "Nullable": false
+            },
+            {
+              "Name": "EventName",
+              "Type": "String",
+              "Length": 128,
+              "Nullable": false
+            },
+            {
+              "Name": "Username",
+              "Type": "String",
+              "Length": 128,
+              "Nullable": false
+            },
+            {
+              "Name": "EnvironmentKey",
+              "Type": "String",
+              "Length": 64,
+              "Nullable": false
+            },
+            {
+              "Name": "RequestPath",
+              "Type": "String",
+              "Length": 512,
+              "Nullable": false
+            },
+            {
+              "Name": "TraceId",
+              "Type": "String",
+              "Length": 64,
+              "Nullable": false
+            },
+            {
+              "Name": "Message",
+              "Type": "String",
+              "Nullable": false
+            },
+            {
+              "Name": "Exception",
+              "Type": "String",
+              "Nullable": false
+            },
+            {
+              "Name": "PropertiesJson",
+              "Type": "String",
+              "Nullable": false
+            }
+          ]
+        },
+        {
+          "Operation": "CreateIndex",
+          "Table": "ApplicationLogs",
+          "Name": "IX_ApplicationLogs_TimestampUtc",
+          "IndexColumns": [
+            "TimestampUtc"
+          ],
+          "Unique": false
+        },
+        {
+          "Operation": "CreateIndex",
+          "Table": "ApplicationLogs",
+          "Name": "IX_ApplicationLogs_Level_TimestampUtc",
+          "IndexColumns": [
+            "Level",
+            "TimestampUtc"
+          ],
+          "Unique": false
+        },
+        {
+          "Operation": "CreateIndex",
+          "Table": "ApplicationLogs",
+          "Name": "IX_ApplicationLogs_EnvironmentKey_TimestampUtc",
+          "IndexColumns": [
+            "EnvironmentKey",
+            "TimestampUtc"
+          ],
+          "Unique": false
+        },
+        {
+          "Operation": "CreateTable",
+          "Table": "SavedViews",
+          "Columns": [
+            {
+              "Name": "Id",
+              "Type": "String",
+              "Length": 36,
+              "Nullable": false
+            },
+            {
+              "Name": "EnvironmentKey",
+              "Type": "String",
+              "Length": 64,
+              "Nullable": false
+            },
+            {
+              "Name": "UsernameKey",
+              "Type": "String",
+              "Length": 128,
+              "Nullable": false
+            },
+            {
+              "Name": "Username",
+              "Type": "String",
+              "Length": 128,
+              "Nullable": false
+            },
+            {
+              "Name": "GridKey",
+              "Type": "String",
+              "Length": 64,
+              "Nullable": false
+            },
+            {
+              "Name": "ViewName",
+              "Type": "String",
+              "Length": 100,
+              "Nullable": false
+            },
+            {
+              "Name": "ViewNameKey",
+              "Type": "String",
+              "Length": 100,
+              "Nullable": false
+            },
+            {
+              "Name": "Description",
+              "Type": "String",
+              "Length": 500,
+              "Nullable": false
+            },
+            {
+              "Name": "ViewStateJson",
+              "Type": "String",
+              "Nullable": false
+            },
+            {
+              "Name": "CreatedUtc",
+              "Type": "DateTime",
+              "Nullable": false
+            },
+            {
+              "Name": "ModifiedUtc",
+              "Type": "DateTime",
+              "Nullable": false
+            }
+          ],
+          "PrimaryKey": {
+            "Name": "PK_SavedViews",
+            "Columns": [
+              "Id"
+            ]
+          }
+        },
+        {
+          "Operation": "CreateIndex",
+          "Table": "SavedViews",
+          "Name": "IX_SavedViews_EnvironmentKey_UsernameKey_ViewNameKey",
+          "IndexColumns": [
+            "EnvironmentKey",
+            "UsernameKey",
+            "ViewNameKey"
+          ],
+          "Unique": true
+        },
+        {
+          "Operation": "CreateIndex",
+          "Table": "SavedViews",
+          "Name": "IX_SavedViews_EnvironmentKey_UsernameKey_GridKey_ViewName",
+          "IndexColumns": [
+            "EnvironmentKey",
+            "UsernameKey",
+            "GridKey",
+            "ViewName"
+          ],
+          "Unique": false
+        },
+        {
+          "Operation": "CreateTable",
+          "Table": "OutboundReports",
+          "Columns": [
+            {
+              "Name": "Id",
+              "Type": "String",
+              "Nullable": false,
+              "Length": 36
+            },
+            {
+              "Name": "EnvironmentKey",
+              "Type": "String",
+              "Nullable": false,
+              "Length": 64
+            },
+            {
+              "Name": "OwnerUsernameKey",
+              "Type": "String",
+              "Nullable": false,
+              "Length": 128
+            },
+            {
+              "Name": "OwnerUsername",
+              "Type": "String",
+              "Nullable": false,
+              "Length": 128
+            },
+            {
+              "Name": "GridKey",
+              "Type": "String",
+              "Nullable": false,
+              "Length": 64
+            },
+            {
+              "Name": "Title",
+              "Type": "String",
+              "Nullable": false,
+              "Length": 200
+            },
+            {
+              "Name": "Description",
+              "Type": "String",
+              "Nullable": false,
+              "Length": 1000
+            },
+            {
+              "Name": "Recipients",
+              "Type": "String",
+              "Nullable": false,
+              "Length": 4000
+            },
+            {
+              "Name": "ViewStateJson",
+              "Type": "String",
+              "Nullable": false
+            },
+            {
+              "Name": "SourceContextJson",
+              "Type": "String",
+              "Nullable": false
+            },
+            {
+              "Name": "ScheduleJson",
+              "Type": "String",
+              "Nullable": false
+            },
+            {
+              "Name": "Enabled",
+              "Type": "Boolean",
+              "Nullable": false
+            },
+            {
+              "Name": "NextRunUtc",
+              "Type": "DateTime",
+              "Nullable": true
+            },
+            {
+              "Name": "LastRunUtc",
+              "Type": "DateTime",
+              "Nullable": true
+            },
+            {
+              "Name": "LastStatus",
+              "Type": "String",
+              "Nullable": false,
+              "Length": 32
+            },
+            {
+              "Name": "LastMessage",
+              "Type": "String",
+              "Nullable": false,
+              "Length": 2000
+            },
+            {
+              "Name": "CreatedUtc",
+              "Type": "DateTime",
+              "Nullable": false
+            },
+            {
+              "Name": "ModifiedUtc",
+              "Type": "DateTime",
+              "Nullable": false
+            }
+          ],
+          "PrimaryKey": {
+            "Name": "PK_OutboundReports",
+            "Columns": [
+              "Id"
+            ]
+          }
+        },
+        {
+          "Operation": "CreateIndex",
+          "Table": "OutboundReports",
+          "Name": "IX_OutboundReports_EnvironmentKey_Enabled_NextRunUtc",
+          "IndexColumns": [
+            "EnvironmentKey",
+            "Enabled",
+            "NextRunUtc"
+          ],
+          "Unique": false
+        },
+        {
+          "Operation": "CreateIndex",
+          "Table": "OutboundReports",
+          "Name": "IX_OutboundReports_EnvironmentKey_OwnerUsernameKey_Title",
+          "IndexColumns": [
+            "EnvironmentKey",
+            "OwnerUsernameKey",
+            "Title"
+          ],
+          "Unique": false
+        },
+        {
+          "Operation": "CreateTable",
+          "Table": "OutboundReportHistory",
+          "Columns": [
+            {
+              "Name": "Id",
+              "Type": "Long",
+              "Nullable": false,
+              "PrimaryKey": true,
+              "AutoIncrement": true
+            },
+            {
+              "Name": "ReportId",
+              "Type": "String",
+              "Nullable": false,
+              "Length": 36
+            },
+            {
+              "Name": "EnvironmentKey",
+              "Type": "String",
+              "Nullable": false,
+              "Length": 64
+            },
+            {
+              "Name": "Title",
+              "Type": "String",
+              "Nullable": false,
+              "Length": 200
+            },
+            {
+              "Name": "StartedUtc",
+              "Type": "DateTime",
+              "Nullable": false
+            },
+            {
+              "Name": "CompletedUtc",
+              "Type": "DateTime",
+              "Nullable": false
+            },
+            {
+              "Name": "Status",
+              "Type": "String",
+              "Nullable": false,
+              "Length": 32
+            },
+            {
+              "Name": "RowCount",
+              "Type": "Integer",
+              "Nullable": false
+            },
+            {
+              "Name": "RecipientCount",
+              "Type": "Integer",
+              "Nullable": false
+            },
+            {
+              "Name": "Message",
+              "Type": "String",
+              "Nullable": false,
+              "Length": 2000
+            }
+          ]
+        },
+        {
+          "Operation": "CreateIndex",
+          "Table": "OutboundReportHistory",
+          "Name": "IX_OutboundReportHistory_StartedUtc",
+          "IndexColumns": [
+            "StartedUtc"
+          ],
+          "Unique": false
+        },
+        {
+          "Operation": "CreateIndex",
+          "Table": "OutboundReportHistory",
+          "Name": "IX_OutboundReportHistory_ReportId_StartedUtc",
+          "IndexColumns": [
+            "ReportId",
+            "StartedUtc"
+          ],
+          "Unique": false
+        }
+      ]
+    }
+  ],
+  "ConfigurationMigrations": []
+}

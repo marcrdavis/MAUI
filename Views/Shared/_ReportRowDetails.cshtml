@@ -1,0 +1,57 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   Shared report row actions and full-record details modal. *@
+@model ReportPageViewModel
+@{
+    var isTaskRun = string.Equals(Model.Grid.GridId, "taskruns", StringComparison.OrdinalIgnoreCase);
+}
+<div class="task-row-action-menu" data-report-row-action-menu hidden role="menu" aria-label="Report row actions">
+    @if (isTaskRun)
+    {
+        <button type="button" data-report-row-command="task-information" role="menuitem">Task Information</button>
+        <div class="task-row-action-divider" role="separator"></div>
+        <button type="button" data-report-row-command="details" role="menuitem">View Run Details</button>
+        <button type="button" data-report-row-command="file-activity" role="menuitem">View File Activity (This Run)</button>
+        <button type="button" data-report-row-command="audit" role="menuitem">View Audit Records</button>
+        <div class="task-row-action-divider" role="separator"></div>
+        <button type="button" data-report-row-command="copy-task-name" role="menuitem">Copy Task Name</button>
+        <button type="button" data-report-row-command="edit-task" role="menuitem">Edit Task</button>
+        <div class="task-row-action-divider" role="separator"></div>
+        <button type="button" data-report-row-command="toggle-task-enabled" role="menuitem">Enable Task</button>
+        <button type="button" data-report-row-command="run-task" role="menuitem">Run Task Now</button>
+    }
+    else
+    {
+        <button type="button" data-report-row-command="details" role="menuitem">View Details</button>
+        @if (string.Equals(Model.Grid.GridId, "audit", StringComparison.OrdinalIgnoreCase))
+        {
+            <button type="button" data-report-row-command="changes" role="menuitem" hidden>View Changes</button>
+        }
+        <button type="button" data-report-row-command="run-history" role="menuitem">View Run History</button>
+        <button type="button" data-report-row-command="file-activity" role="menuitem">View File Activity (This Run)</button>
+        <button type="button" data-report-row-command="audit" role="menuitem">View Audit Records</button>
+    }
+</div>
+
+<dialog class="task-details-dialog report-details-dialog" data-report-details-dialog>
+    <form method="dialog" class="task-details-card report-details-card">
+        <div class="settings-header">
+            <div>
+                <h2 data-report-details-title>Report Details</h2>
+                <p>All values returned for this record.</p>
+            </div>
+            <button type="submit" class="dialog-close" aria-label="Close">×</button>
+        </div>
+        <div class="report-details-body">
+            <table class="report-details-table" aria-label="Report row details">
+                <thead>
+                    <tr><th>Field</th><th>Value</th></tr>
+                </thead>
+                <tbody data-report-details-body></tbody>
+            </table>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="submit" class="secondary-button">Close</button>
+        </div>
+    </form>
+</dialog>

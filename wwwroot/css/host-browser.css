@@ -1,0 +1,128 @@
+/* Shared Host browser uses the established Task Editor presentation. */
+.maui-host-browser-dialog {
+    width: min(760px, calc(100vw - 40px));
+}
+.maui-host-browser-card {
+    width: min(760px, calc(100vw - 40px));
+    /* Allocate the frame before loading; only the listing scrolls as folders change. */
+    height: min(700px, calc(100vh - 48px));
+    max-height: calc(100vh - 48px);
+}
+.maui-host-browser-card > .settings-header,
+.maui-host-browser-card > .settings-footer {
+    flex-shrink: 0;
+}
+.maui-host-browser-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    gap: 14px;
+    min-height: 0;
+}
+.maui-host-browser-body > :not(.maui-host-browser-list) {
+    flex-shrink: 0;
+}
+.maui-host-browser-list {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--surface);
+}
+.maui-host-browser-parent {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    width: 100%;
+    min-height: 34px;
+    padding: 7px 12px;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+}
+.maui-host-browser-parent:hover:not(:disabled) { background: var(--surface-3); }
+.maui-host-browser-header,
+.maui-host-browser-row {
+    display: grid;
+    grid-template-columns: minmax(230px, 1fr) 110px 170px;
+    align-items: center;
+    gap: 10px;
+    min-height: 34px;
+    padding: 0 12px;
+}
+.maui-host-browser-header {
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text-soft);
+    font-weight: 700;
+    font-size: 12px;
+}
+.maui-host-browser-rows {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+.maui-host-browser-rows:empty { display: none; }
+.maui-host-browser-parent { flex-shrink: 0; }
+.maui-host-browser-row {
+    width: 100%;
+    border: 0;
+    border-bottom: 1px solid var(--border-subtle, var(--border));
+    background: transparent;
+    color: var(--text);
+    text-align: left;
+    font: inherit;
+}
+.maui-host-browser-row { cursor: pointer; }
+.maui-host-browser-row:hover,
+.maui-host-browser-row.selected { background: var(--surface-3); }
+.maui-host-browser-row.file {
+    color: var(--text-muted);
+}
+.maui-host-browser-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+.maui-host-browser-name span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.maui-host-browser-loading,
+.maui-host-browser-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex: 1;
+    min-height: 0;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+.maui-host-browser-loading[hidden],
+.maui-host-browser-empty[hidden],
+.maui-host-browser-parent[hidden] { display: none !important; }
+@media (max-width: 720px) {
+    .maui-host-browser-header,
+    .maui-host-browser-row { grid-template-columns: minmax(180px, 1fr) 90px; }
+    .maui-host-browser-header > :last-child,
+    .maui-host-browser-row > :last-child { display: none; }
+}
+.maui-host-browser-header > button { display:flex; align-items:center; gap:8px; padding:8px 0; border:0; background:transparent; color:inherit; font:inherit; text-align:left; cursor:pointer; }
+.maui-host-browser-header > button:hover:not(:disabled), .maui-host-browser-header > button.sorted { color:var(--accent); }
+.maui-host-browser-header > button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+.maui-host-browser-input-action { display:flex; align-items:center; gap:10px; min-width:0; }
+.maui-host-browser-input-action input { flex:1; min-width:0; }
+.maui-host-browser-dialog { font-size:12px; }
+.maui-host-browser-row:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
+.maui-host-browser-dialog [hidden] { display:none !important; }

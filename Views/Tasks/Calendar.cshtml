@@ -1,0 +1,134 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   This Razor file is part of the MAUI application. *@
+@model TaskCalendarPageViewModel
+@{
+    ViewData["Title"] = "Task Calendar";
+}
+
+<div class="page-heading calendar-page-heading">
+    <div>
+        <h1>Tasks <span class="heading-context">/ Calendar</span></h1>
+        <p>Past Task Runs and projected scheduled runs in MOVEit server time. Select a run to view details.</p>
+    </div>
+</div>
+
+<form class="task-calendar-antiforgery" hidden>@Html.AntiForgeryToken()</form>
+<div data-task-calendar-config
+     data-initial-date="@Model.InitialDate"
+     data-calendar-data-url="@Url.Action("CalendarData", "Tasks")"
+     data-task-details-url="@Url.Action("Details", "Tasks")"
+     data-login-url="@Url.Action("SessionExpired", "Account")"></div>
+
+<div class="inline-alert error-alert task-calendar-error" data-task-calendar-error hidden></div>
+<div class="inline-alert task-calendar-warning" data-task-calendar-warning hidden></div>
+<div class="toast" data-task-calendar-toast></div>
+
+<div class="grid-search-row task-calendar-search-row">
+    <select class="task-calendar-search-mode" data-calendar-search-mode aria-label="Calendar task-name search mode">
+        <option value="search" selected>Search</option>
+        <option value="filter">Filter</option>
+    </select>
+    <label class="search-box">
+        <span class="icon"><partial name="_Icon" model="@("search")" /></span>
+        <input type="text" data-calendar-search placeholder="Search task names..." autocomplete="off" />
+        <button type="button" data-calendar-search-clear class="search-clear" aria-label="Clear search">×</button>
+    </label>
+    <div class="grid-count task-calendar-search-count" data-calendar-search-count hidden aria-live="polite">
+        <strong data-calendar-match-count>0</strong><span data-calendar-match-label>matching runs</span>
+    </div>
+</div>
+
+<div class="task-calendar-shell" data-task-calendar-shell>
+    <section class="task-calendar-main" aria-label="Task calendar">
+        <div class="task-calendar-toolbar">
+            <div class="task-calendar-navigation" aria-label="Calendar navigation">
+                <button type="button" class="secondary-button calendar-icon-button" data-calendar-previous aria-label="Previous period" title="Previous period">‹</button>
+                <button type="button" class="secondary-button calendar-icon-button" data-calendar-next aria-label="Next period" title="Next period">›</button>
+                <button type="button" class="secondary-button" data-calendar-today>Today</button>
+                <h2 data-calendar-title>Calendar</h2>
+            </div>
+            <div class="task-calendar-toolbar-options">
+                <div class="calendar-segmented-control" role="group" aria-label="Calendar view">
+                    <button type="button" data-calendar-view="month" class="active">Month</button>
+                    <button type="button" data-calendar-view="week">Week</button>
+                    <button type="button" data-calendar-view="day">Day</button>
+                </div>
+                <label class="calendar-color-control">
+                    <span>Color by</span>
+                    <select data-calendar-color-by>
+                        <option value="sourceHostType">Source Host Type</option>
+                        <option value="resourceGroup">Resource Group</option>
+                        <option value="mauiFolder">MAUI Folder</option>
+                        <option value="status">Status</option>
+                    </select>
+                </label>
+                <button type="button" class="secondary-button" data-calendar-refresh>Refresh</button>
+            </div>
+        </div>
+
+        <div class="task-calendar-loading" data-calendar-loading hidden>
+            <span class="inline-spinner" aria-hidden="true"></span>
+            <span>Loading calendar…</span>
+        </div>
+        <div class="task-calendar-stage" data-calendar-stage></div>
+
+        <div class="task-calendar-legend" data-calendar-legend>
+            <div class="task-calendar-legend-items" data-calendar-legend-items></div>
+        </div>
+    </section>
+
+    <aside class="task-calendar-details" data-calendar-details aria-label="Selected Task details">
+        <div class="task-calendar-details-empty" data-calendar-details-empty>
+            <h2>Details</h2>
+            <p>Select a Task Run or upcoming run from the calendar to see Task and run information.</p>
+        </div>
+        <div class="task-calendar-details-content" data-calendar-details-content hidden>
+            <div class="task-calendar-details-heading">
+                <div>
+                    <span class="calendar-details-kind" data-calendar-details-kind></span>
+                    <h2 data-calendar-details-name></h2>
+                    <span class="calendar-details-id" data-calendar-details-id></span>
+                </div>
+            </div>
+            <div class="task-calendar-details-scroll">
+                <section class="calendar-details-section">
+                    <h3>Run</h3>
+                    <div class="calendar-details-grid" data-calendar-run-details></div>
+                </section>
+                <section class="calendar-details-section">
+                    <h3>Task</h3>
+                    <div class="calendar-details-grid" data-calendar-task-details></div>
+                </section>
+                <section class="calendar-details-section">
+                    <h3>Organization</h3>
+                    <div class="calendar-details-grid" data-calendar-organization-details></div>
+                </section>
+                <div class="inline-alert error-alert" data-calendar-details-error hidden></div>
+            </div>
+            <div class="task-calendar-details-actions">
+                <button type="button" class="primary-button" data-calendar-open-editor>Open Task Editor</button>
+            </div>
+        </div>
+    </aside>
+</div>
+
+<dialog class="task-calendar-slot-dialog" data-calendar-slot-dialog>
+    <div class="task-calendar-slot-card">
+        <div class="settings-header">
+            <div>
+                <h2 data-calendar-slot-title>Runs</h2>
+                <p data-calendar-slot-subtitle></p>
+            </div>
+            <button type="button" class="dialog-close" data-calendar-slot-close aria-label="Close">×</button>
+        </div>
+        <div class="task-calendar-slot-list" data-calendar-slot-list></div>
+        <div class="settings-footer">
+            <button type="button" class="secondary-button" data-calendar-slot-close>Close</button>
+        </div>
+    </div>
+</dialog>
+
+@section Scripts {
+    <script src="~/js/task-calendar.js" asp-append-version="true"></script>
+}

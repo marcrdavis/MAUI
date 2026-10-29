@@ -1,0 +1,249 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   This Razor file is part of the MAUI application. *@
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+@model HostsPageViewModel
+@{
+    ViewData["Title"] = "Hosts";
+    var useMauiHostEditor = bool.TryParse(Configuration["Editors:UseMauiHostEditor:Value"], out var enabledHostEditor) && enabledHostEditor;
+    var filterLabel = Model.ActiveFilter switch
+    {
+        "local-file-system" => "Local File System",
+        "unc-share" => "UNC Share",
+        "moveit-transfer" => "MOVEit Transfer",
+        "ftp-ftps" => "FTP/FTPS",
+        "ssh-sftp" => "SSH/SFTP",
+        "pop3" => "POP3 (Incoming Email)",
+        "smtp" => "SMTP (Outgoing Email)",
+        "amazon-s3" => "Amazon S3",
+        "onedrive" => "Microsoft OneDrive",
+        "azure-blob" => "Azure Blob",
+        "sharepoint" => "SharePoint",
+        "google-storage" => "Google Storage",
+        _ => "All Hosts"
+    };
+    ViewData["GridToolbarRightPrefixPartial"] = "_HostRefreshControls";
+    ViewData["HostLastRefreshUtc"] = Model.LastRefreshUtc;
+    ViewData["GridDeferInitialLoad"] = true;
+    var nativePortabilityDialogModel = new NativePortabilityDialogViewModel
+    {
+        ObjectType = "Host",
+        PluralLabel = "Hosts",
+        ShowLeaveTasksDisabled = false,
+        ShowHostSpreadsheetImport = true
+    };
+}
+<div class="page-heading compact-heading">
+    <div><h1>Hosts <span class="heading-context">/ @filterLabel</span></h1><p>Create, review, and manage MOVEit Automation Hosts.</p></div>
+</div>
+
+<div class="inline-alert license-capacity-alert" data-host-license-alert hidden>
+    <strong data-host-license-title>Warning:</strong>
+    <span data-host-license-message></span>
+</div>
+
+@if (TempData["HostLoadError"] is string hostLoadError && !string.IsNullOrWhiteSpace(hostLoadError))
+{
+    <div class="inline-alert error-alert">@hostLoadError</div>
+}
+
+<partial name="_DataGrid" model="Model.Grid" />
+
+<form class="task-antiforgery" hidden>@Html.AntiForgeryToken()</form>
+
+<div data-host-page-config
+     data-login-url="@Url.Action("SessionExpired", "Account")"
+     data-use-maui-host-editor="@(useMauiHostEditor ? "true" : "false")"
+     data-host-editor-shell-url="@Url.Action("Shell", "HostEditor")"
+     data-host-editor-certificates-url="@Url.Action("Certificates", "HostEditor")"
+     data-host-editor-document-libraries-url="@Url.Action("DocumentLibraries", "HostEditor")"
+     data-host-editor-fingerprint-url="@Url.Action("Fingerprint", "HostEditor")"
+     data-host-editor-save-url="@Url.Action("Save", "HostEditor")"
+     data-clone-host-url="@Url.Action("CloneHost", "Hosts")"
+     data-create-host-url="@Url.Action("CreateHost", "Hosts")"
+     data-host-sheet-row-limit="@Model.ImportRowLimit"
+     data-host-sheet-preview-url="@Url.Action("Preview", "HostSpreadsheetImport")"
+     data-host-sheet-analyze-url="@Url.Action("Analyze", "HostSpreadsheetImport")"
+     data-host-sheet-import-url="@Url.Action("ImportRow", "HostSpreadsheetImport")"
+     data-host-sheet-finish-url="@Url.Action("Finish", "HostSpreadsheetImport")"
+     data-export-host-url="@Url.Action("ExportHost", "Hosts")"
+     data-preflight-import-host-url="@Url.Action("PreflightImportHost", "Hosts")"
+     data-import-host-url="@Url.Action("ImportHost", "Hosts")"
+     data-test-host-url="@Url.Action("TestHost", "Hosts")"
+     data-audit-report-url="@Url.Action("Audit", "Records")"
+     data-save-details-url="@Url.Action("SaveDetails", "Hosts")"
+     data-prepare-host-edit-url="@Url.Action("PrepareHostEdit", "Hosts")"
+     data-preflight-undo-host-url="@Url.Action("PreflightUndoHost", "Hosts")"
+     data-undo-host-url="@Url.Action("UndoHost", "Hosts")"
+     data-preflight-delete-host-url="@Url.Action("PreflightDeleteHost", "Hosts")"
+     data-delete-host-url="@Url.Action("DeleteHost", "Hosts")"
+     data-preflight-delete-hosts-url="@Url.Action("PreflightDeleteHosts", "Hosts")"
+     data-delete-hosts-url="@Url.Action("DeleteHosts", "Hosts")"
+     data-preflight-assigned-task-state-url="@Url.Action("PreflightAssignedTaskState", "Hosts")"
+     data-set-assigned-tasks-enabled-url="@Url.Action("SetAssignedTasksEnabled", "Hosts")"
+     data-mark-host-edited-url="@Url.Action("MarkHostEdited", "Hosts")"
+     data-initial-host-grid-url="@Url.Action("InitialGrid", "Hosts")"
+     data-refresh-host-grid-url="@Url.Action("RefreshGrid", "Hosts")"
+     data-ui-host-refresh-seconds="@Model.UiHostRefreshIntervalSeconds"
+     data-active-filter="@Model.ActiveFilter"
+     data-native-editor-session-url="@Url.Action("Session", "NativeEditor")"
+     data-prepare-task-edit-url="@Url.Action("PrepareTaskEdit", "Tasks")"
+     data-mark-task-edited-url="@Url.Action("MarkTaskEdited", "Tasks")"></div>
+
+<div class="task-row-action-menu" data-host-row-action-menu role="menu" aria-label="Host actions" hidden>
+    <button type="button" role="menuitem" data-host-row-command="information">Host Information</button>
+    <button type="button" role="menuitem" data-host-row-command="audit">View Audit Records</button>
+    <button type="button" role="menuitem" data-host-row-command="test" hidden>Test Host</button>
+    <div class="task-row-action-divider" role="separator"></div>
+    <button type="button" role="menuitem" data-host-row-command="enable-assigned-tasks">Enable Assigned Tasks</button>
+    <button type="button" role="menuitem" data-host-row-command="disable-assigned-tasks">Disable Assigned Tasks</button>
+    <div class="task-row-action-divider" role="separator"></div>
+    <button type="button" role="menuitem" data-host-row-command="copy-name">Copy Host Name</button>
+    <button type="button" role="menuitem" data-host-row-command="clone">Clone Host</button>
+    <button type="button" role="menuitem" data-host-row-command="export">Export Host</button>
+    <button type="button" role="menuitem" data-host-row-command="edit">Edit Host</button>
+    <button type="button" role="menuitem" data-host-row-command="undo">Undo Changes</button>
+    <div class="task-row-action-divider" role="separator"></div>
+    <button type="button" role="menuitem" class="task-row-danger-action" data-host-row-command="delete">Delete Host</button>
+</div>
+
+<partial name="_NewHostDialog" model="Model.AutoFormatNewTaskHostNames" />
+
+<partial name="_NativePortabilityDialogs" model="nativePortabilityDialogModel" />
+<partial name="_HostActionDialogs" />
+
+<dialog class="new-task-dialog" data-undo-host-dialog>
+    <div class="new-task-card">
+        <div class="settings-header">
+            <div><h2>Undo Host Changes</h2><p>Select a saved version to restore.</p></div>
+            <button type="button" class="dialog-close" data-undo-host-no aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body">
+            <div class="inline-alert error-alert" data-undo-host-error hidden></div>
+
+            <p data-undo-host-message></p>
+            <div class="undo-history-list" data-undo-host-history></div>
+            <p><strong>The current host configuration will be replaced by the selected version.</strong></p>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-undo-host-no>Cancel</button>
+            <button type="button" class="danger-button" data-undo-host-yes>Restore Selected Version</button>
+        </div>
+    </div>
+</dialog>
+
+<dialog class="new-task-dialog" data-host-assigned-task-state-dialog>
+    <div class="new-task-card host-assigned-task-state-card">
+        <div class="settings-header">
+            <div>
+                <h2 data-host-assigned-task-state-title>Assigned Tasks</h2>
+                <p data-host-assigned-task-state-subtitle>Review the Tasks assigned to this Host before continuing.</p>
+            </div>
+            <button type="button" class="dialog-close" data-host-assigned-task-state-cancel aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body">
+            <div class="inline-alert error-alert" data-host-assigned-task-state-error hidden></div>
+
+            <p data-host-assigned-task-state-summary></p>
+            <div class="host-assigned-task-state-list" data-host-assigned-task-state-list hidden>
+                <div class="host-assigned-task-state-header" role="row">
+                    <div role="columnheader">Task Name</div>
+                    <div role="columnheader">Description</div>
+                    <div role="columnheader">Current Status</div>
+                </div>
+                <div data-host-assigned-task-state-rows></div>
+            </div>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <button type="button" class="secondary-button" data-host-assigned-task-state-cancel>Cancel</button>
+            <button type="button" class="primary-button" data-host-assigned-task-state-confirm disabled>Continue</button>
+        </div>
+    </div>
+</dialog>
+
+<dialog class="task-details-dialog" data-host-details-dialog>
+    <form method="dialog" class="task-details-card" data-host-details-form>
+        <div class="settings-header">
+            <div><h2>Host Information</h2><p>MOVEit properties, MAUI metadata, and Task assignments.</p></div>
+            <button type="submit" class="dialog-close" aria-label="Close">×</button>
+        </div>
+        <div class="task-details-tabs" role="tablist" aria-label="Host information sections">
+            <button type="button" class="task-details-tab active" role="tab" aria-selected="true" data-host-details-tab="information">Information</button>
+            <button type="button" class="task-details-tab" role="tab" aria-selected="false" data-host-details-tab="tasks">Tasks</button>
+        </div>
+        <div class="task-details-body">
+            <div class="inline-alert error-alert" data-host-details-error hidden></div>
+
+            <div class="details-loading" data-host-details-loading role="status" aria-live="polite" aria-label="Loading Host information">
+                <span class="inline-spinner" aria-hidden="true"></span>
+                <span>Loading...</span>
+            </div>
+            <div data-host-details-content hidden>
+                <div data-host-details-panel="information">
+                    <section class="details-section">
+                        <div class="details-section-heading maui-object-properties-heading">
+                            <div class="task-identity-row maui-object-identity" aria-label="Host identity">
+                                <div class="task-identity-item"><span>Type</span><strong data-host-type></strong></div>
+                                <div class="task-identity-item"><span>Host ID</span><strong data-host-id></strong></div>
+                            </div>
+                            <span class="source-badge">MOVEit</span>
+                        </div>
+                        <div class="details-grid">
+                            <label class="field-block full-span"><span>Host Name</span><input class="text-input" data-host-name maxlength="254" required /></label>
+                            <label class="field-block full-span"><span>Description</span><textarea class="text-input textarea-input" rows="3" data-host-description></textarea></label>
+                            <label class="field-block full-span"><span>Resource Groups</span><input class="text-input" data-host-resource-groups readonly /></label>
+                        </div>
+                        <div class="inline-alert info-alert" data-host-edit-note hidden></div>
+                    </section>
+
+                    <section class="details-section">
+                        <div class="details-section-heading"><h3>Additional Information</h3><span class="source-badge local-badge">MAUI</span></div>
+                        <div class="details-grid" data-host-metadata-fields></div>
+                    </section>
+
+                    <section class="details-section audit-section">
+                        <div class="details-section-heading"><h3>Host Metadata</h3><span class="source-badge local-badge">MAUI</span></div>
+                        <div class="audit-grid" data-host-metadata-audit></div>
+                    </section>
+                </div>
+
+                <div data-host-details-panel="tasks" hidden>
+                    <section class="details-section">
+                    <div class="details-section-heading details-related-tasks-heading"><div><h3>Assigned Tasks</h3><p>Visible Tasks that reference this Host.</p></div></div>
+                    <div class="host-tasks-empty" data-host-tasks-empty hidden>No visible Tasks currently reference this Host.</div>
+                    <div class="host-tasks-list" data-host-tasks-list hidden>
+                        <div class="host-tasks-header" role="row">
+                            <div role="columnheader">Task ID</div>
+                            <div role="columnheader">Task Name</div>
+                        </div>
+                        <div data-host-tasks-rows></div>
+                    </div>
+                    </section>
+                </div>
+            </div>
+
+        </div>
+        <div class="settings-footer">
+            <button type="button" class="secondary-button" data-host-details-cancel>Close</button>
+            <button type="button" class="primary-button" data-host-details-save>Save</button>
+        </div>
+    </form>
+</dialog>
+
+@if (useMauiHostEditor)
+{
+    <partial name="Editors/_HostEditorDialog" />
+}
+
+@section Scripts {
+    @if (useMauiHostEditor)
+    {
+        <link rel="stylesheet" href="~/css/editors/host-editor.css" asp-append-version="true" />
+        <script src="~/js/editors/host-editor.js" asp-append-version="true"></script>
+    }
+    <script src="~/js/native-portability.js" asp-append-version="true"></script>
+    <script src="~/js/shared/host-actions.js" asp-append-version="true"></script>
+    <script src="~/js/host-spreadsheet-import.js" asp-append-version="true"></script>
+    <script src="~/js/shared/new-host-dialog.js" asp-append-version="true"></script>
+    <script src="~/js/hosts.js" asp-append-version="true"></script>
+}

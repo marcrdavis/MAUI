@@ -1,0 +1,677 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   This Razor file is part of the MAUI application. *@
+@using System.Text.Json
+@using System.Globalization
+@inject MoveItAutomationUI.Services.MoveIt.IMoveItSessionService ObjectAccessSession
+@model GridViewModel
+@{
+    var options = Model.Options;
+    var isMoveItAdmin = ObjectAccessSession.Get()?.Info?.IsAdmin == true;
+    var copyAllowed = (Model.GridId is "tasks" or "hosts" or "scripts" or "datelists" or "keysandcertificates" or "keysandcerts")
+        && isMoveItAdmin && MauiSecurityService.IsAdmin(User.Identity?.Name)
+        && Context.RequestServices.GetRequiredService<MoveItAutomationUI.Features.EnvironmentCopy.EnvironmentCopyCoordinator>().Enabled;
+    var bulkActions = options.BulkActions.Where(x => !x.Equals("Copy Between Environments", StringComparison.OrdinalIgnoreCase) && !x.Equals("Copy To", StringComparison.OrdinalIgnoreCase)).ToList();
+    if (copyAllowed) { var beforeDelete = bulkActions.FindIndex(x => x.StartsWith("Delete", StringComparison.OrdinalIgnoreCase)); bulkActions.Insert(beforeDelete < 0 ? bulkActions.Count : beforeDelete, "Copy To"); }
+    var defaultColumnsJson = JsonSerializer.Serialize(options.DefaultColumns);
+    var availableColumnsJson = JsonSerializer.Serialize(options.AvailableColumns);
+    var pageSizesJson = JsonSerializer.Serialize(Model.PageSizeOptions.Where(size => size > 0).Distinct().ToArray());
+    var searchColumnsJson = JsonSerializer.Serialize(Model.SearchColumns);
+    var isReportGrid = Model.GridId is "taskruns" or "fileactivity" or "audit";
+    var hasRowDetails = isReportGrid || Model.GridId == "upcomingruns";
+    var hasRowInfoActions = isReportGrid || Model.GridId is "reports" or "upcomingruns" || Model.Rows.Any(row => !string.IsNullOrWhiteSpace(row.InfoActionUrl));
+    var totalCount = Model.TotalCountOverride ?? Model.Rows.Count;
+    var displayedCount = Model.DisplayedCountOverride ?? Model.Rows.Count;
+    var activeSavedViewId = Context.Request.Query["savedView"].ToString();
+    var reportEditId = Context.Request.Query["reportEdit"].ToString();
+    var isReportEditRequest = Model.ShowCreateReportAction && !string.IsNullOrWhiteSpace(reportEditId);
+    var enableTaskFilenameSearch = Model.GridId == "tasks" && !isReportEditRequest;
+    var searchPlaceholder = isReportEditRequest && Model.GridId == "tasks"
+        ? "Search task names, descriptions, resource groups, and metadata" : Model.SearchPlaceholder;
+    var gridPreferenceKey = string.IsNullOrWhiteSpace(Model.PreferenceKey) ? Model.GridId : Model.PreferenceKey;
+    var persistGridPreference = string.IsNullOrWhiteSpace(activeSavedViewId) && !isReportEditRequest;
+    // Relative-date filter macros use MAUI's application/server-local wall clock, not the browser time zone.
+    var dateMacroNow = DateTime.Now.ToString("yyyy-MM-dd'T'HH:mm:ss", CultureInfo.InvariantCulture);
+    var dateFilterZone = TimeZoneInfo.TryConvertWindowsIdToIanaId(TimeZoneInfo.Local.Id, out var ianaZone) ? ianaZone : TimeZoneInfo.Local.Id;
+    var userGridLayout = await UserPreferencesService.GetCurrentGridLayoutAsync(gridPreferenceKey);
+    var userGridLayoutJson = userGridLayout is null
+        ? string.Empty
+        : JsonSerializer.Serialize(userGridLayout.Layout, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+    // Deferred grids server-render an empty row set, load their first authoritative rows asynchronously, and keep the table Loading shell (including hidden column/filter rows) until their script signals maui:grid-initial-data-ready.
+    var deferInitialGridData = ViewData["GridDeferInitialLoad"] is true;
+}
+<div class="grid-load-shell is-loading"
+     data-grid-load-shell
+     data-grid-initial-load-deferred="@deferInitialGridData.ToString().ToLowerInvariant()">
+<section class="data-workspace @(isReportEditRequest ? "report-edit-mode" : string.Empty)" aria-busy="true" data-grid="@Model.GridId" data-task-filename-search-url="@(enableTaskFilenameSearch ? Url.Action("Index", "TaskFilenameSearch") : null)" data-grid-preference-key="@gridPreferenceKey" data-grid-preference-persistence-enabled="@persistGridPreference.ToString().ToLowerInvariant()" data-default-columns='@defaultColumnsJson' data-available-columns='@availableColumnsJson' data-default-page-size="@Model.DefaultPageSize" data-page-sizes='@pageSizesJson' data-search-columns='@searchColumnsJson' data-fit-columns-to-grid="@Model.FitColumnsToGrid.ToString().ToLowerInvariant()" data-highlight-failed-tasks-in-grid="@Model.HighlightFailedTasksInGrid.ToString().ToLowerInvariant()" data-select-rows-beyond-grid-size="@Model.SelectRowsBeyondGridSize.ToString().ToLowerInvariant()" data-row-selection-enabled="@Model.EnableRowSelection.ToString().ToLowerInvariant()" data-total-count-override="@(Model.TotalCountOverride?.ToString(CultureInfo.InvariantCulture) ?? string.Empty)" data-displayed-count-override="@(Model.DisplayedCountOverride?.ToString(CultureInfo.InvariantCulture) ?? string.Empty)" data-active-saved-view-id="@activeSavedViewId" data-user-grid-layout='@userGridLayoutJson' data-default-sort-column="@Model.DefaultSortColumn" data-default-sort-direction="@Model.DefaultSortDirection" data-date-macro-now="@dateMacroNow" data-date-filter-zone="@dateFilterZone" data-date-filter-locale="@CultureInfo.CurrentCulture.Name">
+    <div class="sticky-grid-tools">
+        <div class="grid-search-row">
+            @if (ViewData["GridSearchPrefixPartial"] is string searchPrefixPartial && !string.IsNullOrWhiteSpace(searchPrefixPartial))
+            {
+                <partial name="@searchPrefixPartial" />
+            }
+            <label class="search-box">
+                <span class="icon"><partial name="_Icon" model="@("search")" /></span>
+                <input type="text" data-grid-search placeholder="@searchPlaceholder" autocomplete="off" />
+                <button type="button" data-search-clear class="search-clear" aria-label="Clear search">×</button>
+            </label>
+            @if (isReportGrid)
+            {
+                <div class="grid-count report-batch-navigation" aria-live="polite">
+                    <button type="button" class="grid-count-link" data-report-fetch-previous hidden>Fetch Previous @Model.Rows.Count</button>
+                    <span class="report-batch-range" data-report-batch-range>Rows <strong data-report-range-start>@(displayedCount > 0 ? 1 : 0)</strong> to <strong data-report-range-end>@displayedCount</strong> of <strong data-report-total-count>@totalCount</strong> <span>@Model.EntityName.ToLowerInvariant()</span></span>
+                    @if (!string.IsNullOrWhiteSpace(Model.CountActionText))
+                    {
+                        <button type="button" class="grid-count-link" data-grid-count-action>@Model.CountActionText</button>
+                    }
+                    <span class="report-grid-count-internal" aria-hidden="true">
+                        <strong data-filtered-count>@displayedCount</strong>
+                        <strong data-total-count>@totalCount</strong>
+                    </span>
+                </div>
+            }
+            else
+            {
+                <div class="grid-count" aria-live="polite"><strong data-filtered-count>@displayedCount</strong><span>of</span><strong data-total-count>@totalCount</strong><span>@Model.EntityName.ToLowerInvariant()</span>@if (!string.IsNullOrWhiteSpace(Model.CountActionText)) { <button type="button" class="grid-count-link" data-grid-count-action>@Model.CountActionText</button> }</div>
+            }
+        </div>
+
+        <div class="grid-toolbar">
+            <div class="toolbar-group">
+                <div class="menu-control" data-menu>
+                    <button type="button" class="toolbar-button primary-toolbar icon-text-button grid-actions-button" data-menu-button aria-haspopup="menu" aria-expanded="false"><span>Actions</span><span class="button-caret">⌄</span></button>
+                    <div class="dropdown-menu dropdown-left" data-menu-panel>
+                        @if (!isReportEditRequest)
+                        {
+                            @foreach (var action in options.AddActions)
+                            {
+                                <button type="button" data-grid-action="@action">@action</button>
+                            }
+                        }
+                        <button type="button" data-grid-export-csv>Export View to CSV</button>
+                        @if (!isReportEditRequest)
+                        {
+                            <button type="button" data-grid-print-view>Print View</button>
+                            @if (Model.ShowCreateReportAction || Model.ShowSavedViewActions)
+                            {
+                                <div class="dropdown-divider" data-grid-saved-view-divider></div>
+                            }
+                        }
+                        @if (Model.ShowCreateReportAction)
+                        {
+                            <button type="button" data-grid-create-report>@(isReportEditRequest ? "Update Report" : "Create Report")</button>
+                            @if (isReportEditRequest)
+                            {
+                                <div class="dropdown-divider"></div>
+                                <button type="button" class="menu-danger-action" data-grid-delete-report disabled>Delete Report</button>
+                            }
+                        }
+                        @if (Model.ShowSavedViewActions && !isReportEditRequest)
+                        {
+                            <button type="button" data-grid-create-view>Create View</button>
+                            <button type="button" data-grid-update-view hidden>Update View</button>
+                            <button type="button" class="menu-danger-action" data-grid-delete-view hidden>Delete View</button>
+                        }
+                    </div>
+                </div>
+                @if ((Model.ShowBulkActions || copyAllowed) && !isReportEditRequest)
+                {
+                    <div class="menu-control" data-menu>
+                        <button type="button" class="toolbar-button" data-menu-button data-bulk-button aria-haspopup="menu" aria-expanded="false" disabled>Bulk Actions <span class="button-caret">⌄</span></button>
+                        <div class="dropdown-menu dropdown-left @(copyAllowed ? "environment-copy-bulk-menu" : null)" data-menu-panel>
+                            @foreach (var action in bulkActions)
+                            {
+                                var isDeleteAction = action?.TrimStart().StartsWith("Delete", StringComparison.OrdinalIgnoreCase) == true;
+                                <button type="button" class="@(isDeleteAction ? "menu-danger-action" : null)" data-grid-action="@action">@action</button>
+                            }
+                        </div>
+                    </div>
+                    <span class="selection-count" data-selection-count></span>
+                }
+                @if (Model.ShowCreateReportAction)
+                {
+                    <div class="grid-report-edit-context" data-grid-report-edit-context hidden>
+                        <span>Editing Report.</span>
+                    </div>
+                }
+            </div>
+            <div class="toolbar-group toolbar-right">
+                @if (ViewData["GridToolbarRightPrefixPartial"] is string toolbarPrefixPartial && !string.IsNullOrWhiteSpace(toolbarPrefixPartial))
+                {
+                    <partial name="@toolbarPrefixPartial" />
+                }
+                <button type="button" class="toolbar-button icon-text-button" data-clear-filters title="Clear column filters"><span class="icon"><partial name="_Icon" model="@("filterx")" /></span><span>Clear filters</span></button>
+                <button type="button" class="toolbar-button icon-text-button" data-grid-settings><span class="icon"><partial name="_Icon" model="@("columns")" /></span><span>Grid Settings</span></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-card">
+        <div class="grid-initial-loading" data-grid-initial-loading role="status" aria-live="polite">
+            <span class="inline-spinner" aria-hidden="true"></span>
+            <span>Loading...</span>
+        </div>
+        <div class="table-scroll">
+            <table class="data-grid-table" data-grid-table>
+                <thead>
+                    <tr class="column-header-row">
+                        <th class="select-column @(hasRowInfoActions ? "has-row-info" : "")">
+                            @if (Model.EnableRowSelection)
+                            {
+                                <div class="row-select-tools">
+                                    <input type="checkbox" data-page-select aria-label="Select all visible rows" />
+                                </div>
+                            }
+                        </th>
+                        @foreach (var column in Model.Columns)
+                        {
+                            var initiallyVisible = options.DefaultColumns.Contains(column.Key, StringComparer.OrdinalIgnoreCase);
+                            <th data-column="@column.Key" data-type="@column.Type" data-default-width="@(column.DefaultWidth > 0 ? column.DefaultWidth.ToString(CultureInfo.InvariantCulture) : string.Empty)" class="@(initiallyVisible ? "" : "column-hidden")" draggable="true">
+                                <button type="button" class="sort-button" data-sort-button>
+                                    <span>@column.Label</span><span class="sort-indicator" aria-hidden="true"></span>
+                                </button>
+                                <span class="resize-handle" data-resize-handle title="Drag to resize. Double-click to size to contents."></span>
+                            </th>
+                        }
+                    </tr>
+                    @* Date/Time filter macro controls are rendered from column Type metadata so grid-specific code never has to guess from labels or keys. *@
+                    <tr class="column-filter-row">
+                        <th class="select-column">
+                            <button type="button"
+                                    class="column-filter-help-button"
+                                    data-filter-help-button
+                                    title="Filter Help"
+                                    aria-label="Open Filter Help">
+                                <span class="icon"><partial name="_Icon" model="@("filter")" /></span>
+                            </button>
+                        </th>
+                        @foreach (var column in Model.Columns)
+                        {
+                            var initiallyVisible = options.DefaultColumns.Contains(column.Key, StringComparer.OrdinalIgnoreCase);
+                            var isDateTimeColumn = column.Type.Equals("datetime", StringComparison.OrdinalIgnoreCase);
+                            <th data-column="@column.Key" data-type="@column.Type" class="@(initiallyVisible ? "" : "column-hidden")">
+                                <div class="column-filter-control @(isDateTimeColumn ? "has-date-macro" : string.Empty)">
+                                    <input type="text" data-column-filter="@column.Key" placeholder="Filter…" aria-label="Filter @column.Label" />
+                                    <button type="button"
+                                            class="column-filter-action-button column-filter-clear-button"
+                                            data-column-filter-clear="@column.Key"
+                                            title="Clear Filter"
+                                            aria-label="Clear Filter for @column.Label"
+                                            disabled>
+                                        <span class="icon"><partial name="_Icon" model="@("x")" /></span>
+                                    </button>
+                                    @if (isDateTimeColumn)
+                                    {
+                                        <button type="button"
+                                                class="column-filter-action-button column-filter-macro-button"
+                                                data-date-macro-button
+                                                data-date-macro-column="@column.Key"
+                                                data-date-macro-label="@column.Label"
+                                                title="Choose a relative-date macro"
+                                                aria-label="Choose a relative-date macro for @column.Label">
+                                            <span class="icon"><partial name="_Icon" model="@("clock")" /></span>
+                                        </button>
+                                    }
+                                </div>
+                            </th>
+                        }
+                    </tr>
+                </thead>
+                <tbody data-grid-body>
+                    @foreach (var row in Model.Rows)
+                    {
+                        var isExpiredCertificate = Model.GridId == "keysandcertificates"
+                            && row.RawValues.TryGetValue("IsExpiredCertificate", out var expiredCertificateValue)
+                            && expiredCertificateValue == "1";
+                        var rowValuesJson = hasRowDetails ? JsonSerializer.Serialize(row.Values) : "{}";
+                        <tr data-row-id="@row.Id" data-row-values="@rowValuesJson" class="@(isExpiredCertificate ? "row-expired-certificate" : null)">
+                            <td class="select-column @((isReportGrid || !string.IsNullOrWhiteSpace(row.InfoActionUrl)) ? "has-row-info" : "")">
+                                <div class="row-select-tools">
+                                    @{
+                                        var explicitlyNotSelectable = row.RawValues.TryGetValue("Selectable", out var rowSelectableValue) && rowSelectableValue == "0";
+                                        var builtInScriptSelectionDisabled = Model.GridId == "scripts"
+                                            && row.RawValues.TryGetValue("IsBuiltIn", out var rowBuiltInSelectionValue)
+                                            && rowBuiltInSelectionValue == "1";
+                                        // Effective permissions are resolved by the shared selection controller.
+                                        // Keep non-admin selection closed until that check has completed.
+                                        var objectSelectionDenied = !isMoveItAdmin && new[] { "tasks", "hosts", "scripts", "datelists", "globalparameters", "keysandcertificates", "keysandcerts" }.Contains(Model.GridId);
+                                        var rowSelectionDisabled = explicitlyNotSelectable || builtInScriptSelectionDisabled || objectSelectionDenied;
+                                        var selectionDisabledText = builtInScriptSelectionDisabled
+                                            ? "Built-in Scripts cannot be selected for bulk actions"
+                                            : "This row cannot be selected for bulk actions";
+                                        var selectionDisabledTitle = builtInScriptSelectionDisabled
+                                            ? "Built-in MOVEit Scripts are read-only and cannot be selected for bulk actions."
+                                            : "This row is not eligible for bulk actions.";
+                                    }
+                                    @if (Model.EnableRowSelection)
+                                    {
+                                        <input type="checkbox"
+                                               data-row-selection-blocked="@((explicitlyNotSelectable || builtInScriptSelectionDisabled) ? "true" : "false")"
+                                               data-row-select
+                                               value="@row.Id"
+                                               aria-label="@(rowSelectionDisabled ? selectionDisabledText : "Select row")"
+                                               title="@(rowSelectionDisabled ? selectionDisabledTitle : null)"
+                                               disabled="@(rowSelectionDisabled ? "disabled" : null)" />
+                                    }
+                                    @if (isReportGrid)
+                                    {
+                                        var reportActionLabel = Model.GridId switch
+                                        {
+                                            "taskruns" => "Run",
+                                            "fileactivity" => "Activity",
+                                            _ => "Audit"
+                                        };
+                                        <button type="button"
+                                                class="row-actions-button"
+                                                data-report-row-menu-button
+                                                data-row-id="@row.Id"
+                                                title="@reportActionLabel actions"
+                                                aria-label="@reportActionLabel actions"
+                                                aria-haspopup="menu"
+                                                aria-expanded="false">…</button>
+                                    }
+                                    else if (Model.GridId == "reports")
+                                    {
+                                        var reportName = row.Values.TryGetValue("ReportName", out var rowReportName) ? rowReportName : row.Id;
+                                        var reportEnabled = row.RawValues.TryGetValue("Enabled", out var rowReportEnabled) && rowReportEnabled == "1";
+                                        <button type="button"
+                                                class="row-actions-button"
+                                                data-report-management-row-menu-button
+                                                data-row-id="@row.Id"
+                                                data-report-name="@reportName"
+                                                data-report-enabled="@(reportEnabled.ToString().ToLowerInvariant())"
+                                                title="Report actions for @reportName"
+                                                aria-label="Report actions for @reportName"
+                                                aria-haspopup="menu"
+                                                aria-expanded="false">…</button>
+                                    }
+                                    else if (Model.GridId == "tasks" && !string.IsNullOrWhiteSpace(row.InfoActionUrl))
+                                    {
+                                        var taskName = row.Values.TryGetValue("Name", out var rowTaskName) ? rowTaskName : row.Id;
+                                        var taskEnabled = row.RawValues.TryGetValue("Enabled", out var rowTaskEnabled) && rowTaskEnabled == "1";
+                                        var taskRunnable = row.RawValues.TryGetValue("Runnable", out var rowTaskRunnable) && rowTaskRunnable == "1";
+                                        var taskRunning = row.RawValues.TryGetValue("Running", out var rowTaskRunning) && rowTaskRunning == "1";
+                                        var taskHasUndo = row.RawValues.TryGetValue("HasUndo", out var rowTaskHasUndo) && rowTaskHasUndo == "1";
+                                        var taskType = row.RawValues.TryGetValue("TaskType", out var rowTaskType) ? rowTaskType : string.Empty;
+                                        <button type="button"
+                                                class="row-actions-button"
+                                                data-task-row-menu-button
+                                                data-row-id="@row.Id"
+                                                data-task-name="@taskName"
+                                                data-task-info-url="@row.InfoActionUrl"
+                                                data-task-enabled="@(taskEnabled.ToString().ToLowerInvariant())"
+                                                data-task-runnable="@(taskRunnable.ToString().ToLowerInvariant())"
+                                                data-task-running="@(taskRunning.ToString().ToLowerInvariant())"
+                                                data-task-has-undo="@(taskHasUndo.ToString().ToLowerInvariant())"
+                                                data-task-type="@taskType"
+                                                title="Task actions for @taskName"
+                                                aria-label="Task actions for @taskName"
+                                                aria-haspopup="menu"
+                                                aria-expanded="false">…</button>
+                                    }
+                                    else if (Model.GridId == "upcomingruns")
+                                    {
+                                        var taskId = row.RawValues.TryGetValue("TaskID", out var upcomingTaskId) ? upcomingTaskId : string.Empty;
+                                        var taskName = row.Values.TryGetValue("TaskName", out var upcomingTaskName) ? upcomingTaskName : taskId;
+                                        if (!string.IsNullOrWhiteSpace(taskId))
+                                        {
+                                            <button type="button"
+                                                    class="row-actions-button"
+                                                    data-upcoming-task-row-menu-button
+                                                    data-task-id="@taskId"
+                                                    data-task-name="@taskName"
+                                                    data-task-info-url="@row.InfoActionUrl"
+                                                    title="Task actions for @taskName"
+                                                    aria-label="Task actions for @taskName"
+                                                    aria-haspopup="menu"
+                                                    aria-expanded="false">…</button>
+                                        }
+                                    }
+                                    else if (Model.GridId == "hosts" && !string.IsNullOrWhiteSpace(row.InfoActionUrl))
+                                    {
+                                        var hostName = row.Values.TryGetValue("Name", out var rowHostName) ? rowHostName : row.Id;
+                                        var hostType = row.Values.TryGetValue("Type", out var rowHostType) ? rowHostType : string.Empty;
+                                        var hostTypeCode = row.RawValues.TryGetValue("TypeCode", out var rowHostTypeCode) ? rowHostTypeCode : string.Empty;
+                                        var hostDestination = row.Values.TryGetValue("Destination", out var rowHostDestination) ? rowHostDestination : string.Empty;
+                                        var hostTestSupported = row.RawValues.TryGetValue("TestSupported", out var rowHostTestSupported) && rowHostTestSupported == "1";
+                                        var hostHasUndo = row.RawValues.TryGetValue("HasUndo", out var rowHostHasUndo) && rowHostHasUndo == "1";
+                                        <button type="button"
+                                                class="row-actions-button"
+                                                data-host-row-menu-button
+                                                data-row-id="@row.Id"
+                                                data-host-name="@hostName"
+                                                data-host-type="@hostType"
+                                                data-host-type-code="@hostTypeCode"
+                                                data-host-destination="@hostDestination"
+                                                data-host-test-supported="@(hostTestSupported.ToString().ToLowerInvariant())"
+                                                data-host-info-url="@row.InfoActionUrl"
+                                                data-host-has-undo="@(hostHasUndo.ToString().ToLowerInvariant())"
+                                                title="Host actions for @hostName"
+                                                aria-label="Host actions for @hostName"
+                                                aria-haspopup="menu"
+                                                aria-expanded="false">…</button>
+                                    }
+                                    else if (Model.GridId == "scripts" && !string.IsNullOrWhiteSpace(row.InfoActionUrl))
+                                    {
+                                        var scriptName = row.Values.TryGetValue("Name", out var rowScriptName) ? rowScriptName : row.Id;
+                                        var scriptHasUndo = row.RawValues.TryGetValue("HasUndo", out var rowScriptHasUndo) && rowScriptHasUndo == "1";
+                                        var scriptCanEditDelete = !row.RawValues.TryGetValue("CanEditDelete", out var rowScriptCanEditDelete) || rowScriptCanEditDelete == "1";
+                                        var scriptIsBuiltIn = row.RawValues.TryGetValue("IsBuiltIn", out var rowScriptIsBuiltIn) && rowScriptIsBuiltIn == "1";
+                                        <button type="button"
+                                                class="row-actions-button"
+                                                data-script-row-menu-button
+                                                data-row-id="@row.Id"
+                                                data-script-name="@scriptName"
+                                                data-script-info-url="@row.InfoActionUrl"
+                                                data-script-has-undo="@(scriptHasUndo.ToString().ToLowerInvariant())"
+                                                data-script-can-edit-delete="@(scriptCanEditDelete.ToString().ToLowerInvariant())"
+                                                data-script-built-in="@(scriptIsBuiltIn.ToString().ToLowerInvariant())"
+                                                title="Script actions for @scriptName"
+                                                aria-label="Script actions for @scriptName"
+                                                aria-haspopup="menu"
+                                                aria-expanded="false">…</button>
+                                    }
+                                    else if (Model.GridId == "datelists" && !string.IsNullOrWhiteSpace(row.InfoActionUrl))
+                                    {
+                                        var dateListName = row.Values.TryGetValue("Name", out var rowDateListName) ? rowDateListName : row.Id;
+                                        var dateListHasUndo = row.RawValues.TryGetValue("HasUndo", out var rowDateListHasUndo) && rowDateListHasUndo == "1";
+                                        var dateListCanEditDelete = !row.RawValues.TryGetValue("CanEditDelete", out var rowDateListCanEditDelete) || rowDateListCanEditDelete == "1";
+                                        <button type="button" class="row-actions-button" data-date-list-row-menu-button data-row-id="@row.Id" data-date-list-name="@dateListName" data-date-list-info-url="@row.InfoActionUrl" data-date-list-has-undo="@(dateListHasUndo.ToString().ToLowerInvariant())" data-date-list-can-edit-delete="@(dateListCanEditDelete.ToString().ToLowerInvariant())" title="Date List actions for @dateListName" aria-label="Date List actions for @dateListName" aria-haspopup="menu" aria-expanded="false">…</button>
+                                    }
+                                    else if (Model.GridId == "globalparameters" && !string.IsNullOrWhiteSpace(row.InfoActionUrl) && isMoveItAdmin)
+                                    {
+                                        var parameterName = row.Values.TryGetValue("Name", out var rowParameterName) ? rowParameterName : row.Id;
+                                        var parameterSecure = row.RawValues.TryGetValue("Secure", out var rowParameterSecure) && rowParameterSecure == "1";
+                                        <button type="button" class="row-actions-button" data-global-parameter-row-menu-button data-row-id="@row.Id" data-parameter-name="@parameterName" data-parameter-info-url="@row.InfoActionUrl" data-parameter-secure="@(parameterSecure.ToString().ToLowerInvariant())" title="Global Parameter actions for @parameterName" aria-label="Global Parameter actions for @parameterName" aria-haspopup="menu" aria-expanded="false">…</button>
+                                    }
+                                    else if (Model.GridId == "keysandcertificates" && !string.IsNullOrWhiteSpace(row.InfoActionUrl))
+                                    {
+                                        var keyName = row.Values.TryGetValue("Name", out var rowKeyName) ? rowKeyName : row.Id;
+                                        var keyType = row.Values.TryGetValue("Type", out var rowKeyType) ? rowKeyType : string.Empty;
+                                        var keyEditorId = row.RawValues.TryGetValue("NativeEditorId", out var rowKeyNativeEditorId) && !string.IsNullOrWhiteSpace(rowKeyNativeEditorId)
+                                            ? rowKeyNativeEditorId
+                                            : (row.RawValues.TryGetValue("Id", out var rowKeyNativeId) ? rowKeyNativeId : string.Empty);
+                                        var keyAuditId = !string.IsNullOrWhiteSpace(keyEditorId) ? keyEditorId : row.Id;
+                                        <button type="button" class="row-actions-button" data-key-certificate-row-menu-button data-row-id="@row.Id" data-key-certificate-name="@keyName" data-key-certificate-type="@keyType" data-key-certificate-audit-id="@keyAuditId" data-key-certificate-info-url="@row.InfoActionUrl" title="Key/Certificate actions for @keyName" aria-label="Key/Certificate actions for @keyName" aria-haspopup="menu" aria-expanded="false">…</button>
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(row.InfoActionUrl) && Model.GridId != "globalparameters")
+                                    {
+                                        <button type="button" class="row-info-button" data-row-info-url="@row.InfoActionUrl" data-row-id="@row.Id" title="Task information" aria-label="Open task information">
+                                            <span class="icon"><partial name="_Icon" model="@("info")" /></span>
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                            @foreach (var column in Model.Columns)
+                            {
+                                var initiallyVisible = options.DefaultColumns.Contains(column.Key, StringComparer.OrdinalIgnoreCase);
+                                var value = row.Values.TryGetValue(column.Key, out var cellValue) ? cellValue : string.Empty;
+                                var raw = row.RawValues.TryGetValue(column.Key, out var rawValue) ? rawValue : value;
+                                <td data-column="@column.Key" data-value="@raw" class="@(initiallyVisible ? "" : "column-hidden")">
+                                    @if (column.Type == "status")
+                                    {
+                                        var statusTooltip = string.Empty;
+                                        if ((value.Equals("Failed", StringComparison.OrdinalIgnoreCase) || value.Equals("Failure", StringComparison.OrdinalIgnoreCase))
+                                            && row.Values.TryGetValue("StatusMessage", out var statusMessageValue))
+                                        {
+                                            statusTooltip = statusMessageValue;
+                                        }
+                                        else if (Model.GridId == "tasks" && row.Values.TryGetValue("LastResult", out var lastResultValue))
+                                        {
+                                            statusTooltip = lastResultValue;
+                                        }
+                                        else if (Model.GridId == "hosts" && column.Key == "Health" && row.Values.TryGetValue("HealthDetail", out var healthDetailValue))
+                                        {
+                                            statusTooltip = healthDetailValue;
+                                        }
+                                        <span class="status-pill status-@(value.ToLowerInvariant().Replace(" ", "-"))" title="@statusTooltip"><span></span>@value</span>
+                                    }
+                                    else if (column.Type == "boolean")
+                                    {
+                                        <span class="boolean-value @(value == "Yes" ? "is-yes" : "is-no")">@value</span>
+                                    }
+                                    else if (column.Key == "TaskName" && (Model.GridId == "taskruns" || Model.GridId == "fileactivity" || Model.GridId == "audit" || Model.GridId == "upcomingruns"))
+                                    {
+                                        var reportTaskId = row.RawValues.TryGetValue("TaskID", out var reportTaskIdValue) ? reportTaskIdValue : string.Empty;
+                                        if (!string.IsNullOrWhiteSpace(reportTaskId))
+                                        {
+                                            <button type="button"
+                                                    class="row-primary-link"
+                                                    data-native-task-editor
+                                                    data-row-id="@reportTaskId"
+                                                    data-task-name="@value"
+                                                    title="Open @value in MOVEit">@value</button>
+                                        }
+                                        else
+                                        {
+                                            <span title="@value">@value</span>
+                                        }
+                                    }
+                                    else if (column.Key == "ReportName" && Model.GridId == "reports")
+                                    {
+                                        var reportEditViewUrl = row.RawValues.TryGetValue("ReportEditViewUrl", out var reportEditViewUrlValue) ? reportEditViewUrlValue : string.Empty;
+                                        if (!string.IsNullOrWhiteSpace(reportEditViewUrl))
+                                        {
+                                            <a class="row-primary-link" href="@reportEditViewUrl" title="Edit Report view for @value">@value</a>
+                                        }
+                                        else
+                                        {
+                                            <span>@value</span>
+                                        }
+                                    }
+                                    else if (column.Key == "Name" && Model.GridId == "tasks")
+                                    {
+                                        var taskDescription = row.Values.TryGetValue("Description", out var descriptionValue) ? descriptionValue : string.Empty;
+                                        <button type="button"
+                                                class="row-primary-link"
+                                                data-native-task-editor
+                                                data-row-id="@row.Id"
+                                                data-task-name="@value"
+                                                title="@taskDescription">@value</button>
+                                    }
+                                    else if (column.Key == "Name" && Model.GridId == "hosts")
+                                    {
+                                        var hostDescription = row.Values.TryGetValue("Description", out var descriptionValue) ? descriptionValue : string.Empty;
+                                        <button type="button"
+                                                class="row-primary-link"
+                                                data-native-host-editor
+                                                data-row-id="@row.Id"
+                                                data-host-name="@value"
+                                                title="@hostDescription">@value</button>
+                                    }
+                                    else if (column.Key == "Name" && Model.GridId == "scripts")
+                                    {
+                                        var scriptDescription = row.Values.TryGetValue("Description", out var descriptionValue) ? descriptionValue : string.Empty;
+                                        var scriptIsBuiltIn = row.RawValues.TryGetValue("IsBuiltIn", out var scriptBuiltInValue) && scriptBuiltInValue == "1";
+                                        <button type="button"
+                                                class="row-primary-link"
+                                                data-native-script-editor
+                                                data-row-id="@row.Id"
+                                                data-script-name="@value"
+                                                data-script-built-in="@(scriptIsBuiltIn.ToString().ToLowerInvariant())"
+                                                title="@scriptDescription">@value</button>
+                                    }
+                                    else if (column.Key == "Name" && Model.GridId == "datelists")
+                                    {
+                                        var dateListDescription = row.Values.TryGetValue("Description", out var descriptionValue) ? descriptionValue : string.Empty;
+                                        <button type="button" class="row-primary-link" data-native-date-list-editor data-row-id="@row.Id" data-date-list-name="@value" title="@dateListDescription">@value</button>
+                                    }
+                                    else if (column.Key == "Name" && Model.GridId == "globalparameters")
+                                    {
+                                        if (isMoveItAdmin)
+                                        {
+                                        <button type="button" class="row-primary-link" data-global-parameter-information data-row-id="@row.Id" data-parameter-name="@value" data-parameter-info-url="@row.InfoActionUrl">@value</button>
+                                        }
+                                        else
+                                        {
+                                            <span title="@value">@value</span>
+                                        }
+                                    }
+                                    else if (column.Key == "Name" && Model.GridId == "keysandcertificates")
+                                    {
+                                        <span title="@value">@value</span>
+                                    }
+                                    else if (column.Key == "Name")
+                                    {
+                                        <button type="button" class="row-primary-link" data-grid-action="Open @Model.EntityName.TrimEnd('s')">@value</button>
+                                    }
+                                    else
+                                    {
+                                        <span title="@value">@value</span>
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <div class="empty-state" data-empty-state hidden>
+                <div class="empty-icon"><span class="icon"><partial name="_Icon" model="@("search")" /></span></div>
+                <h3>No @Model.EntityName.ToLowerInvariant() match</h3>
+                <p>Adjust the search or column filters to see more results.</p>
+                <button type="button" class="secondary-button" data-clear-filters>Clear filters</button>
+            </div>
+        </div>
+        <div class="grid-pager">
+            <div><span data-pager-summary>Showing 1–@Model.Rows.Count of @Model.Rows.Count</span></div>
+            <div class="pager-controls">
+                <label>Rows <select data-page-size></select></label>
+                <button type="button" class="pager-button" data-page-prev aria-label="Previous page">‹</button>
+                <span data-page-indicator>1 / 1</span>
+                <button type="button" class="pager-button" data-page-next aria-label="Next page">›</button>
+            </div>
+        </div>
+    </div>
+
+    <dialog class="settings-dialog" data-settings-dialog>
+        <form method="dialog" class="settings-card">
+            <div class="settings-header"><div><h2>Grid Settings</h2><p>Choose visible columns, rows per page, and column order.</p></div><button type="submit" class="dialog-close" aria-label="Close">×</button></div>
+            <div class="settings-body">
+                <section><h3>Visible columns</h3><p class="settings-help">Drag column headers to reorder them. Double-click a column separator to fit that column to its widest value. Layout changes are saved automatically in your MAUI preferences.</p><div class="column-choice-list" data-column-choices></div></section>
+                <section><h3>Rows per page</h3><p class="settings-help">This setting is shared by all grids for the current user.</p><select class="text-input compact-input" data-settings-page-size></select></section>
+            </div>
+            <div class="settings-footer"><button type="button" class="secondary-button" data-restore-defaults>Restore defaults</button><button type="button" class="secondary-button" data-settings-cancel>Cancel</button><button type="button" class="primary-button" data-settings-apply>Apply</button></div>
+        </form>
+    </dialog>
+
+    <dialog class="settings-dialog filter-help-dialog" data-filter-help-dialog>
+        <form method="dialog" class="settings-card">
+            <div class="settings-header">
+                <div><h2>Filter Help</h2><p>Supported grid filter syntax, operators, and relative-date macros.</p></div>
+                <button type="submit" class="dialog-close" aria-label="Close">×</button>
+            </div>
+            <div class="settings-body filter-help-dialog-body">
+                <section>
+                    <h3>General usage</h3>
+                    <p class="settings-help">Filters are case-insensitive and use contains matching by default. Multiple values in one filter are combined with OR; filters in different columns are combined with AND.</p>
+                    <table class="filter-help-table">
+                        <thead><tr><th>Syntax</th><th>Meaning</th><th>Example</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>value</code></td><td>Contains the value</td><td><code>Failed</code></td></tr>
+                            <tr><td><code>not:value</code></td><td>Does not contain the value</td><td><code>not:Failed</code></td></tr>
+                            <tr><td><code>!value</code></td><td>Shorthand for <code>not:</code></td><td><code>!Failed</code></td></tr>
+                            <tr><td><code>value or value</code></td><td>Matches either value</td><td><code>Failed or Incomplete</code></td></tr>
+                            <tr><td><code>value, value</code></td><td>Comma-separated OR values</td><td><code>Failed, Incomplete, Disabled</code></td></tr>
+                        </tbody>
+                    </table>
+                    <div class="filter-help-notes">
+                        <p><strong>OR operator:</strong> <code>or</code> is treated as an operator only when it appears as a standalone word between two values. A standalone <code>or</code> or words such as <code>order</code> are treated as normal text.</p>
+                        <p><strong>Search box:</strong> the main grid search also supports comma and <code>or</code> alternatives, plus <code>not:</code> and <code>!</code>.</p>
+                    </div>
+                </section>
+
+                <section>
+                    <h3>Numeric columns</h3>
+                    <p class="settings-help">Numeric columns support comparison operators. Alternatives can be combined with comma or <code>or</code>.</p>
+                    <table class="filter-help-table compact">
+                        <thead><tr><th>Syntax</th><th>Meaning</th><th>Example</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>&lt;number</code></td><td>Less than</td><td><code>&lt;1</code></td></tr>
+                            <tr><td><code>&lt;=number</code></td><td>Less than or equal to</td><td><code>&lt;=1</code></td></tr>
+                            <tr><td><code>&gt;number</code></td><td>Greater than</td><td><code>&gt;1</code></td></tr>
+                            <tr><td><code>&gt;=number</code></td><td>Greater than or equal to</td><td><code>&gt;=1</code></td></tr>
+                            <tr><td><code>comparison, comparison</code></td><td>Either numeric condition</td><td><code>&gt;=10, &lt;0</code></td></tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <section>
+                    <h3>Date &amp; Time comparisons</h3>
+                    <p class="settings-help">Compare dates or timestamps regardless of the grid's display format. Use <code>M/d/yyyy</code>, a month name such as <code>Oct 21, 2026</code>, or ISO <code>yyyy-MM-dd</code>; add a 12-hour or 24-hour time when needed. Dates without a time use the whole calendar day. Explicit time-zone offsets are converted to MAUI server-local time.</p>
+                    <table class="filter-help-table compact">
+                        <thead><tr><th>Syntax</th><th>Meaning</th><th>Example</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>&lt;date</code></td><td>Before the date or timestamp</td><td><code>&lt;10/21/2026</code></td></tr>
+                            <tr><td><code>&lt;=date</code></td><td>Through the whole date; at or before a timestamp</td><td><code>&lt;=2026-10-21 14:30</code></td></tr>
+                            <tr><td><code>&gt;date</code></td><td>After the whole date; later than a timestamp</td><td><code>&gt;Oct 21, 2026</code></td></tr>
+                            <tr><td><code>&gt;=date</code></td><td>On or after the date or timestamp</td><td><code>&gt;=10/21/2026 2:30 PM</code></td></tr>
+                            <tr><td><code>!date</code> or <code>not:date</code></td><td>Exclude the date or timestamp</td><td><code>!2026-10-21</code></td></tr>
+                            <tr><td><code>date, date</code> or <code>date or date</code></td><td>Match either alternative, including comparisons and macros</td><td><code>&lt;[today], [nextmonth]</code></td></tr>
+                        </tbody>
+                    </table>
+                    <p class="settings-help">A comma inside a date such as <code>Oct 21, 2026</code> stays part of that date. Partial text filters continue to work. For macro comparisons, <code>&lt;</code>/<code>&gt;=</code> use the period's beginning and <code>&lt;=</code>/<code>&gt;</code> use its end. Example: <code>&lt;=[nextmonth]</code> includes all dates through the end of next month.</p>
+                </section>
+
+                <section>
+                    <h3>Date &amp; Time macros</h3>
+                    <p class="settings-help">Date/Time columns support the same relative-date macros available from the clock button. Macros use the MAUI server-local calendar date and remain dynamic in Saved Views and Reports. Prefix a macro with <code>not:</code> or <code>!</code> to exclude it.</p>
+                    <div class="filter-help-macro-list" data-filter-help-macros></div>
+                </section>
+            </div>
+            <div class="settings-footer"><button type="submit" class="secondary-button">Close</button></div>
+        </form>
+    </dialog>
+
+    <dialog class="settings-dialog date-macro-dialog" data-date-macro-dialog>
+        <form method="dialog" class="settings-card">
+            <div class="settings-header">
+                <div><h2>Date Filter Macros</h2><p>Choose a relative date for <strong data-date-macro-target>this Date/Time column</strong>.</p></div>
+                <button type="submit" class="dialog-close" aria-label="Close">×</button>
+            </div>
+            <div class="settings-body date-macro-dialog-body">
+                <p class="settings-help">The selected macro remains dynamic in saved Views and MAUI Reports. Macros use the MAUI server-local calendar date.</p>
+                <div class="date-macro-choice-list">
+                    <button type="button" class="date-macro-choice" data-date-macro-option="[today]"><code>[today]</code><span>Current calendar day</span></button>
+                    <button type="button" class="date-macro-choice" data-date-macro-option="[yesterday]"><code>[yesterday]</code><span>Previous calendar day</span></button>
+                    <button type="button" class="date-macro-choice" data-date-macro-option="[tomorrow]"><code>[tomorrow]</code><span>Next calendar day</span></button>
+                    <button type="button" class="date-macro-choice" data-date-macro-option="[thisweek]"><code>[thisweek]</code><span>Current Monday through Sunday</span></button>
+                    <button type="button" class="date-macro-choice" data-date-macro-option="[lastweek]"><code>[lastweek]</code><span>Previous Monday through Sunday</span></button>
+                    <button type="button" class="date-macro-choice" data-date-macro-option="[thismonth]"><code>[thismonth]</code><span>Current calendar month</span></button>
+                    <button type="button" class="date-macro-choice" data-date-macro-option="[lastmonth]"><code>[lastmonth]</code><span>Previous calendar month</span></button>
+                    <button type="button" class="date-macro-choice" data-date-macro-option="[nextmonth]"><code>[nextmonth]</code><span>Next calendar month</span></button>
+                    <button type="button" class="date-macro-choice" data-date-macro-option="[nextquarter]"><code>[nextquarter]</code><span>Next calendar quarter (Jan–Mar, Apr–Jun, Jul–Sep or Oct–Dec)</span></button>
+                    <button type="button" class="date-macro-choice" data-date-macro-option="[nextyear]"><code>[nextyear]</code><span>Next calendar year</span></button>
+                    <button type="button" class="date-macro-choice" data-date-macro-option="[today-7d]"><code>[today-7d]</code><span>Example: exactly 7 days before today</span></button>
+                    <button type="button" class="date-macro-choice" data-date-macro-option="[today+1d]"><code>[today+1d]</code><span>Example: exactly 1 day after today</span></button>
+                    <button type="button" class="date-macro-choice" data-date-macro-option="not:[today]"><code>not:[today]</code><span>Example: exclude today's date; <code>not:</code> can prefix any supported macro</span></button>
+                </div>
+            </div>
+            <div class="settings-footer"><button type="submit" class="secondary-button">Cancel</button></div>
+        </form>
+    </dialog>
+
+    @if (isReportEditRequest)
+    {
+        <partial name="_ReportDeleteDialog" />
+
+        <dialog class="settings-dialog report-edit-cancel-dialog" data-grid-report-edit-cancel-dialog>
+            <div class="settings-card">
+                <div class="settings-header">
+                    <div><h2>Cancel Report Edit?</h2><p>Return to Reports without updating this Report view.</p></div>
+                    <button type="button" class="dialog-close" data-grid-report-edit-cancel-dismiss aria-label="Close">×</button>
+                </div>
+                <div class="settings-body">
+                    <p>Are you sure you want to cancel editing <strong data-grid-report-edit-cancel-name>this Report</strong>?</p>
+                    <p class="settings-help">Any unsaved changes to the Report view will be discarded.</p>
+                </div>
+                <div class="settings-footer">
+                    <button type="button" class="secondary-button" data-grid-report-edit-cancel-dismiss>Continue Editing</button>
+                    <button type="button" class="primary-button" data-grid-report-edit-cancel-confirm>Return to Reports</button>
+                </div>
+            </div>
+        </dialog>
+    }
+
+    <div class="toast" data-prototype-toast role="status" aria-live="polite"></div>
+</section>
+</div>

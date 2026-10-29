@@ -1,0 +1,173 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   First-run setup collects only the minimum configuration required to bring MAUI online. *@
+@model InitialSetupViewModel
+@{
+    ViewData["Title"] = "Initial Setup";
+}
+
+<div class="setup-page"
+     data-setup-page
+     data-test-moveit-url="@Url.Action("TestMoveIt", "Setup")"
+     data-test-database-url="@Url.Action("TestDatabase", "Setup")"
+     data-complete-url="@Url.Action("Complete", "Setup")">
+    <div class="setup-shell">
+        <header class="setup-header">
+            <div class="setup-brand">
+                <img src="@(Model.ApplicationLogo?.StartsWith("/", StringComparison.Ordinal) == true && Model.ApplicationLogo?.StartsWith("//", StringComparison.Ordinal) != true ? Url.Content("~" + Model.ApplicationLogo) : Model.ApplicationLogo)" alt="" class="setup-logo" />
+                <div>
+                    <div class="setup-product">@Model.ApplicationName</div>
+                    <div class="setup-version">Version @Model.ApplicationVersion &middot; Build @MauiReleaseInfo.Build</div>
+                </div>
+            </div>
+            <div class="setup-badge">Initial Setup</div>
+        </header>
+
+        <div class="setup-intro">
+                <div>
+                    <span class="setup-eyebrow">WELCOME TO MAUI</span>
+                    <h1>Configure the essentials.</h1>
+                    <p>Connect one MOVEit Automation server and choose where MAUI stores its metadata. Add failover nodes and other settings after sign-in.</p>
+                </div>
+            </div>
+
+            <form class="setup-form" data-setup-form>
+                @Html.AntiForgeryToken()
+
+                <section class="setup-card" data-setup-section="moveit">
+                    <div class="setup-card-heading">
+                        <div class="setup-step-number">1</div>
+                        <div>
+                            <h2>MOVEit Automation</h2>
+                            <p>Configure the first Automation connection. MAUI generates the internal server identifier automatically.</p>
+                        </div>
+                    </div>
+
+                    <div class="setup-field-grid">
+                        <label class="setup-field">
+                            <span>Display Name</span>
+                            <input class="text-input" value="@Model.DefaultDisplayName" autocomplete="off" data-setup-moveit="displayName" />
+                            <small>Shown to users on the MAUI sign-in screen.</small>
+                        </label>
+                        <label class="setup-field">
+                            <span>Environment Key</span>
+                            <input class="text-input" value="@Model.DefaultEnvironmentKey" placeholder="PROD" maxlength="64" autocomplete="off" data-setup-moveit="environmentKey" />
+                            <small>Stable metadata scope for this Automation environment. Use the same value for failover nodes.</small>
+                        </label>
+                        <label class="setup-field full">
+                            <span>Web Admin URL</span>
+                            <input class="text-input" type="url" value="@Model.DefaultWebAdminUrl" placeholder="https://automation.example.com" autocomplete="off" spellcheck="false" data-setup-moveit="webAdminUrl" />
+                            <small>Base URL used by MAUI for MOVEit Automation REST access.</small>
+                        </label>
+                        <label class="setup-checkbox-row full">
+                            <input type="checkbox" @(Model.AllowInvalidServerCertificates ? "checked" : null) data-setup-moveit="allowInvalidServerCertificates" />
+                            <span><strong>Allow invalid server certificate</strong><small>For development or troubleshooting only. Keep disabled in production.</small></span>
+                        </label>
+                    </div>
+
+                    <div class="setup-test-row">
+                        <button type="button" class="secondary-button" data-test-moveit>Test Connection</button>
+                        <div class="setup-test-status" data-moveit-status>Not tested</div>
+                    </div>
+                </section>
+
+                <section class="setup-card" data-setup-section="database">
+                    <div class="setup-card-heading">
+                        <div class="setup-step-number">2</div>
+                        <div>
+                            <h2>MAUI Database</h2>
+                            <p>The metadata database stores MAUI metadata, folders, undo history, preferences, saved views, Reports, and other application state. It does not modify the MOVEit Automation database.</p>
+                        </div>
+                    </div>
+
+                    <div class="setup-provider-choice" role="radiogroup" aria-label="Database provider">
+                        <label class="setup-provider-option">
+                            <input type="radio" name="setupDatabaseProvider" value="SQLite" @(Model.DatabaseProvider.Equals("SQLite", StringComparison.OrdinalIgnoreCase) ? "checked" : null) data-database-provider />
+                            <span><strong>SQLite</strong><small>Recommended for a single MAUI application instance. No database server required.</small></span>
+                        </label>
+                        <label class="setup-provider-option">
+                            <input type="radio" name="setupDatabaseProvider" value="SqlServer" @(Model.DatabaseProvider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase) ? "checked" : null) data-database-provider />
+                            <span><strong>SQL Server</strong><small>Use SQL Server for centralized database administration or larger MAUI installations. RC1 supports one active MAUI application instance.</small></span>
+                        </label>
+                    </div>
+
+                    <div data-sqlite-fields>
+                        <div class="setup-field-grid">
+                            <label class="setup-field full">
+                                <span>SQLite Database File</span>
+                                <input class="text-input" value="@Model.SqliteDatabaseFile" autocomplete="off" spellcheck="false" data-setup-database="sqliteDatabaseFile" />
+                                <small>Relative paths are resolved from the MAUI application folder. The default <code>Data\maui.db</code> location is outside <code>wwwroot</code>; absolute paths are also supported.</small>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div data-sqlserver-fields hidden>
+                        <div class="setup-field-grid">
+                            <label class="setup-field">
+                                <span>SQL Server</span>
+                                <input class="text-input" placeholder="SQLSERVER01 or SQLSERVER01\INSTANCE" autocomplete="off" spellcheck="false" data-setup-database="sqlServer" />
+                            </label>
+                            <label class="setup-field">
+                                <span>Database</span>
+                                <input class="text-input" placeholder="MAUI" autocomplete="off" spellcheck="false" data-setup-database="sqlDatabase" />
+                                <small>Create the empty database first; MAUI creates and versions its own tables.</small>
+                            </label>
+                            <label class="setup-field full">
+                                <span>Authentication</span>
+                                <select class="text-input" data-setup-database="sqlAuthentication">
+                                    <option value="Integrated" selected>Windows Integrated Authentication</option>
+                                    <option value="Sql">SQL Server Authentication</option>
+                                </select>
+                                <small>Integrated authentication uses the Windows identity running the MAUI application.</small>
+                            </label>
+                            <div class="setup-field-grid full setup-sql-credentials" data-sql-credentials hidden>
+                                <label class="setup-field">
+                                    <span>SQL Username</span>
+                                    <input class="text-input" autocomplete="off" data-setup-database="sqlUsername" disabled />
+                                </label>
+                                <label class="setup-field">
+                                    <span>SQL Password</span>
+                                    <input class="text-input" type="password" autocomplete="new-password" data-setup-database="sqlPassword" disabled />
+                                </label>
+                                <div class="setup-inline-warning full">
+                                    SQL authentication requires the username and password to be stored in the MAUI <code>appsettings.json</code> connection string.
+                                </div>
+                            </div>
+                            <label class="setup-checkbox-row">
+                                <input type="checkbox" checked data-setup-database="sqlEncrypt" />
+                                <span><strong>Encrypt SQL connection</strong><small>Recommended.</small></span>
+                            </label>
+                            <label class="setup-checkbox-row">
+                                <input type="checkbox" data-setup-database="sqlTrustServerCertificate" />
+                                <span><strong>Trust server certificate</strong><small>Use only when the SQL Server certificate cannot be validated normally.</small></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="setup-schema-note">
+                        <div><span>Database schema</span><strong>Version @Model.TargetSchemaVersion</strong></div>
+                        <p>MAUI owns and versions this metadata schema through the authenticated upgrade workflow.</p>
+                    </div>
+
+                    <div class="setup-test-row">
+                        <button type="button" class="secondary-button" data-test-database>Test Database</button>
+                        <div class="setup-test-status" data-database-status>Not tested</div>
+                    </div>
+                </section>
+
+                <section class="setup-finish-card">
+                    <div>
+                        <h2>Ready to initialize MAUI</h2>
+                        <p data-setup-finish-message>Test both connections before completing setup.</p>
+                    </div>
+                    <button type="button" class="primary-button setup-complete-button" data-complete-setup disabled>Complete Setup</button>
+                </section>
+
+                <div class="setup-error" data-setup-error hidden></div>
+            </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/setup.js" asp-append-version="true"></script>
+}

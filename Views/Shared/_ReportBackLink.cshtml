@@ -1,0 +1,11 @@
+@* Author: Marc R. Davis (marcdavis@comcast.net)
+   Project: MAUI - MOVEit Automation UI
+   This Razor file is part of the MAUI application. *@
+@model ReportPageViewModel
+@if (string.IsNullOrWhiteSpace(Context.Request.Query["reportEdit"].ToString()) && !string.IsNullOrWhiteSpace(Model.ReturnUrl))
+{
+    var label = string.IsNullOrWhiteSpace(Model.ReturnLabel) ? "Previous Page" : Model.ReturnLabel;
+    <div class="report-backlink-slot">
+        <a class="report-backlink" href="@Model.ReturnUrl">‹ Back to @label</a>
+    </div>
+}

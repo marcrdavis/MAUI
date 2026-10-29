@@ -1,0 +1,12 @@
+@inject MoveItAutomationUI.Services.MoveIt.IMoveItSessionService ObjectCreationSession
+@model string
+@if (ObjectCreationSession.Get()?.Info?.IsAdmin == false)
+{
+<label class="field-block full-span" data-object-create-group="@Model" hidden>
+    <span>Resource Group</span>
+    <select class="text-input" data-object-resource-group>
+        <option value="">Select a Resource Group</option>
+    </select>
+    <span class="validation-message" data-object-group-message role="status"></span>
+</label>
+}
