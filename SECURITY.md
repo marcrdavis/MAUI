@@ -63,6 +63,10 @@ These findings are treated as false positives rather than replacing the existing
 - Native-editor `postMessage` processing requires the per-launch nonce, exact expected MOVEit origin, and exact popup `WindowProxy` before a message is accepted.
 - Native-editor session-expiration redirects are constrained to the current MAUI origin.
 
+### Client-visible notification logs
+
+Signed-in UI notices are recorded through an authenticated, antiforgery-protected endpoint in the existing MAUI application log. User and MOVEit environment are taken from the server session. Only the displayed message, severity, origin and page path are submitted; no form values, native definitions, request bodies or URL query strings are collected. Common named credential/token values are redacted in the browser and again on the server; treat logs as sensitive operational data and avoid putting secrets in user-visible messages. Messages are bounded and control characters normalized. Records are marked ClientReported and are not authoritative MOVEit audit events. Delivery uses the existing bounded log channel/retention policy; unavailable services and logging database failures can prevent capture.
+
 ## Object and feature boundaries
 
 ### Shared Host and Task mutation safety
@@ -141,6 +145,12 @@ Group dataset saves require the captured successful v0 acknowledgement (status s
 
 Cleanup and optional success-confirmation intent are persisted separately in `Data/quick-transfer-cleanup.json`, without MOVEit passwords/access tokens. Pending confirmations include recipient addresses. Protect this file with the installation's Data ACLs; recovery after restart requires appropriate unattended credentials for the original server. Confirmation is an at-most-once attempt, not a guarantee of delivery.
 
+### Task JSON Editor
+
+This experimental feature defaults off and checks the saved setting, live session and per-Task Edit authorization at its endpoints. Writes require antiforgery protection and opaque current revisions; the browser sends scalar-path changes, never a full Task replacement. Native identities/references, Resource Groups, protected credentials/parameters and managed fields are not editable. Credential values are masked before reaching the browser. JSON content is rendered as text; no JSON is evaluated as code, stored in browser drafts or included in server diagnostic logs. Existing checkout ownership, explicit administrator override and persisted-value verification apply. Bulk saves are independent operations; validation is not a transaction and a concurrent change can still stop a later Task save.
+
+The JSON Editor requires the corruption-warning Proceed confirmation before its Save sequence. Confirmation does not grant permissions or bypass revision/checkout checks. Each affected Task captures its ordinary per-user undo snapshot before the update; snapshot failure blocks that Task's write. A later Task's failure does not roll back earlier successful saves.
+
 ### Experimental environment copy
 
 Copy Between Environments defaults off. Its modal/menu and server endpoints require both MOVEit administrator status and MAUI Admin authorization; Data Access credentials do not grant callers additional MAUI access. Both environment accounts are required and must authenticate as MOVEit administrators. Connections use isolated background sessions and do not replace or clear the browser login.
@@ -168,11 +178,3 @@ The production and test projects should be restored from their declared NuGet pa
 Run SAST against the source tree once. Generated publish/output folders such as `AriDotnetPublish/**`, `bin/**`, and `obj/**` should be excluded from duplicate SAST source analysis when the scanner already analyzes the source files that produced them.
 
 Dependency/SCA scanning should still inspect the resolved dependency graph and/or publish output as appropriate. Excluding generated source copies from SAST is intended only to prevent duplicate findings; it is not a recommendation to omit dependency scanning.
-
-## Client-visible notification logs
-
-Signed-in UI notices are recorded through an authenticated, antiforgery-protected endpoint in the existing MAUI application log. User and MOVEit environment are taken from the server session. Only the displayed message, severity, origin and page path are submitted; no form values, native definitions, request bodies or URL query strings are collected. Common named credential/token values are redacted in the browser and again on the server; treat logs as sensitive operational data and avoid putting secrets in user-visible messages. Messages are bounded and control characters normalized. Records are marked ClientReported and are not authoritative MOVEit audit events. Delivery uses the existing bounded log channel/retention policy; unavailable services and logging database failures can prevent capture.
-
-## Task JSON Editor
-
-This experimental feature defaults off and checks the saved setting, live session and per-Task Edit authorization at its endpoints. Writes require antiforgery protection and opaque current revisions; the browser sends scalar-path changes, never a full Task replacement. Native identities/references, Resource Groups, protected credentials/parameters and managed fields are not editable. Credential values are masked before reaching the browser. JSON content is rendered as text; no JSON is evaluated as code, stored in browser drafts or included in server diagnostic logs. Existing checkout ownership, explicit administrator override and persisted-value verification apply. Bulk saves are independent operations; validation is not a transaction and a concurrent change can still stop a later Task save.

@@ -6,7 +6,7 @@
 
 RC3 builds on the RC2 Task/Host/resource editors, permissions, shared Browse and Copy To baseline. Late RC2 added MOVEit Settings and Lockouts; RC3 organizes those controls and refines the existing workflows. Current application identity is **0.18.511-RC3, build 20261029**, with database/configuration versions **1 / 1**.
 
-- Editor preferences are in **Configuration > Settings > Editors**; Resource Group folder creation is in **General > Folders**. Copy Between Environments remains experimental and off by default.
+- Editor preferences are in **Configuration > Settings > Editors**; Resource Group folder creation is in **General > Folders**. Task JSON Editor and Copy Between Environments are under Experimental and off by default.
 - MOVEit 2026.0 / native engine 18.0 adds version-gated OneDrive Hosts and S3 AWS Config File/EC2 IMDS authentication. Shared version checks cover controls, REST operations and Copy To destinations. SharePoint App Access and Google OAuth use the supplied Test Host/Browse contracts.
 - Mixed Automation 2025.x/2026.x environments require COM API 18.x or a later compatible client on the MAUI host. Backward compatibility with 2025.x is described as observed so far, not guaranteed; validate retained COM workflows for each environment.
 - Build/publish validation checks the DLL, release template and upgrade manifest as one package. Preserve live appsettings.json/Data, replace matching release files together and verify the deployed package to catch mixed-file IIS startup failures.
@@ -19,6 +19,8 @@ RC3 builds on the RC2 Task/Host/resource editors, permissions, shared Browse and
 ## RC3 version history
 
 ### 0.18.511 RC3 — Build 20261029
+
+- Documentation-only follow-up: reorganize README around current RC3 requirements, capabilities, editors/experimental features, permissions, setup, operations and limitations. Consolidate detailed guidance in the existing Installation, Upgrade, Security and Testing guides; preserve compatibility notes, license/disclaimers, historical release records and navigation anchors. Document current JSON warning/undo/reset behavior and clarify the actual Settings locations and keep release history out of README. No application/configuration/version changes or rebuild; previous CI records continue to apply only to their recorded application/test commits.
 
 - Require the explicit Task JSON corruption warning before each Save, with Cancel and the shared red/white destructive Proceed button. Cancel retains staged edits without starting a save. Reject stale confirmation responses after closing/reopening the editor; revalidate current Task revisions after Proceed.
 - Confirm the existing per-Task undo capture remains before each Task update. A failed undo snapshot blocks that Task's write. Add controller regressions for every affected Task and snapshot failures, plus browser checks for the exact warning, Cancel and Proceed behavior.

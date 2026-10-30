@@ -452,7 +452,7 @@ Quick Transfer requires permission to use the selected MOVEit Hosts/resources an
 
 Editor preferences are under **Configuration > Settings > Editors**, immediately after General. MOVEit Settings requires both administrator roles; Groups & Permissions requires MOVEit administrator status. Validate permissions, save/readback, checkout recovery, retained credentials and read-only viewing before enabling editors for operators; use the [acceptance matrix](TESTING.md#rc3-editor-and-crud-acceptance).
 
-**General > Folders**, immediately before System Message, creates root Task folders from Resource Group names as a MOVEit-administrator-only action. It runs independently of Save Configuration. **Copy Between Environments** remains under Experimental.
+**General > Folders**, immediately before System Message, creates root Task folders from Resource Group names as a MOVEit-administrator-only action. It runs independently of Save Configuration. **Task JSON Editor** and **Copy Between Environments** are under Experimental, as described below.
 
 The edit-duration option defaults off and applies to editable Task/Host/Script/Date List editors. Host/Task Auto Save remains independent and per user. Preserve checkout journals and Data Protection keys across deployment. [Security](SECURITY.md#shared-host-and-task-mutation-safety) documents the lifecycle; [Testing](TESTING.md#object-permissions-and-read-only-acceptance) covers administrator/non-admin and read-only validation.
 
@@ -468,11 +468,13 @@ Use the packaged CSV/XLSX files under `Templates/HostImport`, outside `wwwroot`,
 
 The packaged Task import workbook is `Templates\TaskImport\MAUI_ImportTasksTemplate.xlsx`. It is included in the build/publish output and is located outside `wwwroot` (it is not a public HTTP endpoint). Copy and populate this workbook when preparing Task imports through **Tasks > Actions > Import Tasks > CSV / Excel**; only the first worksheet is used. The template does not require write permissions for the MAUI IIS application pool.
 
-### Experimental Task JSON Editor
+### Experimental features
 
-Task JSON Editor defaults off under Configuration > Settings > Experimental. Enable it, Save Configuration and reload Tasks to expose Bulk Actions > JSON Editor. It uses the signed-in MOVEit account and existing Task Edit rights, not Data Access credentials. Keep the compatible COM API installed for revision checks, native Undo and overnight Schedule preservation. Validate the [Task JSON Editor acceptance scenarios](TESTING.md#task-json-editor-acceptance) before enabling it for operators.
+#### Experimental Task JSON Editor
 
-### Experimental environment copy
+Task JSON Editor defaults off under Configuration > Settings > Experimental. Enable it, Save Configuration and reload Tasks to expose Bulk Actions > JSON Editor. It uses the signed-in MOVEit account and existing Task Edit rights, not Data Access credentials. Keep the compatible COM API installed for revision checks, native Undo and overnight Schedule preservation. Save requires the explicit corruption warning and Proceed confirmation. Each affected Task is captured through the usual undo process before its update; a failed capture prevents that Task's write. Validate the [Task JSON Editor acceptance scenarios](TESTING.md#task-json-editor-acceptance) before enabling it for operators.
+
+#### Experimental environment copy
 
 Copy Between Environments defaults off and requires both MOVEit administrator status and MAUI Admin access. Configure administrator Data Access credentials for both environments before enabling it. Keep `Data/EnvironmentCopy` writable and restrict access to retained reports/protected recovery definitions; preserve Data Protection keys. Enable it through Configuration > Settings > Experimental and Save Configuration; reload MAUI to expose Copy To in supported row and bulk menus. Copy recovery retention is 1–90 days, default 30. See [Copy acceptance](TESTING.md#copy-between-environments-acceptance) before live use.
 

@@ -182,11 +182,15 @@ Automated tests deliberately do not replace live product validation. Before a pu
 - Chrome and Edge rendering/navigation, including saved grid state and native-editor return paths.
 - IIS recycle behavior: existing transient sessions should require reauthentication when the server-side MOVEit session is lost.
 
+## Tasks, Hosts and checkout
+
 ### Task JSON Editor acceptance
 
 Enable Task JSON Editor under Experimental, save configuration and reload Tasks. Verify it is absent when off and denied without Task Edit access. Select mixed Traditional/Advanced/Sync Tasks; confirm collapsed trees, protected IDs/credentials, typed edits and unchanged fields. Find OnlyUntilFirstSuccess, preview 0 to 1, uncheck matches, apply locally, review and save. Verify full-batch validation precedes writes, saved values match MOVEit, failed Tasks are highlighted and unaffected saves are not repeated. Test both checkout modes, close/abandonment cleanup, administrator override, concurrent edits, a lost save response and an overnight Schedule pair. Validate all changed Tasks in MOVEit before running them. The session limits are 100 Tasks / 16 MiB total, 1 MiB / 20,000 nodes per Task and 2,000 changes per Task.
 
-## Tasks, Hosts and checkout
+- Opening/reopening the JSON modal and successfully reloading a Task clears Find and Replace with. Apply Changes stays on Find & Replace and performs no writes. Review Changes is dimmed until staged changes exist; both result tables offer matching Rows/page controls and preserve selection across pages.
+- Save displays the exact corruption warning with Cancel and the red/white Proceed button. Cancel retains the staged edits and performs no save. Proceed revalidates before writing; closing/reopening invalidates an earlier confirmation.
+- Verify that each affected Task has its normal undo snapshot from before its update. If a snapshot cannot be stored, that Task must not be written. Validate progress while a Task save is still in flight; the bar must advance with completed Task attempts rather than a timer, and failures must remain visible in results.
 
 ### RC3 editor and CRUD acceptance
 
@@ -715,6 +719,15 @@ Include these checks in RC3 release validation in addition to the normal release
 - Run the Release test build with warnings-as-errors and confirm there are no xUnit2031 diagnostics. `SystemJobBehaviorTests.GetDueJobKeysAsync_SkipsAndReschedulesMissedDailyRun` intentionally counts the matching saved configuration explicitly instead of filtering with LINQ before `Assert.Single`; do not reintroduce `Assert.Single(collection.Where(...))`.
 - Recheck Dashboard File Activity against native MOVEit around the 24-hour boundary. If MAUI and MOVEit are hosted in different timezones, capture representative v1 `LogStamp` values before changing timestamp parsing; do not infer a timezone that the API payload does not establish.
 
+### RC3 notification and import acceptance
+
+Host diagnostics retain a five-minute minimum request budget, extended by native connection/data/retry values up to 30 minutes, with independent cleanup. The suite includes a 16-second release check across the former 15-second cleanup limit. These finite budgets cannot guarantee remote cleanup while MOVEit is unreachable.
+
+- Import Tasks and Import Hosts: show five complete data rows plus the header, including with a horizontal scrollbar. Resize/reopen, switch import modes and analyze again; table sizing must stay stable. Scroll to further rows and verify configured page and import batch sizes remain unchanged. Completed imports keep Close rather than Cancel.
+- Test Host and Preflight: test returned native failures, transport/timeouts and unavailable MOVEit. Keep detailed result rows, put errors/warnings in the modal footer, reset stale feedback on retry/reopen and restore controls after failure. Retain native-aware Host operation timing and independent checkout cleanup; do not release another editor's checkout or invent a successful cleanup while MOVEit is unavailable.
+- Open a parent editor and a child dialog. Trigger modal and background page errors; route to the active dialog, label page notices, preserve native save errors and never display a blurred parent toast. Close/reopen to clear stale feedback.
+- Confirm Information, Warning and Error notices in Configuration > Logs. Verify server-derived username/environment and page path, absence of URL queries/form values, credential redaction, and that logging failure causes no retry storm, recursive message or blocked UI action. Unavailable MAUI/logging infrastructure cannot guarantee delivery.
+
 ## Automated coverage catalogue
 
 ### RC3 automated coverage
@@ -822,12 +835,3 @@ When a defect is fixed, add a regression test when the failure can be reproduced
 ### Test project namespace support
 
 The test project imports `Xunit` globally through its project file, matching the standard xUnit template. Individual test files therefore use `[Fact]`, `[Theory]`, `[InlineData]`, and `Assert` without per-file `using Xunit;` declarations.
-
-### RC3 notification and import acceptance
-
-Host diagnostics retain a five-minute minimum request budget, extended by native connection/data/retry values up to 30 minutes, with independent cleanup. The suite includes a 16-second release check across the former 15-second cleanup limit. These finite budgets cannot guarantee remote cleanup while MOVEit is unreachable.
-
-- Import Tasks and Import Hosts: show five complete data rows plus the header, including with a horizontal scrollbar. Resize/reopen, switch import modes and analyze again; table sizing must stay stable. Scroll to further rows and verify configured page and import batch sizes remain unchanged. Completed imports keep Close rather than Cancel.
-- Test Host and Preflight: test returned native failures, transport/timeouts and unavailable MOVEit. Keep detailed result rows, put errors/warnings in the modal footer, reset stale feedback on retry/reopen and restore controls after failure. Retain native-aware Host operation timing and independent checkout cleanup; do not release another editor's checkout or invent a successful cleanup while MOVEit is unavailable.
-- Open a parent editor and a child dialog. Trigger modal and background page errors; route to the active dialog, label page notices, preserve native save errors and never display a blurred parent toast. Close/reopen to clear stale feedback.
-- Confirm Information, Warning and Error notices in Configuration > Logs. Verify server-derived username/environment and page path, absence of URL queries/form values, credential redaction, and that logging failure causes no retry storm, recursive message or blocked UI action. Unavailable MAUI/logging infrastructure cannot guarantee delivery.

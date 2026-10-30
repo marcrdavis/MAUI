@@ -12,8 +12,6 @@ MAUI upgrades are driven by the cumulative `upgrade.json` manifest included with
 
 **In this guide:** [RC3 upgrade state](#rc3-upgrade-state) · [Before upgrading](#before-upgrading) · [Recommended deployment procedure](#recommended-deployment-procedure) · [After-upgrade checks](#after-upgrade-checks) · [Upgrade implementation reference](#upgrade-implementation-reference)
 
-Audit View Changes becomes available automatically for native rows with comparison data on MOVEit Automation 2026 / engine 18 or later. Sign in again after a MOVEit server upgrade to refresh version capabilities. Existing Audit behavior is unchanged on older or unknown versions; no MAUI schema/configuration migration is required.
-
 ## RC3 upgrade state
 
 | Item | Current package |
@@ -82,6 +80,8 @@ After upgrading, validate the editors and Browse combinations against your MOVEi
 
 Editor Undo reverses one local change in the current opening; grid saved-history restore is separate. No database-schema or configuration-version migration is required for this release. Release-by-release changes and earlier validation records are in [CHANGELOG.md](CHANGELOG.md).
 
+Audit View Changes becomes available automatically for native rows with comparison data on MOVEit Automation 2026 / engine 18 or later. Sign in again after a MOVEit server upgrade to refresh version capabilities. Existing Audit behavior is unchanged on older or unknown versions; no MAUI schema/configuration migration is required.
+
 ### MOVEit version-specific Host features
 
 No MAUI schema/configuration migration is needed for the 2026 Host additions. Reauthenticate after a MOVEit server upgrade to refresh the reported engine version. OneDrive Host and S3 IAM choices require Automation 2026.0 / native engine 18.0 or later and remain hidden when the server version is unknown. Existing access-key Hosts keep their older payload defaults; IAM mode changes use native AuthMethod values and omit inactive credentials. OneDrive Task-step/Quick Transfer composition remains outside the implemented Host profile. SharePoint App Access and Google OAuth use the supplied Test Host/Browse requests; response parsing follows the accepted certificate/HMAC equivalents, with no live S3/Google test claim. Validate against the [MOVEit 2026 matrix](TESTING.md#moveit-2026-host-acceptance) before enabling operational use.
@@ -94,13 +94,19 @@ Existing values remain installation-owned and are preserved. This behavior cover
 
 ### Settings locations and preserved preferences
 
-The six editor preference switches are under **Configuration > Settings > Editors**. **General > Folders / Create Folders** is immediately before System Message. Copy Between Environments is under Experimental.
+The six editor preference switches are under **Configuration > Settings > Editors**. **General > Folders / Create Folders** is immediately before System Message. Task JSON Editor and Copy Between Environments are under Experimental.
 
 There is no configuration-key rename or schema migration. Keep the installation-owned `appsettings.json`; existing preferences and defaults are preserved. An older saved Settings navigation order automatically gains Editors near General while retaining its configured categories. Factory Reset and replacing the live configuration file are not needed for this reorganization.
 
-### Copy Between Environments
+### Experimental features
+
+#### Copy Between Environments
 
 Copy Between Environments is an opt-in experimental feature. It does not require a database-schema or configuration-version migration. Existing installations can save its settings through Configuration; missing setting definitions are added from the release template without replacing the live appsettings.json. Retain `Data/EnvironmentCopy` and Data Protection keys across deployment. An application restart marks unfinished copies Interrupted; it does not resume or replay writes. Inspect known destination IDs and checkout outcomes before retrying. The experimental toggle remains off by default, and both Data Access accounts must be configured as MOVEit administrators. Progress/status refresh recovery does not restart a copy. Follow [Copy acceptance](TESTING.md#copy-between-environments-acceptance).
+
+#### Task JSON Editor opt-in
+
+The Task JSON Editor is off by default under Configuration > Settings > Experimental. Save Configuration and reload Tasks after enabling it; the new JSON Editor bulk action does not change the normal MAUI/native editor preference. Existing installations acquire the missing setting definition from the release template when Settings are saved. There is no schema migration or required extra restart. Keep COM support for native revision/Undo/Schedule operations and complete the [acceptance checks](TESTING.md#task-json-editor-acceptance) before use.
 
 ### MOVEit connection feedback
 
@@ -246,7 +252,3 @@ For a release that changes database or configuration shape:
 During prerelease RC3 development, keep database schema and configuration versions at 1 unless an explicitly approved persistent migration requires otherwise; do not add sequential migrations for individual interim builds. The upgrade framework intentionally allows application releases to advance independently from schema/configuration versions when persistent configuration/database shape does not change.
 
 RC3 feedback changes require no database/configuration migration. Toasts now stay in an open modal, including labelled page-origin notices, and signed-in messages feed the existing application log. Verify the normal log-retention policy and the five-row import preview after deployment; import batch/page limits are unchanged.
-
-## Task JSON Editor opt-in
-
-The Task JSON Editor is off by default under Configuration > Settings > Experimental. Save Configuration and reload Tasks after enabling it; the new JSON Editor bulk action does not change the normal MAUI/native editor preference. Existing installations acquire the missing setting definition from the release template when Settings are saved. There is no schema migration or required extra restart. Keep COM support for native revision/Undo/Schedule operations and complete the [acceptance checks](TESTING.md#task-json-editor-acceptance) before use.

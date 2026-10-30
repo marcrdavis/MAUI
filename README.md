@@ -1,4 +1,4 @@
-# MAUI - MOVEit Automation User Interface
+# MAUI — MOVEit Automation User Interface
 
 - **Version:** `0.18.511-RC3`
 - **Release:** Release Candidate 3 (RC3) — **not the final release**
@@ -6,292 +6,233 @@
 - **Target framework:** .NET 8
 - **Database schema / configuration version:** `1` / `1`
 
-> **Pre-release software:** RC3 is a Release Candidate, not a final or general-availability release. It may contain bugs, regressions, incomplete features or behavior that differs on your MOVEit build. Use it for controlled evaluation and pre-production validation. Back up configuration and data, and test installation, upgrades and the workflows you intend to use before relying on this candidate in production. Passing automated tests does not establish that the software is bug-free or replace live MOVEit acceptance testing.
+MAUI is a web administration interface for on-premises MOVEit Automation. MOVEit remains the system of record and execution engine for Tasks, Hosts, Resources and Automation configuration. MAUI adds operational grids, metadata, reporting, administrative tools and optional editors.
 
-MAUI is a web administration interface for on-premises MOVEit Automation. MOVEit remains the system of record for Tasks, Hosts, Resources, execution history and Automation configuration. MAUI adds operational grids, metadata, reporting, administrative tools and optional MAUI editors around those capabilities.
+> **Release Candidate 3:** This is pre-release software. It may contain bugs, regressions or incomplete behavior, including differences between MOVEit builds. Evaluate it in a controlled environment, preserve backups and validate the workflows you need before production use. Automated tests do not replace live MOVEit acceptance testing.
 
-## Project origin and independence
+**On this page:** [Requirements](#requirements-and-compatibility) · [Capabilities](#main-capabilities) · [Editors and experimental features](#editors-and-experimental-features) · [Access and safeguards](#access-and-editing-safeguards) · [Getting started](#getting-started) · [Administration](#administration-and-maintenance) · [Limitations](#known-limitations) · [Documentation and project information](#documentation-project-origin-and-license).
 
-MAUI is an independently developed administration interface. **This project is not an AI reverse-engineered version of MOVEit Automation. No compiled MOVEit Automation code was disassembled or decompiled to build MAUI.** AI-assisted development was used to help implement this separate application; it does not constitute a reconstruction of MOVEit's compiled implementation.
+For deployment instructions, start with [INSTALLATION.md](INSTALLATION.md). Release history and RC1/RC2 comparisons are in [CHANGELOG.md](CHANGELOG.md).
 
-MAUI integrates with MOVEit through REST APIs, the MOVEit Automation Windows COM API, and captured Web Admin request/response patterns. MOVEit Automation remains the system of record and execution engine. MAUI requires an existing, appropriately licensed MOVEit Automation installation; it does not replace that product or its license. The project is not affiliated with or supported by Progress Software.
+<a id="compatibility-and-current-support"></a>
 
-## Documentation
+## Requirements and compatibility
 
-- [`INSTALLATION.md`](INSTALLATION.md) - prerequisites, build, IIS deployment, database setup, Initial Setup, and MAUI Integration.
-- [`UPGRADE.md`](UPGRADE.md) - application/configuration/database upgrade behavior and administrator upgrade procedure.
-- [`TESTING.md`](TESTING.md) - automated regression suite, release gate, and manual smoke-test guidance.
-- [`SECURITY.md`](SECURITY.md) - authentication/authorization, antiforgery, browser-rendering safeguards, dependency scanning, and static-analysis notes.
-- [`CHANGELOG.md`](CHANGELOG.md) - release history, validation records and consolidated implementation notes.
-- [`LICENSE`](LICENSE) - MAUI Community Source License 1.0.
-- `Data/README.txt` - persistent Data-directory guidance.
+| Component | RC3 requirements and targets |
+| --- | --- |
+| MOVEit Automation | Existing, appropriately licensed **2025.x or 2026.x** installation with API capability enabled. Validate the exact build and required workflows. |
+| MAUI host | Dedicated Windows/IIS server or VM, separate from the MOVEit Automation server; .NET 8 / ASP.NET Core and the compatible Windows COM API installed and registered locally. |
+| Application topology | **One active MAUI instance/worker.** For IIS, set Maximum Worker Processes to **1**. SQL Server does not make MAUI active-active capable. |
+| Metadata database | SQLite or Microsoft SQL Server. SQLite defaults to `Data\maui.db`. |
+| Browser/display | Desktop Google Chrome or Microsoft Edge; recommended resolution **1920×1080**. |
 
-**On this page:** [Editors](#optional-maui-editors) · [Permissions](#authentication-and-authorization) · [Copy To](#experimental-copy-between-environments) · [Hosting](#deployment-topology) · [Setup](#initial-setup) · [Upgrades](#upgrades).
+> **Mixed MOVEit versions:** When connecting to both Automation 2025.x and 2026.x, install and register the **MOVEit Automation COM API 18.x**, or a later compatible version, on the MAUI host. Older COM clients cannot connect to Automation 2026.x. Backward compatibility with 2025.x has been observed so far; validate each environment after updating the COM API, then restart the MAUI application pool.
 
-## Compatibility and current support
+MOVEit version-specific controls are gated by the connected server's reported capabilities. OneDrive Host support and S3 AWS Config File / EC2 Instance Role authentication require **Automation 2026.0+ / native engine 18.0+**. Older or unrecognized versions do not enable these features. Sign in again after upgrading MOVEit to refresh server capabilities. Future MOVEit releases require separate validation.
 
-> **Important — mixed MOVEit versions:** If MAUI connects to both MOVEit Automation 2025.x and 2026.x, install and register the **MOVEit Automation COM API 18.x**, or a later compatible version, on the MAUI server. Older COM API versions cannot connect to MOVEit Automation 2026.x. The newer COM API appears backward compatible with 2025.x at this time; validate connections and required workflows against each environment after upgrading. Restart the MAUI application pool after updating the COM API.
+<a id="key-capabilities"></a>
+<a id="application-workspaces"></a>
+<a id="grid-datetime-filters"></a>
 
-MAUI RC3 targets:
-
-- MOVEit Automation **2025.x** and **2026.x**. Validate the exact MOVEit build and enabled capabilities in your environment before production use.
-- MOVEit Automation installations with the **API capability licensed and enabled**.
-- Windows/IIS hosting for MAUI.
-- .NET 8 / ASP.NET Core.
-- The MOVEit Automation Windows COM API installed and registered on the MAUI IIS server.
-- SQLite or Microsoft SQL Server for the MAUI-owned metadata database.
-- Desktop browser targets: **Google Chrome** and **Microsoft Edge**.
-- Recommended display resolution: **1920x1080**.
-
-MAUI is designed for on-premises MOVEit Automation. Compatibility with future MOVEit Automation releases must be validated before those versions are considered supported.
-
-Version families and browser targets are not blanket certification of every build. Use the commit-specific validation record and the acceptance checks in [TESTING](TESTING.md) for the environment being deployed.
-
-## RC3 scope and limitations
-
-- MAUI uses MOVEit as its execution engine and requires a compatible, licensed installation. Retained COM operations and the native Web Admin integration remain required.
-- AS1/AS2/AS3 Host/editor support remains deferred because the required license is unavailable. SSO is not supported.
-- OneDrive Host configuration, Test Host and Browse Host are implemented for MOVEit 2026.0+ / native engine 18.0+; OneDrive Task-step editing and Quick Transfer composition await native Source/Destination patterns.
-- Native Web Admin integration assets must be checked after MOVEit upgrades, which can replace Tomcat `index.html`.
-- Automated tests validate application contracts and fixtures. They do not certify live authentication, protocol behavior, IIS deployment or every MOVEit build. Live S3/Google testing is unavailable; response parsing follows the supplied/accepted patterns.
-
-See [current validation](TESTING.md#release-validation-evidence) and the [RC3 release overview](CHANGELOG.md#rc3-release-overview).
-
-## Native functionality not included in RC3
-
-The following MOVEit Automation functions are not included in MAUI RC3:
-
-- **MOVEit System Log** - MAUI does not provide a replacement System Log view. The System Log remains available in the native MOVEit Web Admin interface when needed.
-- **Service Shutdown** - A MAUI replacement was not considered necessary for this candidate. Service Shutdown remains available through the native MOVEit Web Admin interface.
-- **Virus Test** - A MAUI replacement was not considered necessary for this candidate. Virus Test remains available through the native MOVEit Web Admin interface.
-- **Watched Tasks** - Watched Tasks are not included in this candidate. MAUI support may be considered for a later release.
-
-## Key capabilities
+## Main capabilities
 
 | Workspace | Main functions |
 | --- | --- |
-| Dashboard | Task/Host health, running Tasks, recent activity, certificate expiry and 24-hour transfer trends. |
-| Tasks | Operational views, Calendar, execution controls, notifications, Preflight, folders, metadata, import/export and optional MAUI editors. |
-| Hosts | Protocol inventories, configuration, connection tests, shared Browse, dependencies, metadata and supported import/export. |
-| Resources | Scripts, Date Lists, Global Parameters, SSH/PGP keys, TLS certificates and optional Groups & Permissions administration. |
+| Dashboard | Task/Host health, running Tasks, recent activity, certificate expiry and transfer trends. |
+| Tasks | Operational views, Calendar, execution controls, notifications, Preflight, folders, metadata, import/export and optional editors. |
+| Hosts | Protocol inventories, configuration, Test Host, shared Browse, assigned Tasks, metadata and supported import/export. |
+| Resources | Scripts, Date Lists, Global Parameters, SSH/PGP keys, TLS certificates and Resource Group/User Group permissions. |
 | Quick Transfer | MOVEit-admin-only one-off transfers using generated Traditional Tasks, optional PGP processing, Preflight and live status/cancellation. |
-| Records and Reports | Task Run, File Activity and Audit grids; read-only Audit configuration comparisons on MOVEit 2026 or later; saved reports with scheduled/on-demand HTML and CSV email delivery. |
-| Configuration | MOVEit connections, editor preferences, metadata, templates, SMTP, backups, scheduler, security and application logs. |
+| Records and Reports | Task Run, File Activity and Audit grids; Audit configuration comparisons on supported MOVEit 2026 servers; saved reports with scheduled/on-demand HTML and CSV email delivery. |
+| Configuration | MOVEit connections, editor preferences, metadata, templates, SMTP, backups, System Jobs, security and application logs. |
 
-Shared grids provide filters, sorting, configurable columns, saved views, CSV/Print and per-user preferences. MAUI metadata includes Tags and organization-defined fields. Task/Host portability and spreadsheet imports use the shared object services; use the packaged templates under `Templates/TaskImport` and `Templates/HostImport`.
+Shared grids provide sorting, column filters, saved views, CSV/Print and per-user preferences. MAUI metadata includes Tags and organization-defined fields. Task filename search reads configured Source masks and Destination filenames on demand; ordinary grid loads do not fetch Task steps. Date/time filters support comparison operators, alternatives and relative-date macros; use the grid's Filter Help for syntax and examples.
 
-Release history, RC1/RC2 comparisons and detailed implementation contracts belong in [CHANGELOG.md](CHANGELOG.md).
+Task editors and Quick Transfer use the same sortable Browse modal. Double-click a file to select its folder and filename, or select a folder and click OK to leave the filename unchanged. Host Editor **Browse Host** is inspection-only; selecting an entry there does not transfer or modify it.
 
-## Optional MAUI editors
+## Editors and experimental features
 
-**Configuration > Settings > Editors** controls the preferred MAUI/native editor independently for Tasks, Hosts, Scripts, Date Lists, Groups & Permissions and MOVEit Settings. Save Configuration and reload MAUI after changing preferences. Fresh-install template defaults are **Tasks on; Hosts, Scripts, Date Lists, Groups & Permissions and MOVEit Settings off**. Existing installation choices are preserved. Groups & Permissions is restricted to MOVEit administrators.
+<a id="optional-maui-editors"></a>
+<a id="moveit-settings-experimental"></a>
+<a id="groups-and-permissions"></a>
+<a id="built-in-script-guidance-in-task-editors"></a>
 
-The Task setting covers Traditional, Advanced and Synchronization together. Grid, Calendar and Information links use the same preferences; closing a related editor returns to the originating modal where supported. A disabled MAUI preference uses the normal native MOVEit integration, without an intermediate fallback page.
+### Editor preferences
 
-| Editor | Current supported workflows |
+Choose MAUI/native editors under **Configuration > Settings > Editors**, then Save Configuration and reload MAUI. These are optional RC3 candidate features; this settings location is separate from **Experimental**. Fresh-install defaults are **Task Editor on**, with the other five preferences **off**. Existing installation choices are preserved.
+
+The Task preference covers Traditional, Advanced and Synchronization Tasks together. Supported grid, Calendar and Information links honor the same preferences. Disabling a preference uses the normal native MOVEit integration, without an intermediate fallback page. Related editor modals return to their originating editor where supported.
+
+| Editor | Main workflows and restrictions |
 | --- | --- |
-| Traditional Task | Source/Process/Destination steps (including Local File System), schedules, Next Actions, parameters, exceptions, timestamps and Run As Of. |
-| Advanced Task | Ordered flow, File Loops, If/Else If/Otherwise branches, shared transfer/process panels, Send Email/Run Task, Update Original, comments, schedules and flow-image export. Text conditions offer Matches (`MASK`) and Not Matches (`NOTMASK`). |
-| Synchronization Task | Folder configuration, direction/policy settings, schedules, listing/folder clear operations and Sync Preview. |
-| Hosts | Captured properties for the mapped protocols, Local File System Host 0, credential preservation/replacement, SMTP/POP3 Custom/Microsoft 365 OAuth, SFTP algorithms/keys and supported Browse pickers. MOVEit 2026.0+ / engine 18.0+ adds OneDrive Host configuration and S3 IAM authentication; version-specific controls are hidden on older or unrecognized servers. |
-| Scripts | Compact New form; Edit tabs for Script, Properties and assigned Tasks. PowerShell/VBScript Source, file import/templates, per-user Auto Save and guarded Undo/Export/Delete. Built-in Scripts honor the preference: the MAUI editor is read-only; administrators can maintain MAUI properties and metadata through Script Information. Disabling the preference opens native MOVEit. |
-| Date Lists | New/Edit modal with entries and text import, Properties/Tasks, Auto Save, Undo/export/delete and shared checkout/revision handling. |
-| MOVEit Settings | Logging and directory browse, Windows Event Log, task defaults/AS2 polling, state caching, tamper detection, IP/User policy and trusted IP addresses, plus active lockout lists with confirmed single/bulk unlocks, with revision/readback protection. |
+| Traditional Task | Source/Process/Destination steps, Local File System steps, schedules, Next Actions, parameters, exceptions, timestamps and Run As Of. Traditional-to-Advanced conversion creates a unique disabled copy. |
+| Advanced Task | Nested flow, File Loops, conditional branches, shared transfer/process panels, Send Email, Run Task, Update Original, comments, schedules and flow-image export. |
+| Synchronization Task | Folder configuration, direction/policy settings, schedules, Clear Listings/Clear Folders and Sync Preview. |
+| Host | Supported protocol profiles, credential preservation/replacement, overrides and shared Browse. Version-specific cloud controls require the corresponding MOVEit capability. |
+| Script | Custom PowerShell/VBScript Source, imports/templates, Properties/Tasks, Auto Save and guarded actions. Built-in Scripts are read-only in the editor; permitted MAUI properties/metadata updates use Script Information. |
+| Date List | Entries and text import, Properties/Tasks, Auto Save, Undo/export/delete and shared checkout/revision handling. |
+| Groups & Permissions | MOVEit-administrator-only Resource Group membership, User Group assignments, permission editing and guarded deletion. Parent rows summarize All / Some / None; expanded rows show exact grants. Deleting a Resource Group does not delete its member objects. |
+| MOVEit Settings | Logging, Windows Event Log, Task defaults/AS2 polling, state caching, tamper detection, IP/User policy, trusted IP addresses and lockouts. Requires **both** MOVEit and MAUI administrator access. Unlock operations are confirmed immediate actions, separate from settings Save. |
 
-Task and Host Auto Save are independent per-user preferences. **Undo Last Change** reverses one edit in the current opening; it is consumed after use and resets on reopen/reload. Grid saved-history Undo is a separate operation. Related editors honor preferences and return to their originating modal; messages stay in the active modal/footer.
+There are six preference switches: the three Task types share one switch. **Keys & Certificates and Global Parameters always use MAUI forms**, without an editor-preference switch. Global Parameters are maintained through Information; keys/certificates use creation and Information forms rather than separate editors.
 
-**Checkout Objects for Duration of Edit** is under General > Application Behavior and defaults off. When enabled, editable Task/Host/Script/Date List editors retain checkout until Close/logout or abandonment cleanup. Conflicts show MOVEit's owner/time; only MOVEit administrators may explicitly override. Recovery retains the open form, pauses Auto Save and requires manual Save. Unsaved form values are not durable drafts. Read-only viewing acquires no edit checkout or Undo snapshot.
+Task Process panels display built-in Script descriptions and parameter requirements retrieved from MOVEit. Required parameters can also be supplied through Global Parameters. Built-in Script source/configuration remains read-only.
 
-Task editors and Quick Transfer share the sortable Browse modal. Double-click a file to apply its folder and filename, or select a folder and click OK to preserve the filename. Host Actions > Browse Host is inspection-only. Traditional-to-Advanced conversion creates a unique disabled copy; Run As Of temporarily applies supported date-time macros and restores the original fields. See [editor acceptance](TESTING.md#rc3-editor-and-crud-acceptance) and [shared implementation](CHANGELOG.md#shared-crud-and-integration-reference) for the detailed contracts.
+### Experimental features
 
-### Built-in Script guidance in Task editors
+Both features below are configured under **Configuration > Settings > Experimental**, are **off by default**, and require Save Configuration and a page reload after enabling. Enabling either feature does not change the normal MAUI/native editor preferences.
 
-Process panels show live built-in Script descriptions, input/output parameters, required status, defaults and choices from MOVEit REST. Configure opens the appropriate Task/Process parameter form; a Global Parameter may supply a value. Viewing required placeholders does not save blank parameters. Built-in Script configuration stays read-only; permitted MAUI metadata changes use Script Information.
+<a id="experimental-task-json-editor"></a>
 
-## MOVEit Settings (experimental)
+#### Task JSON Editor
 
-Enable **Use MAUI Settings Editor** under Configuration > Settings > Editors, save configuration, then open **Configuration > MOVEit Settings**. The preference defaults off; both MAUI and MOVEit administrator access are required.
+Select Tasks and choose **Bulk Actions > JSON Editor**. Edit existing scalar values or find matching elements across Traditional, Advanced and Sync Tasks. **Apply Value / Apply Changes stage edits locally**; **Review Changes** opens the review step, and only **Save** writes them. Find and Replace with reset when the modal opens or a Task reload succeeds. Both result tables use standard Rows and paging controls.
 
-The editor covers Logging, Windows Event Log, Task defaults/AS2 polling, State File, Tamper Detection, IP/User Lockout Policy, trusted IP addresses and Lockouts. Unlocking addresses/users is a confirmed immediate action independent of the settings draft. Saves use short checkouts, revision checks and readback. See [acceptance guidance](TESTING.md#moveit-settings-editor-acceptance).
+Save requires an explicit corruption warning with **Cancel / Proceed**. Each affected Task gets its normal undo snapshot before its update; a snapshot failure prevents that Task's write. Shared Task Edit permissions, checkout, revision checks and readback verification still apply. Native identities/references, credentials and other managed values are read-only. There is no Auto Save or durable browser draft. Bulk saves are independent Task operations, not one transaction.
 
-## Groups and Permissions
+Use this editor cautiously: incorrect JSON values can damage MOVEit configuration. See [Task JSON acceptance and limits](TESTING.md#task-json-editor-acceptance).
 
-MOVEit administrators can enable **Use MAUI Group & Permissions Editor** under Configuration > Settings > Editors. Parent Resource Group rows summarize All / Some / None; expanded rows show exact User Group grants.
+<a id="experimental-copy-between-environments"></a>
 
-The shared grid supports Resource Group creation/membership, Local/Domain User Group assignments, inline permissions and guarded deletion. New assignments start with grants off; Task Add/Edit/Delete requires Edit Existing. Deleting a Resource Group does not delete its member objects. See [permission acceptance](TESTING.md#groups-and-permissions-acceptance).
+#### Copy Between Environments — Copy To
 
-## Shared MOVEit Task CRUD architecture
+Requires **both MOVEit administrator and MAUI Admin access**, at least **two distinct configured environments**, and working administrator **Data Access credentials for both**. Nodes sharing an Environment Key count as one environment. The source is the current connection.
 
-Tasks and Hosts each use one authoritative CRUD coordinator. Traditional Task writes use REST v1; Advanced/Sync and supported Host configuration writes use captured REST v0. Imports, Quick Transfer and editors reuse the appropriate shared services. Retained native configuration operations continue to use COM.
+Choose **Copy To** from supported row or Bulk Actions menus in Tasks, Hosts, Scripts, Date Lists or Keys & Certificates. The modal guides object/dependency selection, conflict resolution, naming, Resource Group/Task-folder placement and compatible metadata. Resolve conflicts before Review; overwrites require explicit confirmation. New and overwritten Tasks remain disabled.
 
-Saves validate current identity, permission and revision under checkout, preserve unowned fields/credentials, write once and verify readback. Unconfirmed mutations are not automatically replayed. See [transport ownership and recovery](CHANGELOG.md#shared-crud-and-integration-reference).
+- Built-in Scripts and Local File System Host 0 are reused, not copied. Keys are matched by identity and cannot be renamed or overwritten through Copy To.
+- Standalone SSH/private-PGP transfer, AS1/AS2/AS3, Global Parameters and references embedded in free-form text are outside automatic copying. Native Task/Host dependency export can carry supported key material.
+- Resource Group permission assignments are not copied. Date List group placement is not supported by MOVEit's group member types. Incompatible MAUI metadata fields are skipped without changing destination field definitions.
+- Copying continues after modal Close. Stop Copy stops before the next write; process restart marks unfinished work Interrupted. Uncertain writes are not automatically replayed. Retain reports/recovery files and Data Protection keys; recovery retention defaults to 30 days, configurable from 1–90.
 
-## Shared Resources CRUD architecture
+See [Copy To limitations and contracts](CHANGELOG.md#copy-between-environments) and [two-environment acceptance](TESTING.md#copy-between-environments-acceptance).
 
-Scripts and Date Lists have shared CRUD coordinators and checkout/revision handling. Global Parameter Information is its edit surface; Keys & Certificates use creation and Information forms rather than separate editors.
+<a id="authentication-and-authorization"></a>
+<a id="moveit-object-permissions"></a>
+<a id="moveit-license-aware-behavior"></a>
+<a id="security"></a>
 
-PowerShell templates are environment-scoped and managed under General > Script Templates. Saving shared Script/email templates from editable modals requires either MOVEit administrator or MAUI administrator status; Configuration management retains its MAUI Admin requirement. Importing/applying Script source does not execute it. See [resource implementation](CHANGELOG.md#resources-script-guidance-and-modal-feedback).
+## Access and editing safeguards
 
-## Experimental Task JSON Editor
+Users sign in with MOVEit credentials. MAUI maintains a separate **MAUI Admin/User** role: the first authenticated user in a new database becomes a MAUI Admin; later new users become MAUI Users. MAUI Admins manage roles under **Configuration > Settings > Security**. MOVEit administrator status does not automatically grant MAUI Admin access.
 
-Enable **Task JSON Editor** under Configuration > Settings > Experimental, save configuration and reload Tasks. Select Tasks and choose **Bulk Actions > JSON Editor**. Edit individual JSON values or find matching elements across Tasks, preview replacements and review changes before Save. Apply actions remain local; existing Task edit permissions and checkout rules apply. Native identities/references, credentials and other managed values are read-only. See the [acceptance checks and limits](TESTING.md#task-json-editor-acceptance).
+MOVEit object permissions and license rights remain authoritative. MAUI enforces them on the server and in the UI:
 
-## Experimental Copy Between Environments
+- Creation/import requires eligible permissions. Non-admin creation of Tasks, Hosts, Scripts, TLS certificates, SSH keys and PGP keys requires an eligible Resource Group, shown above Name. The selector is hidden for MOVEit administrators. Date List creation is administrator-only.
+- Task **Edit Existing** permits editing the whole existing Task, including adding/removing steps; it does not grant creation or deletion. Editing, notifications, metadata updates and configuration exports require edit access. Running and deleting require their respective permissions.
+- Visible objects can open read-only through the configured editor. Read-only viewing locks configuration and MAUI metadata, hides mutation controls, shows status in the footer, and does not acquire edit checkout or Undo snapshots. Information Save is hidden without edit rights.
+- All users can see/use Global Parameters; only MOVEit administrators can open their Information modal or delete them. Resource Group administration and Task-folder management/assignment are also MOVEit-admin-only. Non-admins can still view and filter Task folders.
+- Saving shared Script/email templates from editable modals requires **either** administrator role. Configuration administration retains its MAUI Admin requirement; template privileges do not grant additional object permissions.
 
-**Copy To** is off by default under Configuration > Settings > Experimental. It requires both MOVEit administrator status and MAUI Admin access, at least two distinct configured environments, and working administrator Data Access credentials for both. HA nodes sharing an Environment Key count as one environment.
+### Checkout, Auto Save and Undo
 
-Use a supported row menu or Bulk Actions in Tasks, Hosts, Scripts, Date Lists or Keys & Certificates. Objects, Resolve, Review and Results guide dependency selection, conflict resolution, naming, Resource Group/Task-folder placement and compatible MAUI metadata. Source is the current connection. All conflicts must be resolved before Review; overwrite requires explicit confirmation. New/overwritten Tasks remain disabled.
+Normal saves use the shared object services, validate revisions under checkout and verify persisted state. **Checkout Objects for Duration of Edit**, under General > Application Behavior, defaults off. When enabled, editable Task/Host/Script/Date List editors retain checkout for the editing session, with save reacquisition and Close/logout/abandonment cleanup.
 
-- Built-in Scripts and Local File System Host 0 are reused, not copied. Keys are matched by identity; this feature does not rename or overwrite them.
-- Standalone SSH/private-PGP transfer, AS1/AS2/AS3, Global Parameters and references embedded in free-form text are outside automatic copying. Task/Host native dependency export can carry supported key material. Resource Group permission assignments are not copied; Date List group placement is not supported by MOVEit's group member types.
-- Compatible metadata copies without changing destination definitions. Metadata-only differences remain **Completed** with blue rows; actual warnings are yellow and failures/unverified writes red.
-- Execution continues after modal Close, stops before the next write when requested, and never automatically replays an uncertain write. Restart marks unfinished work Interrupted. Retained reports/recovery files default to 30 days (configurable 1–90); preserve `Data/EnvironmentCopy` and Data Protection keys.
+Checkout conflicts show MOVEit's owner/time. Only a MOVEit administrator may explicitly override; an override does not itself save edits. Recovery retains the open form, pauses Auto Save and requires manual Save. Unconfirmed writes are not automatically replayed. Unsaved form values are not durable drafts.
 
-See [Copy To contracts and limitations](CHANGELOG.md#copy-between-environments) and [two-environment acceptance](TESTING.md#copy-between-environments-acceptance).
+Task and Host Auto Save are independent per-user preferences; supported Script/Date List editors also offer Auto Save. Editor **Undo Last Change** reverses one local edit in the current opening and is consumed after use; reopening/reloading resets it. Grid saved-history Undo is a separate operation.
 
-## Grid Date/Time filters
+Passwords/tokens stay server-side; COM/native editing can require the MOVEit password in active-session memory. See [SECURITY.md](SECURITY.md) for credential handling, authorization, antiforgery and checkout details, and [editor acceptance](TESTING.md#rc3-editor-and-crud-acceptance) for validation.
 
-The Tasks searchbox also searches stored Source masks and Destination filenames on demand. Matching is case-insensitive and literal (`*.txt` searches for that configured mask); normal grid loads do not fetch steps. Refresh Now refreshes an active filename search. See [filename search acceptance](TESTING.md#task-filename-search-acceptance).
+<a id="deployment-topology"></a>
+<a id="integration-architecture"></a>
+<a id="metadata-database-choices"></a>
+<a id="native-moveit-web-admin-integration"></a>
+<a id="build-and-source"></a>
+<a id="initial-setup"></a>
 
-Date/Time columns support `<`, `<=`, `>`, `>=`, `!`/`not:` and comma or `or` alternatives. Enter a numeric date (`10/21/2026`), named-month date (`Oct 21, 2026`) or ISO date (`2026-10-21`), with a 12-hour or 24-hour time when needed. Date-only comparisons use whole-day boundaries; timestamps compare the supplied time. Partial text filtering remains available. Commas inside named-month dates are not OR separators.
+<a id="shared-moveit-task-crud-architecture"></a>
+<a id="shared-resources-crud-architecture"></a>
 
-The clock picker and Filter Help include `[nextmonth]`, `[nextquarter]` and `[nextyear]`. These are the next complete calendar periods, based on the MAUI application's local date, rather than rolling 30/90/365-day windows. For example, `<=[nextmonth]` matches through the end of next month, and `<[today], [nextmonth]` matches dates before today or anywhere in next month. Saved Views and scheduled Reports retain these expressions and resolve them when evaluated. Explicit-offset timestamps are interpreted in the application's local time zone.
+## Getting started
 
-## MOVEit connection feedback
+**Do not install MAUI on the MOVEit Automation server.** Use a dedicated Windows/IIS host with network access to MOVEit Web Admin and the metadata database. MAUI uses REST for supported operations, a locally registered COM client for retained native operations, and the native Web Admin integration for editor launches. SQLite/SQL Server stores MAUI-owned state; MOVEit remains authoritative.
 
-MOVEit-backed grid loads and refreshes show a shared **MOVEit Unreachable** banner when MAUI detects a DNS, refused-connection or network failure, or after two consecutive timed-out grid requests. This describes connectivity from the MAUI server; it does not prove that the Windows server is shut down. Existing rows remain visible after a failed refresh and may be stale. Repeated connection-error toasts are suppressed while the banner is active.
+1. Review [prerequisites and database choices](INSTALLATION.md#2-prerequisite-checklist).
+2. Build/publish from source or prepare a complete matching publish package. See [Build MAUI](INSTALLATION.md#4-build-maui); Visual Studio 2022 or later with the ASP.NET/web workload and .NET 8 is supported.
+3. Prepare IIS, install/register the compatible COM API, and configure the [native Web Admin integration](INSTALLATION.md#7-configure-maui-integration-on-moveit-web-admin) on applicable nodes. Configure exact trusted MAUI browser origins.
+4. For a **new installation only**, create `appsettings.json` containing `{}` if absent. Grant application Read access and Modify only on that existing file and `Data`, following the installation guide. Preserve any existing settings/data.
+5. Open MAUI and complete [Initial Setup](INSTALLATION.md#8-run-initial-setup), which tests REST, COM and database access, provisions the database and proceeds to Login.
+6. Configure [Data Access credentials, backups, SMTP and optional workflows](INSTALLATION.md#9-after-setup---first-steps), then complete the applicable [live acceptance checks](TESTING.md#manual-rc3-smoke-test).
 
-Toast messages stay inside the active modal while it is open; page updates are labelled separately from editor errors. Signed-in toast errors, warnings and information are sent to Configuration > Logs. Logging is best effort and does not block the operation if MAUI or its logging database is unavailable.
+Local Visual Studio execution still requires the compatible COM API. RC3 supports IIS site-root and virtual-application deployments; follow the installation guidance for the selected path and bindings.
 
+<a id="configuration"></a>
 
-Refresh intervals, Pause/Resume and Refresh Now keep their existing behavior. The banner clears after a successful live grid read; cached data alone cannot establish recovery. State follows the current tab, login, connection and IIS application. Authentication/permission errors, ordinary HTTP 500, certificate errors and malformed data remain separate. Local-only grids do not probe MOVEit, and this feature does not retry editor saves, creates, deletes or checkout operations. See [connection acceptance](TESTING.md#moveit-connection-banner-acceptance).
-
-## MOVEit license-aware behavior
-
-MAUI reads MOVEit license information at sign-in and enforces supported capabilities on the server and in the UI. Advanced Task creation, custom Script management, PGP operations and finite Task/Host capacity follow those rights; creating/importing/cloning/restoring cannot bypass them. Existing-object behavior remains subject to its normal permissions. AS2 and Backup Host attributes are informational in RC3.
-
-See [licensing coverage](TESTING.md#licensing-and-capacity).
-
-## Authentication and authorization
-
-Users authenticate with their MOVEit Automation username and password. MOVEit access and refresh tokens remain server-side and are not stored in browser cookies or application HTML. Normal protected requests require the corresponding live server-side MOVEit session; if that session expires or is lost during an application recycle, the user must sign in again.
-
-MAUI maintains its own Admin/User authorization in the metadata database:
-
-- The first successfully authenticated user in a new MAUI database becomes a MAUI Admin.
-- Later previously unseen MOVEit users are registered as MAUI Users.
-- MAUI Admins manage roles under **Configuration > Settings > Security**.
-- MOVEit administrator status does not automatically grant the MAUI Admin role.
-
-Saving shared Script or email templates is a specific exception: a live session with either administrator role can save from the relevant editable modal. This does not grant access to MAUI administration pages or additional MOVEit object rights.
-
-The MOVEit password is retained only in server memory for the active session when required for native-editor and COM operations. It is not persisted in `appsettings.json`.
-
-### MOVEit object permissions
-
-MOVEit permissions remain separate from the MAUI Admin/User role. MAUI checks the signed-in MOVEit user's effective rights for each visible object and enforces writes on the server as well as in the UI. Task **Edit Existing** permits editing the complete existing Task, including adding/removing steps; it does not grant object creation or deletion.
-
-- New/import availability uses the user's eligible Resource Groups across grants. Non-admin creation of Tasks, Hosts, Scripts, TLS certificates, SSH keys and PGP keys requires an eligible Resource Group as the first field above Name. The selector is hidden for MOVEit administrators. Task/Host Auto Format Name remains immediately below Name. Date List creation remains administrator-only.
-- Edit, notifications, metadata updates and configuration exports require edit access; deletion and running Tasks require their respective rights. Bulk selection and Bulk Actions are unavailable when the grid offers no permitted action for that row/selection. Run-only access does not enable selection in a Task grid without a Run bulk action.
-- Visible objects can open through the configured editor in read-only mode. Read-only editors lock MOVEit configuration and MAUI properties/metadata, hide mutation controls, show their status in the footer and close without a discard prompt. Read-only viewing does not prepare edit/Undo snapshots or acquire an editing checkout.
-- Information modals hide **Save** when the current user cannot edit that object, including after switching tabs. Opening an editable object restores its normal Save/readiness behavior.
-- Global Parameters remain visible and usable to all users. Only MOVEit administrators can open their Information modal or delete them. Resource Group creation, membership and permission administration are also restricted to MOVEit administrators.
-- Task folders remain visible/filterable to non-admins; only MOVEit administrators can manage folders or change a Task's folder assignment.
-
-## Application workspaces
-
-The [workspace summary](#key-capabilities) covers day-to-day navigation. Quick Transfer is enabled under General and uses one available Traditional Task slot. Successful temporary `ADHOC_*` Tasks are eligible for verified background cleanup; failed/cancelled/no-transfer or ambiguous runs are retained. Live monitor tokens do not survive process restart. Unattended cleanup requires Data Access credentials. See [Quick Transfer acceptance](TESTING.md#quick-transfer-validation).
-
-Reports preserve grid state and use configured SMTP for delivery; source authorization is checked when definitions change and when reports run. Task views distinguish schedule state from the configured schedule, and Preflight does not run a Task.
-
-### Configuration
+## Administration and maintenance
 
 | Settings location | Purpose |
 | --- | --- |
 | General > Application Behavior | Naming defaults, optional edit-duration checkout and Task Failure Alerts. |
 | General > Folders | Create root Task folders from Resource Group names; MOVEit-admin-only immediate action. |
-| General > Script/Notification Templates | Environment-scoped shared templates. Load Script Templates from .txt/.ps1 files or Notification Templates from text/HTML files and edit their names, subjects and message bodies directly in Settings. |
-| Editors | All six MAUI/native editor preferences. |
+| General > Script/Notification Templates | Load, edit/rename and delete environment-scoped shared templates. Script files: `.txt`/`.ps1`; notification files: `.txt`/`.htm`/`.html`. |
+| Editors | The six preferences described in [Editor preferences](#editor-preferences). |
 | MOVEit Connections | Environment definitions and unattended Data Access credentials. |
 | SSH/KEX Algorithms | Live supported choices and configured ordered defaults for new SFTP Hosts/Reset. |
 | Backup | Manual/automatic backups, retention and per-environment MOVEit restore selection. |
 | Advanced | Keep Alive, controlled restart and Factory Reset. |
-| Experimental | Opt-in Task JSON Editor and Copy Between Environments. |
+| Experimental | The opt-in tools described in [Experimental features](#experimental-features). |
 
-Connection-list updates apply to new logins/background connections without restarting. Existing sessions retain their original endpoint; changing an endpoint/COM host/Environment Key clears unattended credentials. Startup-sensitive runtime/database settings still require restart. See [post-install configuration](INSTALLATION.md#9-after-setup---first-steps).
+Connection-list updates apply to new logins/background connections without restarting. Existing sessions retain their original endpoint. Changing an endpoint, COM host or Environment Key clears unattended credentials. Startup-sensitive runtime/database changes can require restart.
 
-## Deployment topology
+### Scheduled work, imports and backups
 
-MAUI should run on a **dedicated Windows IIS server or virtual machine** separate from the MOVEit Automation server.
+Scheduled reports need configured SMTP. IIS startup/preload is needed for scheduled work when the pool would otherwise be cold; **Keep Alive cannot start a stopped application**. See [IIS scheduling guidance](INSTALLATION.md#keep-maui-running-for-scheduled-jobs).
 
-**Do not install MAUI on the MOVEit Automation server.** Keep the Automation server dedicated to MOVEit Automation and deploy MAUI to a separate IIS host with network access to MOVEit Web Admin and the selected metadata database.
+Quick Transfer is separately enabled under General and uses an available Traditional Task slot. Successful temporary Tasks are eligible for verified cleanup; unsuccessful/ambiguous runs are retained. Unattended cleanup needs Data Access credentials. See [Quick Transfer acceptance](TESTING.md#quick-transfer-validation).
 
-**RC3 supports one active MAUI application instance/worker.** If IIS is used, configure the MAUI application pool with **Maximum Worker Processes = 1**. SQL Server is a supported metadata provider but does not make the MAUI web tier multi-node/active-active capable.
+Use the packaged spreadsheets under `Templates/TaskImport` and `Templates/HostImport`, outside `wwwroot`, for imports. Restore and import operations need their normal permissions and backups; see the relevant [acceptance guidance](TESTING.md#imports-exports-and-environment-copy). Back up external SQL Server databases separately from MAUI file backups.
 
-A typical deployment is:
+### MOVEit connection feedback
 
-```mermaid
-flowchart TD
-    browser["User browser"] --> maui["MAUI: dedicated Windows/IIS host"]
-    maui -->|REST| web["MOVEit Web Admin"]
-    browser -->|Native editor window| web
-    maui --> com["Local MOVEit COM client"]
-    com --> automation["MOVEit Automation"]
-    web --> automation
-    maui --> metadata["MAUI metadata: SQLite or SQL Server"]
-```
+MOVEit-backed grid loads/refreshes show **MOVEit Unreachable** for detected DNS/refused-connection/network failures or after two consecutive timeouts. This describes connectivity from the MAUI host, not proof that the Windows server is shut down. Existing rows remain visible and may be stale; repeated connectivity-error toasts are suppressed while the banner is active.
 
-See [`INSTALLATION.md`](INSTALLATION.md) for detailed prerequisites, build, IIS, database, Initial Setup, and MAUI Integration instructions.
+A successful live grid read clears the banner; cached rows alone do not prove recovery. Authentication, permission, certificate, ordinary HTTP 500 and malformed-data errors remain separate. Grid connection handling does not replay editor writes or checkout operations. See [connection acceptance](TESTING.md#moveit-connection-banner-acceptance).
 
-## Integration architecture
+Messages from an open modal stay inside that modal; signed-in toast notices are also sent to Configuration > Logs on a best-effort basis.
 
-REST provides authentication, inventories, status/reports and supported object operations. The locally registered Windows COM API supplies retained native configuration operations. The Web Admin integration launches native editing according to preferences. SQLite or SQL Server stores MAUI-only state; MOVEit remains authoritative for Automation configuration and execution.
+<a id="upgrades"></a>
+<a id="release-controlled-vs-installation-owned-files"></a>
 
-See [shared object boundaries](CHANGELOG.md#shared-object-boundaries-and-transport-ownership).
+### Upgrades and persistent data
 
-## Metadata database choices
+Deploy one complete matching publish output. Preserve **live `appsettings.json` and the entire `Data` directory**, including databases, backups, cleanup/recovery records and Data Protection keys. Build/publish excludes live appsettings.json. Release templates, `appsettings.custom.json`, `upgrade.json` and assets must match the deployed binaries; do not use a broad `appsettings*.json` exclusion or delete the destination directory.
 
-SQLite defaults to `Data\maui.db`; SQL Server supports Windows or SQL authentication. Both use the same supported single-instance MAUI topology. Keep database files outside `wwwroot`, protect `Data`, and arrange separate SQL Server database backups. Persistent SQLite `file:` URI sources are rejected.
+Back up first, finish active work, take MAUI offline, replace release-owned files, verify the package, and complete `/Upgrade` as a MAUI Admin if requested. The current release manifest does not force an additional restart; startup-sensitive changes can still require Restart MAUI. Follow [UPGRADE.md](UPGRADE.md) for the full procedure and recovery rules.
 
-See [database prerequisites](INSTALLATION.md#3-choose-the-maui-metadata-database).
+<a id="rc3-scope-and-limitations"></a>
+<a id="native-functionality-not-included-in-rc3"></a>
 
-## Native MOVEit Web Admin integration
+## Known limitations
 
-Install the three supplied assets from `IntegrationAssets/MOVEitWebAdmin` on every applicable Web Admin/Tomcat node and add the script reference to `index.html`. Configure `LAUNCHER_ORIGINS` with each exact trusted MAUI browser origin before deployment. Recheck this integration after vendor upgrades.
+- **RC3 is a candidate, not a production-readiness certification.** Automated checks use fixtures/mocks; live authentication, protocol behavior, IIS deployment and each MOVEit build still need validation. Live S3/Google testing has not been available; accepted response patterns are documented in [TESTING.md](TESTING.md#moveit-2026-host-acceptance).
+- **AS1/AS2/AS3 Host/editor support is deferred** because the required license is unavailable. SSO is not supported.
+- **OneDrive Host** configuration, Test and Browse are implemented for supported 2026 servers. OneDrive Task-step editing and Quick Transfer composition await native Source/Destination patterns.
+- **MOVEit System Log, Service Shutdown, Virus Test and Watched Tasks** have no MAUI replacement in RC3; use native MOVEit where applicable.
+- The COM support layer and native Web Admin integration remain required. MOVEit upgrades may replace Tomcat `index.html`; recheck the integration assets and script reference afterward.
+- MAUI's web tier is limited to the [single-instance topology](#requirements-and-compatibility). Copy To has additional [object/dependency limitations](#copy-between-environments--copy-to).
 
-Follow the [complete integration procedure](INSTALLATION.md#7-configure-maui-integration-on-moveit-web-admin), including localhost and HA-node guidance.
+## Documentation, project origin and license
 
-## Build and source
+### Documentation
 
-Open `MoveItAutomationUI.sln` with Visual Studio 2022 or later and the ASP.NET/web workload, or use the .NET 8 SDK. The application can run locally with the included HTTPS launch profile; the workstation still needs the compatible COM API.
+| Document | Purpose |
+| --- | --- |
+| [INSTALLATION.md](INSTALLATION.md) | Prerequisites, build, IIS/database setup, Initial Setup and native integration. |
+| [UPGRADE.md](UPGRADE.md) | Upgrade procedure, installation-owned data, release-package checks and recovery. |
+| [TESTING.md](TESTING.md) | Commit-specific validation evidence, automated checks and live acceptance scenarios. |
+| [SECURITY.md](SECURITY.md) | Security policy, roles/credentials, request controls, operational safeguards and scanning guidance. |
+| [CHANGELOG.md](CHANGELOG.md) | RC3 history, historical RC1/RC2 changes, shared CRUD/transport contracts and validation records. |
+| [LICENSE](LICENSE) | MAUI Community Source License 1.0. |
+| [Data/README.txt](Data/README.txt) | Persistent Data-directory guidance. |
 
-Use the [build/deployment instructions](INSTALLATION.md#4-build-maui) and [release validation gate](TESTING.md#rc3-release-validation-gate). Windows build/publish verifies that the DLL, release template and upgrade manifest agree.
+### Project origin and independence
 
-## Release-controlled vs installation-owned files
+MAUI is an independently developed administration interface. **This project is not an AI reverse-engineered version of MOVEit Automation. No compiled MOVEit Automation code was disassembled or decompiled to build MAUI.** AI-assisted development was used to help implement this separate application; it does not constitute a reconstruction of MOVEit's compiled implementation.
 
-Deploy one complete matching publish output. Preserve the installed **`appsettings.json` and entire `Data` directory**, including databases, backups, cleanup/recovery records and Data Protection keys. Build and publish exclude appsettings.json. For a new installation only, an administrator must create that file containing `{}` before MAUI starts; preserve any existing file.
+MAUI integrates with MOVEit through REST APIs, the MOVEit Automation Windows COM API, and captured Web Admin request/response patterns. MOVEit Automation remains the system of record and execution engine. MAUI requires an existing, appropriately licensed MOVEit Automation installation; it does not replace that product or its license. The project is not affiliated with or supported by Progress Software.
 
-Release templates, `appsettings.custom.json`, `upgrade.json` and application assets must be updated with the binaries. Do not use a broad `appsettings*.json` deployment exclusion or delete the destination directory. See [deployment protection](UPGRADE.md#protect-installation-owned-content).
-
-## Initial Setup
-
-Deploy to a dedicated Windows/IIS host, create appsettings.json containing `{}` only if it does not exist, grant Read on application files and Modify only on that existing file and Data, then open MAUI. Setup tests Web Admin reachability, local COM activation and the metadata database, provisions schema/configuration version 1 and proceeds to Login without an IIS restart. The first authenticated user becomes a MAUI Admin.
-
-Follow [Initial Setup](INSTALLATION.md#8-run-initial-setup), then configure Data Access credentials, backups, SMTP and System Jobs as needed. Scheduled jobs require IIS startup/preload; [Keep Alive](INSTALLATION.md#keep-maui-running-for-scheduled-jobs) cannot start a stopped application.
-
-## Upgrades
-
-Back up configuration/data, close editors and finish active transfers/copies, then take MAUI offline and deploy a complete matching publish. Preserve installation-owned files and verify the destination package before restarting. Complete `/Upgrade` as a MAUI Admin if requested and validate the required workflows.
-
-The current manifest does not force an additional restart. Startup-sensitive changes can require **Restart MAUI**; other completed upgrades offer **Return to MAUI**. See [UPGRADE.md](UPGRADE.md) for the full procedure, recovery and restart rules.
-
-## Security
-
-MAUI uses authenticated server-side MOVEit sessions, database-backed MAUI roles, ASP.NET Core antiforgery validation, server-side token storage, explicit native-editor origin/source checks, and sanitized handling of user-authored notification HTML.
-
-See [`SECURITY.md`](SECURITY.md) for the supported security-policy scope, private vulnerability-reporting guidance, implementation notes, dependency/static-analysis guidance, and documented scanner false positives. See [`TESTING.md`](TESTING.md) for the RC3 security/release validation gate.
-
-## License and source availability
+### License and source availability
 
 Copyright (C) 2026 Marc R. Davis.
 
@@ -299,7 +240,7 @@ MAUI is **source-available** software distributed under the **MAUI Community Sou
 
 Because the license restricts certain commercial software uses, MAUI should not be described as OSI-approved open-source software. Review the complete `LICENSE` terms before use or redistribution.
 
-## Disclaimer and trademarks
+### Disclaimer and trademarks
 
 MAUI is an independent project. It is **not affiliated with, endorsed by, sponsored by, or supported by Progress Software Corporation**. Progress Software provides no support or warranty for MAUI.
 
@@ -309,6 +250,6 @@ Administrators are responsible for validating MAUI in their own environment, mai
 
 Progress, MOVEit, and related Progress product names and marks are trademarks or registered trademarks of **Progress Software Corporation and/or its subsidiaries or affiliates** in the United States and other countries. Their use in this project is referential only and does not imply affiliation, endorsement, or sponsorship. See the [Progress Software Corporation trademark policy](https://www.progress.com/legal/trademarks/trademarks-use-policy) for current trademark guidance.
 
-## Documentation maintenance
+### Documentation maintenance
 
 Maintain only `README.md`, `CHANGELOG.md`, `INSTALLATION.md`, `SECURITY.md`, `TESTING.md`, `UPGRADE.md` and the existing `LICENSE`. Incorporate implementation and validation notes into these documents. **Do not create a new `.md` file without Marc's approval.** Keep current RC3 guidance separate from historical release notes and distinguish automated checks from live IIS/MOVEit acceptance.
