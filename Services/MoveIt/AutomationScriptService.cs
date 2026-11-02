@@ -498,7 +498,7 @@ public sealed class AutomationScriptService : IAutomationScriptService
     }
 
     // Purpose: Normalizes language code or unknown.
-    private static string NormalizeLanguageCodeOrUnknown(string? language)
+    internal static string NormalizeLanguageCodeOrUnknown(string? language)
     {
         var value = (language ?? string.Empty).Trim();
         if (value.Equals("PS1", StringComparison.OrdinalIgnoreCase) || value.Equals("PowerShell", StringComparison.OrdinalIgnoreCase)) return "PS1";

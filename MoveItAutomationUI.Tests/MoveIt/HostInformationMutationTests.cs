@@ -1,6 +1,7 @@
 using System.Net;
 using System.Reflection;
 using System.Text.Json.Nodes;
+using System.Xml.Linq;
 using Microsoft.Extensions.Logging.Abstractions;
 using MoveItAutomationUI.Services.MoveIt;
 using MoveItAutomationUI.Services.MoveIt.Hosts;
@@ -11,7 +12,95 @@ namespace MoveItAutomationUI.Tests.MoveIt;
 public sealed class HostInformationMutationTests
 {
     public static IEnumerable<object[]> Types => HostV0CreationTests.Types;
+    public static IEnumerable<object[]> RenameTypes => Types.Append(new object[] { "OneDrive" });
     private static JsonObject Revision(JsonObject host) => ObjectEditVersion.Named(host["Name"]!.ToString(), host["Desc"]!.ToString());
+
+    [Theory] [MemberData(nameof(RenameTypes))]
+    public async Task RenamePatchesOnlyNameOnTheCheckoutAndRetainsConcurrentDescriptionAndProtocolFields(string type)
+    {
+        var fixture = new Fixture(type); var expected = fixture.Saved.DeepClone().AsObject();
+        expected["Name"] = "Renamed"; expected["Desc"] = "Concurrent description";
+        expected["NativeOnly"]!["Concurrent"] = "keep";
+        fixture.OnCheckout = host => { host["Desc"] = "Concurrent description"; host["NativeOnly"]!["Concurrent"] = "keep"; };
+        await fixture.Crud.RenameAsync(" 42 ", " Renamed ", "Original");
+        var submitted = fixture.Submitted![type]!.DeepClone().AsObject();
+        foreach (var key in new[] { "DefPassword", "ClientSecret", "OAuthClientSecret", "ProxyPassword" })
+        { Assert.Null(submitted[key]); submitted.Remove(key); expected.Remove(key); }
+        Assert.True(JsonNode.DeepEquals(expected, submitted));
+        Assert.Equal(new[] { "GET", "name-check:Renamed", "checkout", "GET", "PUT", "GET", "release" }, fixture.Calls);
+        Assert.Equal(0, fixture.ComCalls);
+    }
+
+    [Theory] [InlineData(false)] [InlineData(true)]
+    public async Task RenameDuplicateOrConcurrentNameFailsBeforePut(bool concurrent)
+    {
+        var fixture = new Fixture("FTP") { DuplicateName = !concurrent };
+        if (concurrent) fixture.OnCheckout = host => host["Name"] = "Someone else renamed";
+        if (concurrent) await Assert.ThrowsAsync<ObjectEditConflictException>(() => fixture.Crud.RenameAsync("42", "Renamed", "Original"));
+        else await Assert.ThrowsAsync<HostNameAlreadyExistsException>(() => fixture.Crud.RenameAsync("42", "Renamed", "Original"));
+        Assert.Equal(0, fixture.Writes); Assert.Equal(0, fixture.ComCalls);
+        Assert.Equal(concurrent ? new[] { "GET", "name-check:Renamed", "checkout", "GET", "release" } : new[] { "GET", "name-check:Renamed" }, fixture.Calls);
+    }
+
+    [Fact]
+    public async Task RenameValidatesNamesCurrentNameAndPermissionsBeforeCheckout()
+    {
+        var fixture = new Fixture("FTP");
+        await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Crud.RenameAsync("42", " ", "Original"));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Crud.RenameAsync("42", new string('x',255), "Original"));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Crud.RenameAsync("0", "Name", "Original"));
+        Assert.Empty(fixture.Calls);
+        await Assert.ThrowsAsync<ObjectEditConflictException>(() => fixture.Crud.RenameAsync("42", "Renamed", "Stale"));
+        fixture.Saved["xAddEditDelete"] = 0;
+        await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Crud.RenameAsync("42", "Renamed", "Original"));
+        Assert.Equal(new[] { "GET", "GET" }, fixture.Calls); Assert.Equal(0, fixture.Writes);
+    }
+
+    [Fact]
+    public async Task RenameCaseOnlyAndMaximumLengthNamesDoNotConflictWithTheSelectedHost()
+    {
+        var fixture = new Fixture("SMTP");
+        await fixture.Crud.RenameAsync("42", "ORIGINAL", "Original");
+        Assert.DoesNotContain("name-check:ORIGINAL", fixture.Calls);
+        await fixture.Crud.RenameAsync("42", new string('x',254), "ORIGINAL");
+        Assert.Equal(new string('x',254), fixture.Saved["Name"]!.ToString());
+    }
+
+    [Theory]
+    [InlineData("write")] [InlineData("ack")] [InlineData("readback")] [InlineData("saved-name")]
+    [InlineData("saved-desc")] [InlineData("saved-id")] [InlineData("saved-type")] [InlineData("release")]
+    public async Task RenameUnverifiedWritesNeverReplayOrFallBack(string failure)
+    {
+        var fixture = new Fixture("SMTP") { Failure = failure };
+        await Assert.ThrowsAsync<HostPartialSaveException>(() => fixture.Crud.RenameAsync("42", "Renamed", "Original"));
+        Assert.Equal(1, fixture.Writes); Assert.Equal(0, fixture.ComCalls); Assert.Equal("release", fixture.Calls.Last());
+    }
+
+    [Fact]
+    public async Task RenameSupportsFlatReadsAndUsesTheRetainedNativePathForUnverifiedTypes()
+    {
+        var fixture = new Fixture("S3") { FlatRead = true };
+        await fixture.Crud.RenameAsync("42", "Renamed", "Original");
+        Assert.Equal("Renamed", fixture.Saved["Name"]!.ToString()); Assert.Equal(0, fixture.ComCalls);
+        var retained = new Fixture("AS2");
+        await retained.Crud.RenameAsync("42", "Renamed", "Original");
+        Assert.Equal(new[] { "GET", "name-check:Renamed", "COM" }, retained.Calls);
+        Assert.Equal(1, retained.ComCalls); Assert.Null(retained.Submitted);
+    }
+
+    [Theory] [InlineData(false)] [InlineData(true)]
+    public void NativeRenamePreservesEveryOtherXmlValueAndRejectsStaleNames(bool descriptionElement)
+    {
+        var root = XElement.Parse(descriptionElement
+            ? "<Host ID='42' Name='Original' Type='AS2' Native='keep'><Description>Fresh description</Description><Credentials Secret='keep'/><Parameters><Parameter Name='Token' Secure='1'>keep</Parameter></Parameters></Host>"
+            : "<Host ID='42' Name='Original' Type='AS2' Desc='Fresh description' Native='keep'><Credentials Secret='keep'/><Parameters><Parameter Name='Token' Secure='1'>keep</Parameter></Parameters></Host>");
+        var expected = new XElement(root); expected.SetAttributeValue("Name", "Renamed");
+        HostRenameDefinition.Apply(root, "Renamed", "Original");
+        Assert.True(XNode.DeepEquals(expected, root));
+        Assert.Throws<ObjectEditConflictException>(() => HostRenameDefinition.Apply(root, "Another", "Original"));
+        root.SetAttributeValue("ID", "0");
+        Assert.Throws<InvalidOperationException>(() => HostRenameDefinition.Apply(root, "Another", "Renamed"));
+    }
 
     [Theory] [MemberData(nameof(Types))]
     public async Task InformationPatchesOnlyItsFieldsAndPreservesIncompleteProtocolSettings(string type)
@@ -144,9 +233,10 @@ public sealed class HostInformationMutationTests
         public Action<JsonObject>? OnCheckout { get; set; }
         public CancellationTokenSource? Cancel { get; init; }
         public bool ReleasedWithLiveToken { get; private set; }
+        public bool DuplicateName { get; init; }
         public Fixture(string type)
         {
-            if (type == "AS2") Saved = new JsonObject();
+            if (type is "AS2" or "OneDrive") Saved = new JsonObject();
             else
             {
                 using var stream = typeof(HostV0CreationTests).Assembly.GetManifestResourceStream("MoveItAutomationUI.Tests.MoveIt.Fixtures.HostV0CreationCaptures.json")!;
@@ -155,11 +245,14 @@ public sealed class HostInformationMutationTests
             Saved["ID"] = "42"; Saved["Name"] = "Original"; Saved["Desc"] = "Old";
             Saved["Group"] = new JsonArray("Production"); Saved["NativeOnly"] = new JsonObject { ["Opaque"] = "keep" };
             Saved["ID2"] = "7"; Saved["xAddEditDelete"] = 1;
-            if (type != "SharePoint") Saved["DefPassword"] = "NATIVE_SECRET";
+            if (type == "OneDrive") Saved["OAuthClientSecret"] = "NATIVE_SECRET";
+            else if (type != "SharePoint") Saved["DefPassword"] = "NATIVE_SECRET";
             var rest = Stub<IMoveItRestClient>((method, args) =>
             {
                 switch (method.Name)
                 {
+                    case nameof(IMoveItRestClient.HostNameExistsAsync):
+                        Calls.Add($"name-check:{args[0]}"); return Task.FromResult(DuplicateName);
                     case nameof(IMoveItRestClient.GetHostAsync):
                         Calls.Add("GET"); if (Writes > 0 && Failure == "readback") throw new HttpRequestException("Readback failed");
                         return Task.FromResult(FlatRead ? Saved.DeepClone().AsObject() : Wrap(Saved, Writes > 0 && Failure == "saved-type" ? "FTP" : type));
@@ -193,9 +286,12 @@ public sealed class HostInformationMutationTests
                     default: throw new NotSupportedException(method.Name);
                 }
             });
-            var com = Stub<IMoveItComClient>((method, _) =>
+            var com = Stub<IMoveItComClient>((method, args) =>
             {
-                ComCalls++; Assert.Equal("AS2", type); Assert.Equal(nameof(IMoveItComClient.UpdateHostBasicDetailsAsync), method.Name);
+                ComCalls++; Assert.Equal("AS2", type);
+                Assert.Contains(method.Name, new[] { nameof(IMoveItComClient.UpdateHostBasicDetailsAsync), nameof(IMoveItComClient.RenameHostAsync) });
+                if (method.Name == nameof(IMoveItComClient.RenameHostAsync))
+                { Assert.Equal("Original", args[2]); Saved["Name"] = (string)args[1]!; }
                 Calls.Add("COM"); return Task.CompletedTask;
             });
             var saves = new HostDefinitionSaveService(rest, com, null!, NullLogger<HostDefinitionSaveService>.Instance);

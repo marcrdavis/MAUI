@@ -133,7 +133,9 @@
         }
 
         async function refresh(forceRefresh = false) {
-            if (disposed || inFlight || !grid) return;
+            if (disposed || !grid) return;
+            options.onRefreshRequested?.(Boolean(forceRefresh));
+            if (inFlight) return;
             options.beforeRefresh?.(Boolean(forceRefresh));
             setBusy(true);
             clearTimer();

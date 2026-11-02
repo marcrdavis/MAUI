@@ -71,6 +71,8 @@ public sealed class OutboundReportService : IOutboundReportService
         if (request.Description.Length > 1000) throw new ArgumentException("Report Description cannot exceed 1000 characters.");
         var serverTimeZone = session.Info?.ServerTimezoneInfo?.TimeZoneName ?? string.Empty;
         var schedule = _scheduleCalculator.ValidateAndNormalize(request.Schedule, serverTimeZone);
+        if (schedule.DeliveryMode != OutboundReportDeliveryModes.Now)
+            OutboundReportSourcePolicy.EnsureScheduledSearchSupported(request.GridKey, request.ViewState?.SearchText);
         var recipients = OutboundReportRepository.NormalizeRecipients(request.Recipients);
 
         if (schedule.DeliveryMode == OutboundReportDeliveryModes.Now)
@@ -179,6 +181,7 @@ public sealed class OutboundReportService : IOutboundReportService
         var existing = await _repository.GetAsync(request.Id, username, isAdmin, cancellationToken)
             ?? throw new ArgumentException("The Report no longer exists or you do not have access to it.");
         OutboundReportSourcePolicy.EnsureAllowed(existing.GridKey, isAdmin);
+        OutboundReportSourcePolicy.EnsureScheduledSearchSupported(existing.GridKey, request.ViewState.SearchText);
         var updated = await _repository.UpdateViewAsync(request, username, isAdmin, cancellationToken);
         return (await _repository.GetAllAsync(username, isAdmin, cancellationToken)).Single(item => item.Id == updated.Id);
     }

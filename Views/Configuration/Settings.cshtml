@@ -177,7 +177,7 @@
             <div class="panel-card configuration-card">
                 <div class="configuration-card-heading"><h3>Folders</h3></div>
                 <div class="configuration-setting-row">
-                    <div><strong>Create top-level folders from Resource Group names.</strong><p>When clicked, MAUI will create a set of root-level folders from the current Resource Groups. If a folder already exists with the same name it will not be duplicated or overwritten.</p></div>
+                    <div><strong>Create Top-Level Folders from Resource Group Names</strong><p>When clicked, MAUI will create a set of root-level folders from the current Resource Groups. If a folder already exists with the same name it will not be duplicated or overwritten.</p></div>
                     <button type="button" class="secondary-button" data-create-resource-group-folders disabled="@(!isMoveItAdmin)" title="@(isMoveItAdmin ? null : "Only MOVEit administrators can manage Task folders.")">Create Folders</button>
                 </div>
             </div>
@@ -341,8 +341,8 @@
                     <label class="configuration-switch" data-copy-availability-hint title="@(Model.CopyBetweenEnvironmentsAvailable ? null : MoveItAutomationUI.Features.EnvironmentCopy.EnvironmentCopyAvailability.Requirement)"><input type="checkbox" disabled="@(!Model.CopyBetweenEnvironmentsAvailable)" @(Model.CopyBetweenEnvironments ? "checked" : null) data-setting="copyBetweenEnvironments" aria-label="Copy Between Environments" /><span></span></label>
                 </div>
                 <div class="configuration-setting-row">
-                    <div><strong>Copy recovery retention</strong><p>Retain operation reports and protected overwrite recovery definitions for this many days (1–90).</p></div>
-                    <span data-copy-availability-hint title="@(Model.CopyBetweenEnvironmentsAvailable ? null : MoveItAutomationUI.Features.EnvironmentCopy.EnvironmentCopyAvailability.Requirement)"><input type="number" class="text-input configuration-number-input" disabled="@(!Model.CopyBetweenEnvironmentsAvailable)" min="1" max="90" value="@Model.CopyRecoveryRetentionDays" data-setting="copyRecoveryRetentionDays" aria-label="Copy recovery retention days" /></span>
+                    <div><strong>Copy Recovery Retention</strong><p>Retain operation reports and protected overwrite recovery definitions for this many days (1–90).</p></div>
+                    <span data-copy-availability-hint title="@(Model.CopyBetweenEnvironmentsAvailable ? null : MoveItAutomationUI.Features.EnvironmentCopy.EnvironmentCopyAvailability.Requirement)"><input type="number" class="text-input configuration-number-input" disabled="@(!Model.CopyBetweenEnvironmentsAvailable)" min="1" max="90" value="@Model.CopyRecoveryRetentionDays" data-setting="copyRecoveryRetentionDays" aria-label="Copy Recovery Retention days" /></span>
                 </div>
             </div>
         </section>
@@ -1019,7 +1019,7 @@
                 <p>MAUI will remove the field definition and every stored value for this field across all configured MOVEit environments.</p>
             </div>
             <div class="configuration-import-confirm-file">
-                <span>Metadata field</span>
+                <span>Metadata Field</span>
                 <strong data-metadata-field-delete-name></strong>
             </div>
             <p data-metadata-field-delete-message></p>
@@ -1151,7 +1151,7 @@
                 <p>Confirm that you have a current configuration backup before importing. After import, refresh any open Task, Host, or Resource pages before making additional changes.</p>
             </div>
             <div class="configuration-import-confirm-file">
-                <span>Configuration file</span>
+                <span>Configuration File</span>
                 <strong data-moveit-config-import-confirm-file></strong>
             </div>
             <p>Continue and overwrite the current MOVEit Automation configuration?</p>

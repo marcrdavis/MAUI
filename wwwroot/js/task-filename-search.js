@@ -9,7 +9,7 @@
             const toast = grid.querySelector('[data-prototype-toast]');
             let index = new Map(), loadedAt = 0, timer = 0, pending = null, sequence = 0;
             let lastQuery = '', failed = false, disposed = false;
-            const query = () => search.value.trim();
+            const query = () => /^json:/i.test(search.value) ? '' : search.value.trim();
             function cancel() {
                 clearTimeout(timer); timer = 0; sequence++;
                 pending?.abort(); pending = null;

@@ -18,8 +18,8 @@
         <div class="task-json-body" data-task-json-body>
             <section id="task-json-edit-panel" role="tabpanel" aria-labelledby="task-json-edit-tab" data-task-json-panel="edit" class="task-json-edit-layout">
                 <div class="panel-card configuration-card task-json-tree-panel">
-                    <div class="configuration-card-heading task-json-heading"><h3>Selected Tasks</h3><div><button type="button" class="secondary-button" data-task-json-expand>Expand All</button><button type="button" class="secondary-button" data-task-json-collapse>Collapse All</button></div></div>
-                    <label class="field-block task-json-tree-search"><span class="sr-only">Search elements or values</span><input type="search" class="text-input" placeholder="Search elements or values" data-task-json-tree-search /></label>
+                    <div class="configuration-card-heading task-json-heading"><h3>Selected Tasks</h3><div><button type="button" class="secondary-button" data-task-json-reload>Reload Tasks</button><button type="button" class="secondary-button" data-task-json-expand>Expand All</button><button type="button" class="secondary-button" data-task-json-collapse>Collapse All</button></div></div>
+                    <label class="field-block task-json-tree-search"><span class="sr-only">Search elements or values</span><input type="search" class="text-input" placeholder="Search elements or values" data-task-json-tree-search aria-describedby="task-json-search-help" /><small class="field-help" id="task-json-search-help">Use text or element/value comparisons: DoIfFailure=1, RetryCount&gt;0, Name contains invoice. Operators: &lt;, &lt;=, =, &gt;=, &gt;, !=, contains. Ordered comparisons are numeric; text matching ignores case.</small></label>
                     <div class="task-json-tree" data-task-json-tree></div>
                 </div>
                 <div class="panel-card configuration-card task-json-value-panel">
@@ -72,6 +72,7 @@
         <footer class="settings-footer new-task-footer">
             <div class="task-json-save-progress" data-task-json-save-progress hidden><progress data-task-json-progress max="1" value="0" aria-label="Task save progress"></progress></div>
             <p class="maui-modal-feedback" data-task-json-status data-maui-modal-feedback data-feedback-kind="default" role="status" aria-live="polite">No unsaved changes.</p>
+            <span class="task-json-search-count" data-task-json-search-count role="status" aria-live="polite" hidden></span>
             <button type="button" class="secondary-button" data-task-json-close>Close</button>
             <button type="button" class="primary-button" data-task-json-submit disabled>Review Changes</button>
         </footer>

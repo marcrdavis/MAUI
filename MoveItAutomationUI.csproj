@@ -8,10 +8,10 @@
     <RootNamespace>MoveItAutomationUI</RootNamespace>
     <AssemblyName>MoveItAutomationUI</AssemblyName>
     <Authors>Marc R. Davis (marcdavis@comcast.net)</Authors>
-    <Version>0.18.511-RC3</Version>
-    <AssemblyVersion>0.18.511.0</AssemblyVersion>
-    <FileVersion>0.18.511.0</FileVersion>
-    <InformationalVersion>0.18.511-RC3+build.20261029</InformationalVersion>
+    <Version>0.18.521-RC3</Version>
+    <AssemblyVersion>0.18.521.0</AssemblyVersion>
+    <FileVersion>0.18.521.0</FileVersion>
+    <InformationalVersion>0.18.521-RC3+build.20261101</InformationalVersion>
 
     <!-- The test project is intentionally stored beneath the source root for packaging convenience.
          Exclude its entire subtree from ASP.NET Core Web SDK default item globs so test source,

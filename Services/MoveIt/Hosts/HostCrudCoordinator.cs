@@ -34,6 +34,8 @@ public interface IHostCrudCoordinator
     Task<MoveItCreatedHost> CreateConfiguredAsync(HostBasicDefinition definition, CancellationToken cancellationToken = default);
     Task<MoveItHostConfiguration> UpdateConfiguredAsync(string hostId, HostBasicUpdate update, CancellationToken cancellationToken = default);
     Task UpdateBasicDetailsAsync(string hostId, string name, string description, CancellationToken cancellationToken = default);
+    Task ValidateRenameAsync(string hostId, string name, string originalName, CancellationToken cancellationToken = default);
+    Task RenameAsync(string hostId, string name, string originalName, CancellationToken cancellationToken = default);
     Task<MoveItHostConfiguration> GetNativeConfigurationAsync(string hostId, CancellationToken cancellationToken = default);
     Task<MoveItHostConfiguration> RestoreNativeConfigurationAsync(string hostId, string xml, CancellationToken cancellationToken = default);
     Task DeleteAsync(string hostId, CancellationToken cancellationToken = default);
@@ -99,6 +101,18 @@ public sealed class HostCrudCoordinator : IHostCrudCoordinator
     }
     public Task<MoveItHostConfiguration> GetNativeConfigurationAsync(string hostId, CancellationToken cancellationToken = default)
         => _com.GetHostConfigurationAsync(Id(hostId), cancellationToken);
+    public async Task ValidateRenameAsync(string hostId, string name, string originalName, CancellationToken cancellationToken = default)
+    {
+        var id = Id(hostId);
+        if (_access is not null) await _access.RequireAsync("Host", id, "Edit", cancellationToken);
+        await _saves.ValidateRenameAsync(id, name, originalName, cancellationToken);
+    }
+    public async Task RenameAsync(string hostId, string name, string originalName, CancellationToken cancellationToken = default)
+    {
+        var id = Id(hostId);
+        if (_access is not null) await _access.RequireAsync("Host", id, "Edit", cancellationToken);
+        await _saves.RenameAsync(id, name, originalName, cancellationToken);
+    }
     public async Task<MoveItHostConfiguration> RestoreNativeConfigurationAsync(string hostId, string xml, CancellationToken cancellationToken = default)
     {
         if (_access is not null) await _access.RequireAsync("Host", Id(hostId), "Edit", cancellationToken);

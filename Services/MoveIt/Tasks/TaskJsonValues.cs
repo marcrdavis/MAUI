@@ -71,7 +71,7 @@ public static class TaskJsonValues
         }
         Visit(document, [], false, false); return paths;
     }
-    private static bool Secret(string key) => AdvancedTaskDefinition.IsSecret(key) || key.Equals("PrivateKey", StringComparison.OrdinalIgnoreCase)
+    internal static bool Secret(string key) => AdvancedTaskDefinition.IsSecret(key) || key.Equals("PrivateKey", StringComparison.OrdinalIgnoreCase)
         || key.Equals("AccessToken", StringComparison.OrdinalIgnoreCase) || key.Equals("RefreshToken", StringComparison.OrdinalIgnoreCase)
         || key.Equals("Token", StringComparison.OrdinalIgnoreCase);
     private static bool UnsafeNumber(JsonNode node)

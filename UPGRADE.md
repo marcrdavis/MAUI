@@ -1,8 +1,8 @@
 # MAUI Upgrade Guide
 
-- **Target release:** `0.18.511-RC3`
+- **Target release:** `0.18.521-RC3`
 - **Release:** Release Candidate 3 (pre-release)
-- **Build:** `20261029`
+- **Build:** `20261101`
 - **Database schema:** `1`
 - **Configuration version:** `1`
 
@@ -16,7 +16,7 @@ MAUI upgrades are driven by the cumulative `upgrade.json` manifest included with
 
 | Item | Current package |
 | --- | --- |
-| Application / build | `0.18.511-RC3` / `20261029` |
+| Application / build | `0.18.521-RC3` / `20261101` |
 | Minimum directly supported application version | `0.16.77-integration` |
 | Database schema / configuration version | `1` / `1` |
 | Manifest RestartRequired | `false`; startup-sensitive changes can still require restart. |
@@ -26,7 +26,9 @@ Live appsettings.json and Data remain installation-owned. Release templates/mani
 
 ## Before upgrading
 
-RC3 includes optional MAUI editors for Traditional, Advanced and Synchronization Tasks, mapped Hosts, Scripts, Date Lists and Groups & Permissions. Review existing editor preferences under Configuration > Settings > Editors after upgrade; retain the native Web Admin integration and compatible COM API. New Host and empty Advanced/Sync creation use captured REST v0, but Host spreadsheet creation/updates, native clone/restore and other native configuration operations still require COM. Validate these paths, both checkout modes and conflict/partial-save recovery using [TESTING.md](TESTING.md#rc3-editor-and-crud-acceptance).
+RC3 includes optional MAUI editors for Traditional, Advanced and Synchronization Tasks, mapped Hosts, Scripts, Date Lists and Groups & Permissions. Review existing editor preferences under Configuration > Settings > Editors after upgrade and retain the compatible COM API. New Host and empty Advanced/Sync creation use captured REST v0, but Host spreadsheet creation/updates, native clone/restore and other native configuration operations still require COM. Validate these paths, both checkout modes and conflict/partial-save recovery using [TESTING.md](TESTING.md#rc3-editor-and-crud-acceptance).
+
+**The MOVEit Integration components are not required if using only the MAUI Editors.** Retain/deploy the browser bridge, CSS/logo and Tomcat script reference when launching native MOVEit editors from MAUI. MAUI-only editor use can skip the Web Admin asset steps; it still requires the compatible COM API for retained native operations.
 
 Close Task/Host/Script/Date List editors before deployment so their checkouts can release normally. Preserve `Data/ObjectEditLeases` and `Data/DataProtection-Keys`; the cleanup worker can recover abandoned records after restart, but unavailable MOVEit authentication may require a fresh owner login or administrator inspection.
 
@@ -65,16 +67,20 @@ Data\
 6. If no upgrade is pending, sign in and validate the release.
 7. If an upgrade is pending, authenticate as a MAUI Admin and complete `/Upgrade`.
 8. MAUI completes version-only, schema-only, and reload-safe configuration upgrades without a process restart. If startup-sensitive configuration changed or the manifest requires a restart, select **Restart MAUI** after completion; IIS application-pool access is not required for the MAUI administrator.
-9. Sign in again and validate Dashboard, object inventories, Records, native editor launch, System Jobs, Quick Transfer (in non-production), and any environment-specific workflows.
-10. Ensure every applicable MOVEit Web Admin/Tomcat node has the current MAUI Integration assets and verify `index.html` still loads `maui-integration.js`.
+9. Sign in again and validate Dashboard, object inventories, Records, configured MAUI editor launches, System Jobs, Quick Transfer (in non-production), and any environment-specific workflows. Include native editor launch if that integration is used.
+10. If native editor integration is used, ensure every applicable MOVEit Web Admin/Tomcat node has the current MAUI Integration assets and verify `index.html` still loads `maui-integration.js`.
     - **Before deploying or replacing `maui-integration.js`, configure its `LAUNCHER_ORIGINS` allow-list with every trusted browser-visible MAUI origin that uses this MOVEit Web Admin instance.** Use exact origins only; wildcards are not supported.
     - The current package's `maui-integration.js` advertises `MAUI_INTEGRATION_ASSET_REVISION = 0.16.206-RC1` (the bundled integration asset revision, independent of the RC3 application version). Deploy this script to every applicable Web Admin/Tomcat node, keep the trusted-origin allow-list consistent across nodes, and retain the package CSS/logo alongside it.
 
-MOVEit Automation upgrades may replace Tomcat `index.html`. Recheck the MAUI Integration after a MOVEit upgrade even when the MAUI release itself did not change the integration assets.
+For installations using native editor integration, MOVEit Automation upgrades may replace Tomcat `index.html`. Recheck that integration after a MOVEit upgrade even when the MAUI release itself did not change the integration assets.
 
 ## After-upgrade checks
 
 ### Upgrade validation priorities
+
+When upgrading from 0.18.511, include the Task JSON Editor's comparisons/Reload Tasks, Tasks/Hosts `JSON:` search and refresh behavior, Quick Transfer retention/inline confirmation email, Rename Task/Host, and native import **Reuse Existing** defaults. Rename must honor **Auto Format New Task/Host Names** on opening and reject invalid/duplicate names. Reused import dependencies must keep their destination configuration and metadata. See [rename acceptance](TESTING.md#task-and-host-rename-acceptance), [JSON grid search acceptance](TESTING.md#tasks-and-hosts-json-grid-search-acceptance) and [dependency reuse acceptance](TESTING.md#native-import-dependency-reuse-acceptance).
+
+Rename logging now preserves the underlying local database error when MOVEit saved the new name but MAUI audit recording failed. The reported SQLite failure's root cause remains unconfirmed; this release does not claim to fix it. Inspect the native name and Configuration > Logs before retrying.
 
 After upgrading, validate the editors and Browse combinations against your MOVEit build, including credentials and supported proxy modes. Confirm non-admin actions match their existing Resource Group grants, read-only object views remain read-only, Task folders remain administrator-managed, and template-saving access follows the configured roles. Loading existing templates is available under normal access rules.
 

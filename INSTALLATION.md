@@ -1,14 +1,16 @@
 # MAUI Installation Guide
 
-- **Version:** `0.18.511-RC3`
+- **Version:** `0.18.521-RC3`
 - **Release:** Release Candidate 3 (pre-release)
-- **Build:** `20261029`
+- **Build:** `20261101`
 - **Database schema:** `1`
 - **Configuration version:** `1`
 
 > **Release Candidate 3 — not the final release.** This pre-release may contain bugs, regressions or incomplete behavior. Install it in a controlled test environment first, preserve backups, and complete the applicable live acceptance checks before relying on it in production.
 
-This guide covers a new MAUI installation and the required MAUI Integration on MOVEit Automation Web Admin. Before production deployment, also review [`SECURITY.md`](SECURITY.md) and complete the release/smoke-test guidance in [`TESTING.md`](TESTING.md).
+This guide covers a new MAUI installation and optional native-editor integration on MOVEit Automation Web Admin. Before production deployment, also review [`SECURITY.md`](SECURITY.md) and complete the release/smoke-test guidance in [`TESTING.md`](TESTING.md).
+
+**The MOVEit Integration components are not required if using only the MAUI Editors.** Skip section 7 for MAUI-only editing and enable the applicable editor preferences under Configuration > Settings > Editors. The MOVEit COM API on the MAUI host remains a separate prerequisite.
 
 **In this guide:** [1. Supported deployment](#1-supported-deployment) · [2. Prerequisite checklist](#2-prerequisite-checklist) · [4. Build MAUI](#4-build-maui) · [5. Prepare the IIS application](#5-prepare-the-iis-application) · [7. Configure MAUI Integration on MOVEit Web Admin](#7-configure-maui-integration-on-moveit-web-admin) · [8. Run Initial Setup](#8-run-initial-setup) · [10. Protect installation-owned files](#10-protect-installation-owned-files) · [12. Troubleshooting checklist](#12-troubleshooting-checklist)
 
@@ -136,8 +138,8 @@ dotnet publish .\MoveItAutomationUI.csproj --configuration Release --output .\pu
 RC3 application identity:
 
 ```text
-Version 0.18.511-RC3
-Build   20261029
+Version 0.18.521-RC3
+Build   20261101
 ```
 
 See [`TESTING.md`](TESTING.md) for automated coverage and the recommended manual RC3 smoke test.
@@ -163,6 +165,8 @@ MAUI can be run directly from Visual Studio for development and pre-deployment t
 The development workstation must reach the configured MOVEit Automation Web Admin URL and have the compatible **MOVEit Automation Windows COM API installed and registered before Initial Setup**. Setup checks local COM activation, just as it does on the production IIS host. Some REST-backed pages may still load in an already configured instance when COM becomes unavailable, but that is a partially working installation rather than an alternative deployment mode.
 
 #### Testing native MOVEit editor integration from localhost
+
+This subsection applies only when testing native MOVEit editor launches from MAUI.
 
 The native editor bridge validates the browser origin that launched the MOVEit Web Admin window. To test native-editor integration from the recommended Visual Studio `https` profile, include `https://localhost:7184` in the deployed MOVEit Web Admin copy of `maui-integration.js`:
 
@@ -257,7 +261,7 @@ A missing or inaccessible COM API may allow REST-backed areas of MAUI to work wh
 
 ## 7. Configure MAUI Integration on MOVEit Web Admin
 
-MAUI offers optional Task, Host, Script, Date List and Groups & Permissions editors. Native MOVEit Web Admin is still used according to editor preferences and for native-only operations and unsupported types. The browser bridge and native-editor styling must be installed on each MOVEit Web Admin/Tomcat node that users may reach.
+**The MOVEit Integration components are not required if using only the MAUI Editors.** This section applies when MAUI launches native MOVEit Web Admin editors, including native routes selected by editor preferences or unsupported MAUI editor types. For those launches, install the browser bridge, native-editor styling and logo on each MOVEit Web Admin/Tomcat node users may reach. These assets do not replace the locally registered COM API.
 
 The MAUI source/release contains:
 
@@ -317,7 +321,7 @@ automation-mark.svg
 
 The usual target is the MOVEit Web Admin `Tomcat\webapps\ROOT` directory. Use the actual Tomcat ROOT location for your MOVEit installation.
 
-For a new installation, deploy all three files together. For an upgrade, ensure the deployed integration assets match the current MAUI package. Whenever `maui-integration.js` is replaced, configure `LAUNCHER_ORIGINS` for all trusted MAUI environments before copying it to Tomcat. `MAUI_INTEGRATION_ASSET_REVISION` in `maui-integration.js` controls browser cache-busting for the dependent CSS/logo and is intentionally independent of the MAUI application version when later application releases do not change the Web Admin integration assets.
+When native-editor integration is used, deploy all three files together for a new installation and keep them consistent with the current package during upgrades. Whenever `maui-integration.js` is replaced, configure `LAUNCHER_ORIGINS` for all trusted MAUI environments before copying it to Tomcat. `MAUI_INTEGRATION_ASSET_REVISION` in `maui-integration.js` controls browser cache-busting for the dependent CSS/logo and is intentionally independent of the MAUI application version when later application releases do not change the Web Admin integration assets.
 
 ### 7.4 Update `index.html`
 
@@ -435,7 +439,8 @@ Quick Transfer has no separate server configuration, but it exercises several MO
 2. Run **Preflight** and confirm the generated Task passes the expected Task/Host/resource checks without starting a transfer.
 3. Transfer a small test file and confirm status reaches the expected MOVEit Task Run result. Verify Source **Delete Source File After Successful Transfer** is off by default and Destination **Overwrite Existing File** is on by default before exercising those options deliberately.
 4. While a non-production transfer is running, confirm **Transfer** changes to **Cancel** and cancellation reports **Cancelled** only after MOVEit confirms the stop.
-5. With the default cleanup option enabled, confirm a successfully monitored temporary `ADHOC_*` Task is removed. Also test **Create Traditional Task from this request** if reusable Task creation will be used.
+5. With **Delete temporary task after successful transfer** enabled, confirm a successfully monitored temporary `ADHOC_*` Task is removed. Uncheck it and confirm the generated Task remains. Failed, cancelled and no-transfer Tasks must remain available for troubleshooting. The redundant Create Traditional Task option is no longer present.
+6. Confirm the email recipients textbox is visible inside **Send Transfer Confirmation Email**, disabled while unchecked or SMTP is unavailable, and enabled when confirmation is available and selected. Check recipient validation and delivery after a successful transfer.
 6. If PGP is licensed and required, test both Encrypt and Decrypt. For Encrypt, verify expired keys are not selectable and the selected PGP key is preserved in the generated Task. If PGP is not licensed, confirm Encrypt/Decrypt are disabled with the license tooltip.
 
 Quick Transfer requires permission to use the selected MOVEit Hosts/resources and capacity for one Traditional Task. Manual folder/path entry does not make an otherwise unsupported Host type valid; for root-based profiles, an unselected root means the saved Host default root is used. Quick Transfer status tokens are process-local in RC3; finish active transfers before deployment. A submitted MOVEit run can continue independently, but its original MAUI monitor token does not survive restart. Background cleanup can recover eligible successful temporary Tasks using administrator Data Access credentials; failed, cancelled, ambiguous or unverifiable Tasks remain for review. See [Quick Transfer recovery](CHANGELOG.md#operational-safeguards-and-historical-fixes).
@@ -483,7 +488,8 @@ Copy Between Environments defaults off and requires both MOVEit administrator st
 After completing the first steps, validate:
 
 - Dashboard and inventory retrieval;
-- Task/Host/Resource native editor launch;
+- Task/Host/Resource launches using the configured MAUI editor preferences; include native editor launch only if native integration is used;
+- Tasks/Hosts `JSON:` searches, Task/Host Rename and the applicable [native import reuse checks](TESTING.md#native-import-dependency-reuse-acceptance);
 - Task Run, File Activity, and Audit Records;
 - Run Task Now and other permitted operations;
 - a Quick Transfer Preflight and small non-production transfer using representative Hosts;
@@ -521,7 +527,7 @@ Preserve the `Data/DataProtection-Keys` directory along with the installed `apps
 
 ### Recovery files and continuous retention
 
-Preserve `Data/ObjectEditLeases` (including `ShortLived`), `Data/RunAsOfRecovery` and `Data/DataProtection-Keys` during deployment. Failed checkout requests retain internal cleanup details in Configuration > Logs. Retry opening the object to obtain the current MOVEit checkout response; only a MOVEit administrator can confirm Override Checkout when needed. MAUI does not force checkout or release an unverified acquisition in the background. Run As Of recovery never starts a Task again and needs the original account's still-valid cleanup tokens; otherwise inspect the Task and its original Undo snapshot. Copy To recovery/report retention is enforced periodically while MAUI runs. Release 0.18.511 RC3 does not force an additional post-upgrade restart. MAUI still requests a restart when startup-sensitive configuration changes require one.
+Preserve `Data/ObjectEditLeases` (including `ShortLived`), `Data/RunAsOfRecovery` and `Data/DataProtection-Keys` during deployment. Failed checkout requests retain internal cleanup details in Configuration > Logs. Retry opening the object to obtain the current MOVEit checkout response; only a MOVEit administrator can confirm Override Checkout when needed. MAUI does not force checkout or release an unverified acquisition in the background. Run As Of recovery never starts a Task again and needs the original account's still-valid cleanup tokens; otherwise inspect the Task and its original Undo snapshot. Copy To recovery/report retention is enforced periodically while MAUI runs. Release 0.18.521 RC3 does not force an additional post-upgrade restart. MAUI still requests a restart when startup-sensitive configuration changes require one.
 
 ## 11. Upgrading MAUI
 
@@ -535,7 +541,7 @@ See [`UPGRADE.md`](UPGRADE.md) for the full upgrade framework. The normal operat
 6. If MAUI reports an upgrade is pending, authenticate as a MAUI Admin and complete `/Upgrade`.
 7. MAUI completes version-only, schema-only, and reload-safe configuration upgrades without restarting. If startup-sensitive configuration changed or the release manifest requires a restart, select **Restart MAUI** after completion; MAUI waits for the replacement process and returns to Login; no IIS application-pool access is required for the MAUI administrator.
 8. Sign in again and validate normal login and core workflows.
-9. Compare the deployed MOVEit Web Admin integration assets with the current package. If `maui-integration.js` must be replaced, configure `LAUNCHER_ORIGINS` with every trusted MAUI browser origin **before** deploying it to each Web Admin/Tomcat node, then re-verify the `index.html` script reference.
+9. If native editor integration is used, compare the deployed MOVEit Web Admin assets with the current package. If `maui-integration.js` must be replaced, configure `LAUNCHER_ORIGINS` with every trusted MAUI browser origin **before** deploying it to each applicable Web Admin/Tomcat node, then re-verify the `index.html` script reference. MAUI-only editor use can skip this step.
 
 Application releases may change while database schema/configuration versions remain unchanged. RC3 remains at database schema **1** and configuration version **1**.
 
@@ -561,8 +567,8 @@ Validate layers independently:
 4. MOVEit API license/capability and user authentication.
 5. MAUI metadata database connectivity and write/DDL permissions.
 6. MOVEit Windows COM API registration/access on the MAUI IIS server.
-7. `LAUNCHER_ORIGINS`, integration assets, and Tomcat `index.html` change.
-8. Browser cache/hard refresh after integration-asset changes.
+7. For native editor launches, `LAUNCHER_ORIGINS`, integration assets and the Tomcat `index.html` change.
+8. For native editor launches, browser cache/hard refresh after integration-asset changes.
 9. Confirm the application pool still has **Maximum Worker Processes = 1**.
 10. If authentication appears stale after an application recycle, sign in again; normal protected requests require a live server-side MOVEit session.
 11. MAUI application logs under **Configuration > Logs** after login.

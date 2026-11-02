@@ -176,37 +176,19 @@
 
     <section class="quick-transfer-card quick-transfer-options-card" aria-labelledby="quick-transfer-options-heading">
         <div class="quick-transfer-section-heading quick-transfer-section-heading-compact">
-            <div><h2 id="quick-transfer-options-heading">Task Options</h2><p>Keep the request as a reusable Traditional Task or remove the temporary Task after success.</p></div>
+            <div><h2 id="quick-transfer-options-heading">Task Options</h2><p>Choose whether to remove the temporary Task after success and send a confirmation email.</p></div>
         </div>
         <div class="quick-transfer-options-list">
             <label class="quick-transfer-switch-row">
-                <input type="checkbox" data-quick-persist-task />
-                <span><strong>Create Traditional Task from this request</strong><small>Keep the generated task after this transfer.</small></span>
-            </label>
-            <label class="quick-transfer-switch-row">
                 <input type="checkbox" data-quick-delete-temp checked />
-                <span><strong>Delete temporary task after successful transfer</strong><small>Failed, cancelled, and no-transfer tasks are retained for troubleshooting.</small></span>
+                <span><strong>Delete Temporary Task After Successful Transfer</strong><small>Failed, cancelled, and no-transfer tasks are retained for troubleshooting.</small></span>
             </label>
-            <label class="quick-transfer-switch-row" title="@(Model.ConfirmationEmailAvailable ? "Send a summary after MOVEit confirms a successful transfer." : Model.ConfirmationEmailUnavailableReason)">
-                <input type="checkbox" data-quick-confirm-email @(Model.ConfirmationEmailAvailable ? null : "disabled") />
-                <span><strong>Send Transfer Confirmation Email</strong><small>Notify recipients after a successful transfer.</small></span>
-            </label>
-            <div class="quick-transfer-task-name" data-quick-confirm-recipients-row hidden>
-                <label class="field-block">
-                    <span>Recipient Email Address(es)</span>
-                    <input class="text-input" type="text" maxlength="4000" autocomplete="off" placeholder="user@company.com; team@company.com" data-quick-confirm-recipients />
-                    <small>Separate multiple email addresses with commas or semicolons.</small>
+            <div class="quick-transfer-switch-row quick-transfer-email-option" title="@(Model.ConfirmationEmailAvailable ? "Send a summary after MOVEit confirms a successful transfer." : Model.ConfirmationEmailUnavailableReason)">
+                <label class="quick-transfer-confirm-toggle">
+                    <input type="checkbox" data-quick-confirm-email @(Model.ConfirmationEmailAvailable ? null : "disabled") />
+                    <span><strong>Send Transfer Confirmation Email</strong><small>Notify recipients after a successful transfer.</small></span>
                 </label>
-            </div>
-            <div class="quick-transfer-task-name" data-quick-task-name-row hidden>
-                <label class="field-block">
-                    <span>Task Name</span>
-                    <input class="text-input" type="text" maxlength="254" autocomplete="off" data-quick-task-name />
-                </label>
-                <label class="new-task-auto-format" title="When enabled, converts the name to uppercase and replaces spaces with underscores. Example: My Task → MY_TASK.">
-                    <input type="checkbox" data-quick-task-auto-format @(Model.AutoFormatNewTaskHostNames ? "checked" : null) />
-                    <span>Auto Format Name</span>
-                </label>
+                <input class="text-input" type="text" maxlength="4000" autocomplete="off" placeholder="user@company.com; team@company.com" aria-label="Confirmation Email Recipients" title="Separate multiple email addresses with commas or semicolons." data-quick-confirm-recipients disabled />
             </div>
         </div>
     </section>

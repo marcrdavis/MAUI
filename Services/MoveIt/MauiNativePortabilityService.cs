@@ -25,7 +25,9 @@ public sealed record NativePortabilityObjectPreview(
     bool CanRename,
     string SuggestedName,
     string ConflictTargetId,
-    IReadOnlyList<string> MetadataIssues);
+    IReadOnlyList<string> MetadataIssues,
+    bool CanReuseExisting = false,
+    string ReuseTargetName = "");
 public sealed record NativePortabilityPreflight(
     bool Valid,
     string PackageType,
@@ -39,7 +41,7 @@ public sealed record NativePortabilityPreflight(
     bool RequiresMetadataAcknowledgement,
     IReadOnlyList<NativePortabilityObjectPreview> Items,
     string Message);
-public sealed record NativePortabilityImportedItem(string ObjectType, string SourceId, string SourceName, string FinalName, string DestinationId, bool Selected, bool Overwritten, bool MetadataApplied, string Warning);
+public sealed record NativePortabilityImportedItem(string ObjectType, string SourceId, string SourceName, string FinalName, string DestinationId, bool Selected, bool Overwritten, bool MetadataApplied, string Warning, bool Reused = false);
 public sealed record NativePortabilityImportResult(
     bool Success,
     string PackageType,
@@ -47,7 +49,8 @@ public sealed record NativePortabilityImportResult(
     int OverwrittenCount,
     int RenamedCount,
     IReadOnlyList<NativePortabilityImportedItem> Items,
-    string Warning);
+    string Warning,
+    int ReusedCount = 0);
 
 /// <summary>
 /// MOVEit's native import request was sent, but MAUI did not receive a definitive upstream result.
@@ -283,6 +286,7 @@ public sealed partial class MauiNativePortabilityService : IMauiNativePortabilit
                 : SuggestUniqueName(obj.ObjectType, obj.SourceName, usedNames);
             if (canRename && suggestedName.Length > 0) usedNames.GetOrAdd(obj.ObjectType).Add(suggestedName);
             var selected = selectedKeys.Contains(MetadataKey(obj.ObjectType, obj.SourceId));
+            var reuseTarget = duplicate is null ? null : ResolveReuseTarget(obj, destination, selectedKeys);
             previews.Add(new NativePortabilityObjectPreview(
                 obj.ObjectType,
                 obj.SourceId,
@@ -295,7 +299,9 @@ public sealed partial class MauiNativePortabilityService : IMauiNativePortabilit
                 canRename,
                 suggestedName,
                 duplicate is null ? string.Empty : ResolveConflictTargetId(obj, destination),
-                issues));
+                issues,
+                reuseTarget is not null,
+                reuseTarget?.Name ?? string.Empty));
         }
 
         var conflicts = previews.Count(item => item.Conflict);
@@ -342,33 +348,23 @@ public sealed partial class MauiNativePortabilityService : IMauiNativePortabilit
         var resolutionMap = BuildResolutionMap(resolutions);
         ValidateSubmittedConflictResolutions(resolutionMap, importObjects, duplicates, destinationForConflictDetection);
 
-        // "Use Existing" must not be implemented by hand-editing MOVEit's decoded JSON model. The native
-        // Web Admin contract was captured for Rename and native duplicate Overwrite, but not for a synthetic
-        // key/certificate remove operation. Instead remove only the selected existing key/certificate from the
-        // original native XML and ask /config/encode to build a fresh authoritative import model. The imported
-        // Task/Host keeps its original native key ID reference, which is valid only because CanUseExistingKey
-        // has verified that the same native ID exists in the destination environment.
-        var useExistingKeys = new List<UseExistingKeyPlan>();
-        foreach (var obj in importObjects.Where(item => IsKeyType(item.ObjectType)))
+        // Exclude reused dependencies from native XML, remap only structured references with the
+        // shared Copy To rules, then ask MOVEit to encode a fresh authoritative import model.
+        // Never invent decoded JSON removal/duplicate flags or change the selected Task choices.
+        var selectedKeys = package.Manifest.SelectedItems
+            .Select(item => MetadataKey(item.Type, item.SourceId)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var reused = BuildReusePlans(importObjects, duplicates, resolutionMap, destinationForConflictDetection, selectedKeys);
+        if (reused.Count > 0)
         {
-            var duplicate = FindDuplicate(duplicates, obj);
-            if (duplicate is null) continue;
-            if (!resolutionMap.TryGetValue(MetadataKey(obj.ObjectType, obj.SourceId), out var resolution)) continue;
-            if (!NormalizeResolutionAction(resolution.Action).Equals("useexisting", StringComparison.OrdinalIgnoreCase)) continue;
-            if (!CanUseExistingKey(obj, duplicate, destinationForConflictDetection))
-                throw new InvalidOperationException($"Use Existing is only valid when the conflicting {FriendlyObjectType(obj.ObjectType, obj.NativeSubtype)} has the same native ID in the destination environment.");
-            useExistingKeys.Add(new UseExistingKeyPlan(obj, (resolution.TargetId ?? string.Empty).Trim()));
-        }
-
-        if (useExistingKeys.Count > 0)
-        {
-            var nativeXmlWithoutExistingKeys = RemoveUseExistingKeyDependencies(package.NativeXml, useExistingKeys.Select(plan => plan.Object).ToList());
+            var expectedObjects = importObjects.Where(obj => !reused.Any(plan => plan.Object == obj)).ToList();
+            var rewrittenXml = PrepareReuseImportXml(package.NativeXml, reused, expectedObjects);
             decoded = await DecodeNativeImportAsync(
-                nativeXmlWithoutExistingKeys,
+                rewrittenXml,
                 package.Manifest.ProtectionMode == "passphrase" ? passphrase : null,
                 cancellationToken);
             importObjects = EnumerateImportObjects(decoded);
             ValidateDecodedBoundary(package, importObjects);
+            ValidateReuseDecodedObjects(expectedObjects, importObjects);
             duplicates = MergeKeyInventoryDuplicates(ReadDuplicates(decoded), importObjects, destinationForConflictDetection);
         }
 
@@ -430,6 +426,8 @@ public sealed partial class MauiNativePortabilityService : IMauiNativePortabilit
         // dependencies do not inherit the selected Task/Host's grants, and overwrite needs Edit too.
         if (_access is not null)
         {
+            foreach (var plan in reused)
+                await _access.RequireAsync(ToMetadataObjectType(plan.Object.ObjectType), plan.Target.Id, "Read", cancellationToken);
             foreach (var plan in plans)
             {
                 var type = plan.Object.ObjectType switch { "SSHClientKey" => "SSH", "SSLClientCert" => "TLS", "PGPKey" => "PGP", _ => plan.Object.ObjectType };
@@ -502,7 +500,7 @@ public sealed partial class MauiNativePortabilityService : IMauiNativePortabilit
         // destination objects and therefore do not identify one unambiguous overwrite target.
         var overwriteInventory = await LoadDestinationInventoryAsync(cancellationToken);
         ValidateOverwritePlans(plans, overwriteInventory);
-        ValidateUseExistingKeyPlans(useExistingKeys, overwriteInventory);
+        ValidateReusePlans(reused, overwriteInventory, selectedKeys);
 
         // Save MAUI Undo snapshots before MOVEit overwrites any supported existing object. This extends the same
         // guardrail previously used by the Task/Host importers to native dependencies that are being overwritten.
@@ -513,7 +511,7 @@ public sealed partial class MauiNativePortabilityService : IMauiNativePortabilit
         // Revalidate the exact analyzed targets one last time immediately before the native point of no return.
         var finalCommitInventory = await LoadDestinationInventoryAsync(cancellationToken);
         ValidateOverwritePlans(plans, finalCommitInventory);
-        ValidateUseExistingKeyPlans(useExistingKeys, finalCommitInventory);
+        ValidateReusePlans(reused, finalCommitInventory, selectedKeys);
 
         var planSummary = string.Join(", ", plans
             .GroupBy(plan => $"{plan.Object.ObjectType}:{plan.Action}", StringComparer.OrdinalIgnoreCase)
@@ -548,9 +546,6 @@ public sealed partial class MauiNativePortabilityService : IMauiNativePortabilit
             warnings.Add("MOVEit import completed, but MAUI could not complete post-import reconciliation. Refresh the grid and verify the imported objects before attempting any retry.");
         }
 
-        var selectedKeys = package.Manifest.SelectedItems
-            .Select(item => MetadataKey(item.Type, item.SourceId))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var metadataByKey = package.MetadataItems.ToDictionary(item => MetadataKey(item.ObjectType, item.SourceId), StringComparer.OrdinalIgnoreCase);
         var results = new List<NativePortabilityImportedItem>();
 
@@ -604,14 +599,19 @@ public sealed partial class MauiNativePortabilityService : IMauiNativePortabilit
             results.Add(new NativePortabilityImportedItem(plan.Object.ObjectType, plan.Object.SourceId, plan.Object.SourceName, plan.FinalName, destinationId, selected, plan.Action == "overwrite", metadataApplied, warning));
         }
 
+        // Reused resources are read-only: no metadata restore, audit modification, Undo or creation count.
+        results.AddRange(reused.Select(plan => new NativePortabilityImportedItem(
+            plan.Object.ObjectType, plan.Object.SourceId, plan.Object.SourceName, plan.Target.Name,
+            plan.Target.Id, false, false, false, string.Empty, Reused: true)));
         return new NativePortabilityImportResult(
             true,
             package.Manifest.PackageType,
-            results.Count,
+            plans.Count,
             plans.Count(plan => plan.Action == "overwrite"),
             plans.Count(plan => plan.Action == "rename"),
             results,
-            string.Join(" ", warnings));
+            string.Join(" ", warnings),
+            reused.Count);
     }
 
     private async Task<MoveItTaskConfiguration> CreateHostExportCarrierAsync(string carrierName, string carrierXml, CancellationToken cancellationToken)
@@ -795,7 +795,7 @@ public sealed partial class MauiNativePortabilityService : IMauiNativePortabilit
         if ((normalizedAction == "overwrite" || normalizedAction == "useexisting")
             && (expected.Length == 0 || current.Length == 0))
         {
-            var actionLabel = normalizedAction == "useexisting" ? "Use Existing" : "Overwrite Existing";
+            var actionLabel = normalizedAction == "useexisting" ? "Reuse Existing" : "Overwrite Existing";
             throw new InvalidOperationException(
                 $"MAUI can no longer identify the exact destination target for {label}. Analyze the package again before choosing {actionLabel}.");
         }
@@ -857,26 +857,6 @@ public sealed partial class MauiNativePortabilityService : IMauiNativePortabilit
         if (!expectedTargetId.Equals(currentTargetId, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException(
                 $"The overwrite target for {FriendlyObjectType(plan.Object.ObjectType, plan.Object.NativeSubtype)} '{plan.Object.SourceName}' changed after the package was analyzed. Analyze the package again before importing.");
-    }
-
-    private static void ValidateUseExistingKeyPlans(IReadOnlyList<UseExistingKeyPlan> plans, DestinationInventory inventory)
-    {
-        foreach (var plan in plans)
-        {
-            var obj = plan.Object;
-            var kind = KeyKindFromObjectType(obj.ObjectType);
-            var target = inventory.Keys.FirstOrDefault(item =>
-                item.Kind == kind && item.Id.Equals(obj.SourceId, StringComparison.OrdinalIgnoreCase))
-                ?? throw new InvalidOperationException(
-                    $"The {FriendlyObjectType(obj.ObjectType, obj.NativeSubtype)} '{obj.SourceName}' selected for Use Existing no longer exists in the destination environment. Analyze the package again.");
-
-            if (string.IsNullOrWhiteSpace(plan.ExpectedTargetId)
-                || !plan.ExpectedTargetId.Equals(target.RowId, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException(
-                    $"The destination {FriendlyObjectType(obj.ObjectType, obj.NativeSubtype)} selected for Use Existing changed after the package was analyzed. Analyze the package again.");
-            }
-        }
     }
 
     private static void ValidateOverwritePlans(IReadOnlyList<ImportPlan> plans, DestinationInventory inventory)
@@ -1489,57 +1469,13 @@ public sealed partial class MauiNativePortabilityService : IMauiNativePortabilit
         node["new"] = true;
     }
 
-    private static string RemoveUseExistingKeyDependencies(string nativeXml, IReadOnlyList<ImportObjectRef> useExistingKeys)
-    {
-        if (useExistingKeys is null || useExistingKeys.Count == 0) return nativeXml;
-
-        var document = ParseExportDocument(nativeXml);
-        var root = document.Root ?? throw new InvalidOperationException("The native MOVEit export has an unexpected root element.");
-        foreach (var obj in useExistingKeys)
-        {
-            var (containerName, elementName) = obj.ObjectType switch
-            {
-                "PGPKey" => ("PGPKeys", "PGPKey"),
-                "SSHClientKey" => ("SSHClientKeys", "SSHClientKey"),
-                "SSLClientCert" => ("SSLClientCerts", "SSLClientCert"),
-                _ => throw new InvalidOperationException("Use Existing is only supported for key/certificate dependencies.")
-            };
-
-            var container = root.Elements().FirstOrDefault(element => element.Name.LocalName.Equals(containerName, StringComparison.OrdinalIgnoreCase))
-                ?? throw new InvalidOperationException($"The native MOVEit export is missing its {containerName} collection.");
-            var matches = container.Elements()
-                .Where(element => element.Name.LocalName.Equals(elementName, StringComparison.OrdinalIgnoreCase)
-                    && (((string?)element.Attribute("ID") ?? string.Empty).Trim()).Equals(obj.SourceId, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-            if (matches.Count != 1)
-                throw new InvalidOperationException($"MAUI could not uniquely identify {FriendlyObjectType(obj.ObjectType, obj.NativeSubtype)} ID '{obj.SourceId}' in the native export for Use Existing.");
-            matches[0].Remove();
-        }
-
-        // Host packages require an explicit empty Tasks element before Hosts. XDocument may self-close it when
-        // serializing the working XML, so preserve the validated native Host-import contract.
-        return document.ToString(SaveOptions.DisableFormatting)
-            .Replace("<Tasks />", "<Tasks></Tasks>", StringComparison.Ordinal)
-            .Replace("<Tasks/>", "<Tasks></Tasks>", StringComparison.Ordinal);
-    }
-
-    private static bool CanUseExistingKey(ImportObjectRef obj, DuplicateRef duplicate, DestinationInventory inventory)
-    {
-        if (!IsKeyType(obj.ObjectType) || !duplicate.Reasons.Any(reason => reason.Equals("id", StringComparison.OrdinalIgnoreCase)))
-            return false;
-
-        var kind = KeyKindFromObjectType(obj.ObjectType);
-        return inventory.Keys.Any(item =>
-            item.Kind == kind && item.Id.Equals(obj.SourceId, StringComparison.OrdinalIgnoreCase));
-    }
-
     private static string ConflictResolutionRequiredMessage(ImportObjectRef obj, DuplicateRef duplicate)
     {
         if (IsKeyType(obj.ObjectType) && duplicate.Reasons.Any(reason => reason.Equals("id", StringComparison.OrdinalIgnoreCase)))
-            return $"Choose Use Existing or Overwrite Existing for conflicting {FriendlyObjectType(obj.ObjectType, obj.NativeSubtype)} '{obj.SourceName}'.";
+            return $"Choose Reuse Existing or Overwrite Existing for conflicting {FriendlyObjectType(obj.ObjectType, obj.NativeSubtype)} '{obj.SourceName}'.";
         if (CanRename(obj))
-            return $"Choose Overwrite Existing or Import as New for conflicting {FriendlyObjectType(obj.ObjectType, obj.NativeSubtype)} '{obj.SourceName}'.";
-        return $"Choose Overwrite Existing for conflicting {FriendlyObjectType(obj.ObjectType, obj.NativeSubtype)} '{obj.SourceName}'.";
+            return $"Choose {(obj.ObjectType == "Host" ? "Reuse Existing where available, " : "")}Overwrite Existing or Import as New for conflicting {FriendlyObjectType(obj.ObjectType, obj.NativeSubtype)} '{obj.SourceName}'.";
+        return $"Choose Reuse Existing where available or Overwrite Existing for conflicting {FriendlyObjectType(obj.ObjectType, obj.NativeSubtype)} '{obj.SourceName}'.";
     }
 
     private static string NormalizeResolutionAction(string? value)
@@ -1548,7 +1484,7 @@ public sealed partial class MauiNativePortabilityService : IMauiNativePortabilit
         if (action.Equals("useexisting", StringComparison.OrdinalIgnoreCase) || action.Equals("use-existing", StringComparison.OrdinalIgnoreCase)) return "useexisting";
         if (action.Equals("overwrite", StringComparison.OrdinalIgnoreCase)) return "overwrite";
         if (action.Equals("rename", StringComparison.OrdinalIgnoreCase) || action.Equals("new", StringComparison.OrdinalIgnoreCase)) return "rename";
-        throw new InvalidOperationException("Conflict resolution must be Use Existing, Overwrite Existing, or Import as New where supported.");
+        throw new InvalidOperationException("Conflict resolution must be Reuse Existing, Overwrite Existing, or Import as New where supported.");
     }
 
     private static string NormalizeImportName(string? value, string objectType)
@@ -1562,8 +1498,8 @@ public sealed partial class MauiNativePortabilityService : IMauiNativePortabilit
     private static bool CanRename(ImportObjectRef obj)
         // The native Rename-as-new payload shape has been captured and verified for Tasks and Hosts.
         // Dependency object rename semantics vary by MOVEit resource type, so MAUI deliberately does not
-        // offer rename for dependency conflicts. Key/certificate ID conflicts may use the existing object;
-        // other dependency conflicts remain overwrite-only until their native contracts are captured.
+        // offer rename for other dependency conflicts. Compatible dependencies can instead be reused
+        // by removing their native definitions and remapping references before authoritative re-encoding.
         => obj.ObjectType.Equals("Task", StringComparison.OrdinalIgnoreCase)
            || obj.ObjectType.Equals("Host", StringComparison.OrdinalIgnoreCase);
 
@@ -1656,11 +1592,10 @@ public sealed partial class MauiNativePortabilityService : IMauiNativePortabilit
         => string.IsNullOrWhiteSpace(first) ? second : string.IsNullOrWhiteSpace(second) ? first : $"{first} {second}";
 
     private sealed record NativeXmlDescriptor(string NativeObjectType, string MetadataObjectType, string SourceId, string MetadataObjectId, string SourceName);
-    private sealed record ImportObjectRef(string ObjectType, string NativeSubtype, string SourceId, string SourceName, JsonObject Node);
-    private sealed record DuplicateRef(string Type, string Id, IReadOnlyList<string> Reasons);
+    internal sealed record ImportObjectRef(string ObjectType, string NativeSubtype, string SourceId, string SourceName, JsonObject Node);
+    internal sealed record DuplicateRef(string Type, string Id, IReadOnlyList<string> Reasons);
     private sealed record ImportPlan(ImportObjectRef Object, string Action, string FinalName, DuplicateRef? Duplicate, string ExpectedTargetId);
-    private sealed record UseExistingKeyPlan(ImportObjectRef Object, string ExpectedTargetId);
-    private sealed record DestinationInventory(IReadOnlyList<AutomationTask> Tasks, IReadOnlyList<AutomationHost> Hosts, IReadOnlyList<AutomationScript> Scripts, IReadOnlyList<AutomationDateList> DateLists, IReadOnlyList<AutomationKeyCertificate> Keys);
+    internal sealed record DestinationInventory(IReadOnlyList<AutomationTask> Tasks, IReadOnlyList<AutomationHost> Hosts, IReadOnlyList<AutomationScript> Scripts, IReadOnlyList<AutomationDateList> DateLists, IReadOnlyList<AutomationKeyCertificate> Keys);
 }
 
 internal static class NativePortabilityDictionaryExtensions

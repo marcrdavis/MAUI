@@ -14,13 +14,13 @@ const inline=file=>'<script>'+read(file).replace(/<\/script/gi,'<\\/script')+'</
 const html=String.raw`<!doctype html><html data-theme="light" data-moveit-admin="true" data-user-grid-page-size="50"><head><meta charset="utf-8"><style>${read('wwwroot/css/site.css')}
 ${read('wwwroot/css/script-editor.css')}
 ${read('wwwroot/css/editors/task-json-editor.css')}</style></head><body class="grid-fixed-page"><section hidden data-grid="tasks" data-page-sizes="[10,50,100]" data-default-page-size="10"></section>${modal}<script>
-window.errors=[];window.logged=[];window.requests=[];window.fault='';window.held=[];window.changed=0;window.attack=0;window.duration=false;window.leaseListeners=0;window.confirms=[];window.confirmProceed=true;window.heldSaves=[];
+window.errors=[];window.logged=[];window.requests=[];window.fault='';window.held=[];window.changed=0;window.attack=0;window.duration=false;window.leaseListeners=0;window.confirms=[];window.confirmProceed=true;window.confirmReload=true;window.heldSaves=[];
 window.addEventListener('error',event=>errors.push(event.message));window.addEventListener('unhandledrejection',event=>errors.push(String(event.reason)));
 const originalAdd=window.addEventListener.bind(window),originalRemove=window.removeEventListener.bind(window);
 window.addEventListener=(name,callback,...args)=>{if(name==='pagehide')leaseListeners++;return originalAdd(name,callback,...args);};
 window.removeEventListener=(name,callback,...args)=>{if(name==='pagehide')leaseListeners--;return originalRemove(name,callback,...args);};
 window.mauiLogNotification=(...args)=>logged.push(args);window.mauiAppUrl=url=>'/maui'+url;
-window.mauiConfirm=async options=>{confirms.push(options);return options.confirmText==='Proceed'?confirmProceed:true;};
+window.mauiConfirm=async options=>{confirms.push(options);return options.title==='Reload Tasks?'?confirmReload:options.confirmText==='Proceed'?confirmProceed:true;};
 window.seed=()=>{window.docs={};for(const [id,type]of [['900',''],['901','COS'],['902','Sy']])docs[id]={version:'v1',definition:{ID:id,Name:id==='901'?'<img src=x onerror="attack++">':'Task '+id,TT:type,Active:0,CacheNames:'random',Info:{Description:'Before'},Schedules:{Schedule:[{OnlyUntilFirstSuccess:0,Days:{DayOfWeek:['Monday']}}]},steps:[{Source:{ID:'11',FileMask:'*.*',ClientSecret:null}}]}};};seed();
 const reply=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:{'content-type':'application/json'}});
 window.fetch=async(url,options={})=>{
@@ -45,7 +45,7 @@ window.fetch=async(url,options={})=>{
 };
 window.shell=id=>({id,name:docs[id].definition.Name,kind:docs[id].definition.TT==='COS'?'Advanced':docs[id].definition.TT==='Sy'?'Synchronization':'Traditional',editVersion:docs[id].version,checkoutObjectsForDurationOfEdit:duration,definition:structuredClone(docs[id].definition),readOnlyPaths:[['ID'],['TT'],['steps','0','Source','ID'],['steps','0','Source','ClientSecret']]});
 window.fetchJson=async(url,options={})=>{const headers=new Headers(options.headers||{});if(options.body)headers.set('RequestVerificationToken','token');const response=await fetch(url,{...options,headers});const payload=await response.json();if(!response.ok){const error=new Error(payload.message);error.status=response.status;error.payload=payload;throw error;}return payload;};
-</script>${inline('wwwroot/js/modal-ui.js')}${inline('wwwroot/js/editors/object-edit-lease.js')}${inline('wwwroot/js/editors/task-json-model.js')}${inline('wwwroot/js/editors/task-json-editor.js')}<script>
+</script>${inline('wwwroot/js/modal-ui.js')}${inline('wwwroot/js/editors/object-edit-lease.js')}${inline('wwwroot/js/shared/json-search.js')}${inline('wwwroot/js/editors/task-json-model.js')}${inline('wwwroot/js/editors/task-json-editor.js')}<script>
 window.editor=MauiTaskJsonEditor.initialize({fetchJson,antiForgeryToken:'token',changed:()=>changed++});window.ready=true;
 </script></body></html>`;
 for(const [,script]of html.matchAll(/<script>([\s\S]*?)<\/script>/g))new(require('node:vm').Script)(script);
@@ -128,7 +128,7 @@ async function screenshot(name) {
     await check('document.querySelector("[data-task-json-pager=match]").hidden',true,'Empty results have no duplicate paging summary');
     await evaluate(`const search=document.querySelector('[data-task-json-tree-search]');search.value='Task.Active';search.dispatchEvent(new Event('input'));`);await click('[data-task-json-tree] .task-json-leaf');
     await check(`(()=>{const field=document.querySelector('[data-task-json-current]'),style=getComputedStyle(field);return [field.getBoundingClientRect().height,style.paddingTop,style.paddingBottom,style.fontFamily===getComputedStyle(document.querySelector('[data-task-json-name]')).fontFamily];})()`,[42,'10px','10px',true],'Scalar fields use centered MAUI field geometry and font');
-    await check(`(()=>{const b=document.querySelector('[data-task-json-expand]'),r=[...document.querySelectorAll('[data-task-json-tree] button')].find(b=>b.textContent==='Reload Task');return [getComputedStyle(b).borderRadius,b.getBoundingClientRect().height,r.classList.contains('secondary-button'),document.querySelectorAll('[data-task-json-dialog] .link-button').length];})()`,['9px',38,true,0],'Tree commands reuse actual MAUI buttons');
+    await check(`(()=>{const b=document.querySelector('[data-task-json-expand]'),r=document.querySelector('[data-task-json-reload]');return [getComputedStyle(b).borderRadius,b.getBoundingClientRect().height,r.classList.contains('secondary-button'),document.querySelectorAll('[data-task-json-dialog] .link-button').length];})()`,['9px',38,true,0],'Tree commands reuse actual MAUI buttons');
     for(const theme of ['light','dark']){await evaluate(`document.documentElement.dataset.theme='${theme}'`);await screenshot('edit-'+theme);}
     await preview();await check('document.querySelectorAll("[data-task-json-match]").length',3);await check('document.querySelectorAll("[data-task-json-matches] img").length',0);await check('attack',0);
     await check('document.querySelector("[data-task-json-match-page]").textContent','Showing 1–3 of 3');
@@ -246,6 +246,39 @@ async function screenshot(name) {
     await check('document.querySelector("[data-task-json-current]").value','Line one\nLine two','Multiline strings retain their exact text');
     await check('document.querySelector("[data-task-json-current]").getBoundingClientRect().height',100);
     await click('[data-task-json-close]');await pause(30);await check('errors',[]);await check('leaseListeners',0);
+    await evaluate(`seed();fault='';duration=false;confirmReload=true;document.querySelector('[data-task-json-dialog]').dataset.checkoutEnabled='false';for(const id of ['900','901','902'])docs[id].definition.NextActions={NextAction:[{DoIfFailure:id==='901'?0:1}]};docs['900'].definition.Info.Description='Monthly invoice';`);await open(['900','901','902']);
+    await check(`[...document.querySelector('[data-task-json-reload]').parentElement.children].map(b=>b.textContent)`,['Reload Tasks','Expand All','Collapse All'],'Reload is a shared header command');
+    await check(`[...document.querySelectorAll('[data-task-json-tree] button')].some(b=>b.textContent==='Reload Task')`,false);
+    const searchTree=async value=>{await evaluate(`const search=document.querySelector('[data-task-json-tree-search]');search.value=${JSON.stringify(value)};search.dispatchEvent(new Event('input'));`);};
+    const searchReads=await evaluate('requests.filter(r=>r.action==="Shell").length');
+    await searchTree('DoIfFailure=1');await check('document.querySelectorAll("[data-task-json-tree] > details").length',2);await check('document.querySelectorAll("[data-task-json-tree] .task-json-leaf").length',2);
+    await check('document.querySelector("[data-task-json-search-count]").textContent','2 of 3 Tasks match');await check('document.querySelector("[data-task-json-search-count]").hidden',false);
+    await check('document.querySelector("[data-task-json-search-count]").closest("footer")!==null',true);
+    await searchTree('Description contains INVOICE');await check('document.querySelectorAll("[data-task-json-tree] > details").length',1);
+    await searchTree('invoice');await check('document.querySelectorAll("[data-task-json-tree] > details").length',1,'Plain value search also hides nonmatching Tasks');
+    await searchTree('DoIfFailure<1');await check('document.querySelectorAll("[data-task-json-tree] > details").length',1);
+    await searchTree('DoIfFailure>8');await check('document.querySelectorAll("[data-task-json-tree] > details").length',0);await check('document.querySelector("[data-task-json-search-count]").textContent','0 of 3 Tasks match');
+    await searchTree('DoIfFailure=');await check('document.querySelector("[data-task-json-tree-search]").validity.valid',false,'An incomplete expression explains the required value');
+    await searchTree('');await check('document.querySelectorAll("[data-task-json-tree] > details").length',3);await check('document.querySelector("[data-task-json-search-count]").hidden',true);
+    await check('requests.filter(r=>r.action==="Shell").length',searchReads,'Tree searches make no server requests');
+    await searchTree('DoIfFailure=1');await click('[data-task-json-tree] .task-json-leaf');await evaluate(`const input=document.querySelector('[data-task-json-new]');input.value='0';input.dispatchEvent(new Event('input'));`);await click('[data-task-json-apply]');
+    await check('document.querySelector("[data-task-json-search-count]").textContent','1 of 3 Tasks match','Counts update after a local edit changes the matches');
+    await evaluate(`confirmReload=false;document.querySelector('[data-task-json-find]').value='DoIfFailure';document.querySelector('[data-task-json-replacement]').value='1';`);await click('[data-task-json-reload]');await waitFor(`document.querySelector('[data-task-json-dialog]').getAttribute('aria-busy')==='false'`);
+    await check('requests.filter(r=>r.action==="Shell").length',searchReads,'Cancelling reload preserves the draft without reads');await check('document.querySelector("[data-task-json-submit]").disabled',false);
+    await evaluate('confirmReload=true;');await click('[data-task-json-reload]');await waitFor(`!document.querySelector('[data-task-json-reload]').disabled`);
+    await check('requests.filter(r=>r.action==="Shell").length',searchReads+3,'Reload reads every selected Task, including those hidden by the search');
+    await check('document.querySelector("[data-task-json-search-count]").textContent','2 of 3 Tasks match');await check('document.querySelector("[data-task-json-submit]").disabled',true);
+    await check('document.querySelector("[data-task-json-find]").value','');await check('document.querySelector("[data-task-json-replacement]").value','');
+    await click('[data-task-json-tree] .task-json-leaf');await check('document.querySelector("[data-task-json-current]").value','1','Reload discards the staged edit and reads the current server value');
+    for(const theme of ['light','dark']){await evaluate(`document.documentElement.dataset.theme='${theme}'`);await screenshot('search-'+theme);}
+    await evaluate('fault="load403";');await click('[data-task-json-reload]');await waitFor(`!document.querySelector('[data-task-json-reload]').disabled`);
+    await check('document.querySelector("[data-task-json-fields]").hidden',true,'Failed reloads cannot leave a stale editable definition');await check('document.querySelector("[data-task-json-submit]").disabled',true);
+    await evaluate(`fault='';duration=true;document.querySelector('[data-task-json-dialog]').dataset.checkoutEnabled='true';`);await click('[data-task-json-reload]');await waitFor(`!document.querySelector('[data-task-json-reload]').disabled`);
+    await check('document.querySelector("[data-task-json-search-count]").textContent','2 of 3 Tasks match');await check('leaseListeners',3,'Reload reuses the per-Task lease objects');
+    await evaluate(`fault='hold';document.querySelector('[data-task-json-reload]').click();`);await waitFor('held.length>0');await click('[data-task-json-close]');await pause(30);
+    await evaluate(`fault='';duration=false;document.querySelector('[data-task-json-dialog]').dataset.checkoutEnabled='false';`);await open(['902']);await evaluate('held.splice(0).forEach(fn=>fn());');await pause(30);
+    await check('document.querySelectorAll("[data-task-json-tree] > details").length',1,'Late reload results cannot replace a reopened modal');await check('document.querySelector("[data-task-json-tree]").textContent.includes("Task 902")',true);
+    await check('document.querySelector("[data-task-json-tree-search]").value','');await click('[data-task-json-close]');await pause(30);await check('leaseListeners',0);await check('errors',[]);
     const result={result:'PASS',checks};fs.writeFileSync(path.join(output,'results.json'),JSON.stringify(result,null,2));console.log('Task JSON editor rendered workflows: '+JSON.stringify(result));
 })().catch(async error=>{console.error(error);try{if(socket){console.error(await evaluate('({errors,requests:requests.map(r=>({url:r.url,id:r.id})),body:document.body.innerText})'));await screenshot('FAILED');}}catch{}process.exitCode=1;}).finally(()=>{
  socket?.close();if(browser?.pid){if(process.platform==='win32')spawnSync('taskkill',['/pid',String(browser.pid),'/T','/F'],{stdio:'ignore'});else browser.kill('SIGTERM');}

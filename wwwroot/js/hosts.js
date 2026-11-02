@@ -60,7 +60,9 @@
         const response = await (window.MauiMoveItGridConnection?.fetch || window.fetch.bind(window))(url, { ...options, headers });
         if (response.status === 401) {
             window.location.replace(endpoint('loginUrl') || window.mauiAppUrl('/Account/SessionExpired'));
-            throw new Error('MOVEit session expired.');
+            const error = new Error('MOVEit session expired.');
+            error.status = 401;
+            throw error;
         }
 
         const contentType = response.headers.get('content-type') || '';
@@ -234,11 +236,116 @@
     });
     function openNewHostDialog() { newHost.open(); }
 
+    function applyHostNameFormat(field, autoFormat) {
+        if (!field || !autoFormat?.checked) return;
+        const start = field.selectionStart;
+        const end = field.selectionEnd;
+        const formatted = field.value.toUpperCase().replaceAll(' ', '_');
+        if (formatted === field.value) return;
+        field.value = formatted;
+        if (typeof start === 'number' && typeof end === 'number') {
+            try { field.setSelectionRange(start, end); } catch { /* unsupported input selection */ }
+        }
+    }
+
+    // Rename Host: reuse the common modal controls and name formatting rules.
+    const renameHostDialog = document.querySelector('[data-rename-host-dialog]');
+    const renameHostForm = renameHostDialog?.querySelector('[data-rename-host-form]');
+    const renameHostName = renameHostDialog?.querySelector('[data-rename-host-name]');
+    const renameHostAutoFormat = renameHostDialog?.querySelector('[data-rename-host-auto-format]');
+    const renameHostSubmit = renameHostDialog?.querySelector('[data-rename-host-submit]');
+    const renameHostCancel = renameHostDialog?.querySelector('[data-rename-host-cancel]');
+    const renameHostClose = renameHostDialog?.querySelector('[data-rename-host-close]');
+    const renameHostSpinner = renameHostDialog?.querySelector('[data-rename-host-spinner]');
+    const renameHostSubmitLabel = renameHostDialog?.querySelector('[data-rename-host-submit-label]');
+    let renameHostSource = null;
+    let renameHostBusy = false;
+    let renameHostRequiresReload = false;
+    let renameHostGeneration = 0;
+    const updateRenameHostAction = window.MauiModalUI.watchAction(renameHostDialog, renameHostSubmit,
+        () => !renameHostBusy && !renameHostRequiresReload && Boolean(renameHostSource),
+        () => Boolean(renameHostName?.value.trim()) && renameHostName.value.trim().length <= 254
+            && renameHostName.value.trim() !== renameHostSource?.hostName);
+
+    function openRenameHostDialog(hostId, hostName) {
+        if (!renameHostDialog || renameHostBusy) return;
+        resetRenameHostDialog();
+        renameHostSource = { hostId: String(hostId || '').trim(), hostName: String(hostName || '').trim() };
+        if (renameHostName) renameHostName.value = renameHostSource.hostName;
+        applyHostNameFormat(renameHostName, renameHostAutoFormat);
+        renameHostDialog.showModal();
+        updateRenameHostAction();
+        window.requestAnimationFrame(() => { renameHostName?.focus(); renameHostName?.select(); });
+    }
+
+    function resetRenameHostDialog() {
+        ++renameHostGeneration;
+        renameHostSource = null;
+        renameHostRequiresReload = false;
+        if (renameHostName) renameHostName.value = '';
+        if (renameHostAutoFormat) renameHostAutoFormat.checked = renameHostAutoFormat.defaultChecked;
+        window.MauiModalUI.clear(renameHostDialog);
+        setRenameHostBusy(false);
+    }
+
+    function setRenameHostBusy(busy) {
+        renameHostBusy = Boolean(busy);
+        if (renameHostName) renameHostName.readOnly = renameHostBusy;
+        if (renameHostAutoFormat) renameHostAutoFormat.disabled = renameHostBusy;
+        if (renameHostCancel) renameHostCancel.disabled = renameHostBusy;
+        if (renameHostClose) renameHostClose.disabled = renameHostBusy;
+        if (renameHostSpinner) renameHostSpinner.hidden = !renameHostBusy;
+        if (renameHostSubmitLabel) renameHostSubmitLabel.textContent = renameHostBusy ? 'Renaming…' : 'Rename';
+        renameHostDialog?.classList.toggle('is-busy', renameHostBusy);
+        updateRenameHostAction();
+    }
+
+    async function submitRenameHost() {
+        if (renameHostBusy || renameHostRequiresReload || !renameHostSource) return;
+        window.MauiModalUI.clear(renameHostDialog);
+        applyHostNameFormat(renameHostName, renameHostAutoFormat);
+        const name = String(renameHostName?.value || '').trim();
+        if (!name || name.length > 254) {
+            window.MauiModalUI.showError('Host Name must contain 1–254 characters.', renameHostDialog);
+            renameHostName?.focus();
+            return;
+        }
+        if (name === renameHostSource.hostName) return;
+        const source = renameHostSource;
+        const generation = renameHostGeneration;
+        setRenameHostBusy(true);
+        let refresh = false;
+        try {
+            const result = await fetchJson(endpoint('renameHostUrl'), { method: 'POST', body: JSON.stringify({
+                hostId: source.hostId, name, originalName: source.hostName
+            }) });
+            window.MauiRenameResult.requireConfirmation(result, 'Host', source.hostId, name);
+            setHostUndoAvailable(source.hostId, true);
+            refresh = true;
+            if (generation === renameHostGeneration) renameHostDialog?.close();
+        } catch (error) {
+            refresh = window.MauiRenameResult.requiresReload(error);
+            if (generation === renameHostGeneration) {
+                renameHostRequiresReload = refresh;
+                window.MauiModalUI.showError(window.MauiRenameResult.failureMessage(error, 'Host'), renameHostDialog);
+            }
+        } finally {
+            if (generation === renameHostGeneration) setRenameHostBusy(false);
+        }
+        // A grid refresh failure must never turn a completed rename into a retryable save error.
+        if (refresh) {
+            try { await refreshHostGrid(true); }
+            catch { showStatus('Refresh the Hosts grid to see the latest Host names.', 5000, 'warning', 'page'); }
+        }
+    }
+    // End Rename Host.
+
     // ---------------------------------------------------------------------
     // Host row menu
     // ---------------------------------------------------------------------
     const hostRowActionMenu = document.querySelector('[data-host-row-action-menu]');
     const hostRowExportCommand = hostRowActionMenu?.querySelector('[data-host-row-command="export"]');
+    const hostRowRenameCommand = hostRowActionMenu?.querySelector('[data-host-row-command="rename"]');
     const hostRowTestCommand = hostRowActionMenu?.querySelector('[data-host-row-command="test"]');
     const hostRowUndoCommand = hostRowActionMenu?.querySelector('[data-host-row-command="undo"]');
     const hostRowCloneCommand = hostRowActionMenu?.querySelector('[data-host-row-command="clone"]');
@@ -269,6 +376,10 @@
         const isLocalFileSystem = activeHostMenuContext.typeCode.toLowerCase() === 'filesystem'
             || activeHostMenuContext.type.toLowerCase() === 'local file system';
         if (hostRowCloneCommand) hostRowCloneCommand.disabled = isLocalFileSystem || hostCloneLicenseLimited;
+        if (hostRowRenameCommand) {
+            hostRowRenameCommand.disabled = isLocalFileSystem || activeHostMenuContext.id === '0';
+            hostRowRenameCommand.title = hostRowRenameCommand.disabled ? 'The built-in Local File System Host cannot be renamed.' : '';
+        }
         if (hostRowTestCommand) {
             hostRowTestCommand.hidden = !activeHostMenuContext.testSupported;
             hostRowTestCommand.disabled = !activeHostMenuContext.testSupported;
@@ -358,6 +469,7 @@
         if (command === 'clone') { openCloneHostDialog(context.id, context.name); return; }
         if (command === 'copy-name') { copyHostNameToClipboard(context.name); return; }
         if (command === 'export') { nativePortability?.openExport([context.id], [context.name]); return; }
+        if (command === 'rename') { openRenameHostDialog(context.id, context.name); return; }
         if (command === 'edit') { launchHostEditor(context.id, context.name); return; }
         if (command === 'undo') { beginUndoHost(context.id, context.name); return; }
         if (command === 'delete') beginDeleteHost(context.id);
@@ -1014,6 +1126,9 @@
             url.searchParams.set('forceRefresh', forceRefresh ? 'true' : 'false');
             return url;
         },
+        onRefreshRequested: forceRefresh => {
+            if (forceRefresh) grid?.dispatchEvent(new CustomEvent('maui:json-search-invalidated'));
+        },
         beforeRefresh: closeHostRowActionMenu,
         deferAutomaticRefresh: () => Boolean(document.querySelector('[data-host-test-dialog][aria-busy="true"]')),
         onPayload: payload => renderHostLicenseCapacity(payload?.licenseCapacity),
@@ -1075,6 +1190,19 @@
             beginDeleteHosts(event.detail?.selectedIds || []);
         }
     });
+
+    // Rename Host events.
+    renameHostName?.addEventListener('input', () => applyHostNameFormat(renameHostName, renameHostAutoFormat));
+    renameHostAutoFormat?.addEventListener('change', () => {
+        applyHostNameFormat(renameHostName, renameHostAutoFormat);
+        updateRenameHostAction();
+    });
+    renameHostForm?.addEventListener('submit', event => { event.preventDefault(); void submitRenameHost(); });
+    renameHostClose?.addEventListener('click', () => { if (!renameHostBusy) renameHostDialog?.close(); });
+    renameHostCancel?.addEventListener('click', () => { if (!renameHostBusy) renameHostDialog?.close(); });
+    renameHostDialog?.addEventListener('cancel', event => { if (renameHostBusy) event.preventDefault(); });
+    renameHostDialog?.addEventListener('close', () => { if (!renameHostDialog.open) resetRenameHostDialog(); });
+    // End Rename Host events.
 
     document.addEventListener('click', event => {
         const menuButton = event.target.closest('[data-host-row-menu-button]');

@@ -10,6 +10,8 @@ namespace MoveItAutomationUI.Services.MoveIt.Hosts;
 public interface IHostDefinitionSaveService
 {
     Task UpdateBasicDetailsAsync(string hostId, string name, string description, CancellationToken cancellationToken = default);
+    Task ValidateRenameAsync(string hostId, string name, string originalName, CancellationToken cancellationToken = default);
+    Task RenameAsync(string hostId, string name, string originalName, CancellationToken cancellationToken = default);
     Task<HostDefinitionSaveResult> SaveDefinitionAsync(
         string hostId,
         HostDefinitionSaveRequest request,

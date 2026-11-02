@@ -1,7 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const root=path.resolve(__dirname,'../..'),read=file=>fs.readFileSync(path.join(root,file),'utf8');
-const c={window:{}};vm.runInNewContext(read('wwwroot/js/editors/task-json-model.js'),c);const m=c.window.MauiTaskJsonModel;
+const c={window:{}};vm.runInNewContext(read('wwwroot/js/shared/json-search.js'),c);vm.runInNewContext(read('wwwroot/js/editors/task-json-model.js'),c);const m=c.window.MauiTaskJsonModel;
 const doc=JSON.parse('{"ID":"900","Info":{"Description":" A ","Null":null},"Schedules":{"Schedule":[{"OnlyUntilFirstSuccess":0},{"OnlyUntilFirstSuccess":1}]},"strange.name":{"a/b":"x"},"__proto__":{"safe":"value"}}');
 const original=JSON.stringify(doc),leaves=m.leaves(doc,[['ID'],['Info','Null']]);
 assert.equal(leaves.length,7);assert.equal(leaves.find(l=>l.name==='ID').readOnly,true);
@@ -18,6 +18,22 @@ assert.equal(m.match(leaf,'Task.Schedules.Schedule[*].OnlyUntilFirstSuccess','pa
 assert.equal(m.match(leaf,'Task.Schedules.Schedule[1].OnlyUntilFirstSuccess','path',''),false);
 assert.equal(m.match(leaf,'OnlyUntilFirstSuccess','name','1'),false);
 assert.equal(m.match(leaf,'Task.Schedules.Schedule[0].OnlyUntilFirstSuccess','path','0'),true);
+const flag={name:'DoIfFailure',pathText:'Task.NextActions.NextAction[0].DoIfFailure',readOnly:false};
+for(const [query,value,expected]of [
+ ['DoIfFailure=1',1,true],['doiffailure = 1',0,false],['DoIfFailure!=1',0,true],['DoIfFailure!=1','1',false],
+ ['DoIfFailure<2',1,true],['DoIfFailure<=1',1,true],['DoIfFailure>1',1,false],['DoIfFailure>=1','1',true],
+ ['DoIfFailure=1',true,true],['DoIfFailure = 0',false,true],['DoIfFailure > 0','',false],['DoIfFailure<2','words',false],
+ ['DoIfFailure=1','11',false],['Task.NextActions.NextAction[*].DoIfFailure=1',1,true],['NextActions.NextAction[0].DoIfFailure=1',1,true],
+ ['DoIfFailure=1',{not:'a scalar'},false],['NextAction',1,true],['random',1,false]
+])assert.equal(m.compileTreeSearch(query)(flag,value),expected,query+' / '+JSON.stringify(value));
+const nameLeaf={name:'Name',pathText:'Task.Name',readOnly:false};
+for(const [query,value,expected]of [['Name contains invoice','Monthly INVOICE',true],['Name CONTAINS "a=b"','a=b task',true],
+ ['Name=""','',true],['Name=""',null,false],['Name=Report','report',true],['Name!=Report','REPORT',false],['Name contains a.*','a.* literal',true],
+ ['invoice','INVOICE',true],['Name<z','a',false],['Name>=-2.5','-2',true]])assert.equal(m.compileTreeSearch(query)(nameLeaf,value),expected,query);
+assert.equal(m.compileTreeSearch('Secret=null')({name:'Secret',pathText:'Task.Secret',readOnly:true},null),false,'Masked values cannot match comparisons');
+assert.equal(m.compileTreeSearch('null')({name:'Secret',pathText:'Task.Secret',readOnly:true},null),false,'Masked placeholders are not searchable values');
+assert.equal(m.compileTreeSearch('FTP')({name:'Type',pathText:'Task.steps[0].Source.Type',readOnly:true},'FTP'),true,'Visible read-only values are searchable');
+for(const query of ['DoIfFailure=','DoIfFailure <','Name contains ','Name="open','=1'])assert.throws(()=>m.compileTreeSearch(query),undefined,query);
 const task={original:doc,document:m.clone(doc),leaves};m.set(task.document,['Info','Description'],'new');
 assert.equal(m.changes(task).length,1);assert.equal(m.changes(task)[0].before,' A ');
 assert.equal(m.changes(task),m.changes(task),'Unchanged documents reuse their diff');m.set(task.document,['Info','Description'],'other');assert.equal(m.changes(task)[0].value,'other');m.set(task.document,['Info','Description'],'new');

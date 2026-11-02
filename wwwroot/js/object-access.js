@@ -21,7 +21,7 @@
         if (/^(new |import |clone|create advanced)/.test(value)) return 'Create';
         if (value === 'json editor') return 'Edit';
         if (/delete/.test(value)) return 'Delete';
-        if (/^(edit|export|undo|toggle-enabled|enable|disable|notifications|test)/.test(value)) return 'Edit';
+        if (/^(edit|export|rename|undo|toggle-enabled|enable|disable|notifications|test)/.test(value)) return 'Edit';
         if (/^(run(?!-history)|kill)/.test(value)) return 'Run';
         return '';
     }

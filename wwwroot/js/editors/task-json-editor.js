@@ -40,6 +40,9 @@
             q('[data-task-json-new]').disabled = editing;
             q('[data-task-json-apply]').disabled = editing || !inputDirty;
             q('[data-task-json-find-button]').disabled = busy();
+            q('[data-task-json-reload]').disabled=busy()||!items.length;
+            q('[data-task-json-tree-search]').disabled=busy();
+            q('[data-task-json-search-count]').hidden=view!=='edit'||!q('[data-task-json-tree-search]').value.trim();
             q('[data-task-json-replace]').disabled = busy() || !matches.some(m => m.checked && m.editable);
             all('[data-task-json-match]').forEach(box => { box.disabled = busy() || box.dataset.editable !== 'true'; });
             const eligible = matches.filter(m => m.editable), checked = eligible.filter(m => m.checked).length;
@@ -102,19 +105,22 @@
         }
         function taskTools(item,parent) {
             const tools = node('div',undefined,'task-json-task-tools');
-            const reload = node('button','Reload Task','secondary-button'); reload.type='button'; reload.disabled=busy();
-            reload.addEventListener('click',()=>{void reloadTask(item,false);}); tools.append(reload);
             if (document.documentElement.dataset.moveitAdmin === 'true' && item.blocked) {
                 const override = node('button','Override Checkout','secondary-button'); override.type='button'; override.disabled=busy();
-                override.addEventListener('click',()=>{void reloadTask(item,true);}); tools.append(override);
+                override.addEventListener('click',()=>{void recoverTaskCheckout(item);}); tools.append(override);
             }
-            parent.append(tools);
+            if(tools.childElementCount)parent.append(tools);
             if(item.message) parent.append(node('p',item.message,'task-json-task-message'));
         }
         function renderTree() {
             const scroll=tree.scrollTop, expanded=new Set([...tree.querySelectorAll('details[open]')].map(d=>d.dataset.path));
-            tree.replaceChildren(); const search=q('[data-task-json-tree-search]').value.trim().toLowerCase();
+            tree.replaceChildren(); const field=q('[data-task-json-tree-search]'),search=field.value.trim();let predicate,matchingTasks=0;
+            try{predicate=model.compileTreeSearch(search);field.setCustomValidity('');}
+            catch(error){field.setCustomValidity(error.message);tree.append(node('p',error.message,'settings-help'));}
             for(const item of items) {
+                const found=search&&predicate&&item.document?item.leaves.filter(leaf=>predicate(leaf,model.get(item.document,leaf.path))):[];
+                if(search&&!found.length)continue;
+                matchingTasks++;
                 const details=node('details'); details.dataset.path=item.id; const heading=node('summary',item.name);
                 heading.append(node('span',[item.kind,item.status].filter(Boolean).join(' · ') || 'Loading')); details.append(heading);
                 const children=node('div',undefined,'task-json-branch'); let populated=false;
@@ -122,7 +128,6 @@
                     if(populated)return; populated=true; taskTools(item,children);
                     if(!item.document)return;
                     if(search) {
-                        const found=item.leaves.filter(leaf=>leaf.pathText.toLowerCase().includes(search) || !leaf.readOnly && String(model.get(item.document,leaf.path)).toLowerCase().includes(search));
                         for(const leaf of found.slice(0,100)) children.append(leafButton(item,leaf,leaf.pathText));
                         if(found.length>100)children.append(node('p',`${found.length} matches. Refine the search to see all values.`,'settings-help'));
                     } else appendChildren(item,item.document,[],children,expanded);
@@ -131,6 +136,9 @@
                 details.open=expanded.has(item.id) || Boolean(search); if(details.open)populate();
                 details.append(children);tree.append(details);
             }
+            q('[data-task-json-search-count]').textContent=`${matchingTasks} of ${items.length} Tasks match`;
+            q('[data-task-json-search-count]').hidden=view!=='edit'||!search;
+            if(search&&predicate&&!matchingTasks)tree.append(node('p','No Tasks match this search.','settings-help'));
             tree.scrollTop=scroll;
         }
         function appendChildren(item,value,path,parent,expanded) {
@@ -313,23 +321,46 @@
             else notice(`${saved} ${saved===1?'Task':'Tasks'} saved.`);
             if(saved||failed)changed?.();
         }
-        async function reloadTask(item,override) {
+        async function recoverTaskCheckout(item) {
             if(busy())return;
-            if(!override&&item.document&&model.changes(item).length&&!await window.mauiConfirm?.({title:'Reload Task?',message:'Discard this Task’s unsaved changes and load its current MOVEit configuration?',confirmText:'Discard Changes',danger:true}))return;
             phase='loading';updateControls();const sequence=generation;
             try {
-                if(override){if(!await item.lease.override(item.id))return;await load(item,sequence,true);}
-                else {await item.lease.close();await load(item,sequence);}
+                if(!await item.lease.override(item.id))return;await load(item,sequence,true);
                 if(sequence!==generation)return;
                 if(selected?.item===item){selected=null;renderSelected();}matches=[];findComplete=false;findGeneration++;renderMatches();renderTree();renderReview();
-                if(!item.blocked){resetFindReplace();notice(override?'Checkout restored. Review your retained changes before saving.':counts());}
+                if(!item.blocked){resetFindReplace();notice('Checkout restored. Review your retained changes before saving.');}
             } catch(error){if(sequence===generation)failure(item,error);}
             finally{if(sequence===generation){phase='';updateControls();renderTree();}}
+        }
+        async function reloadTasks() {
+            if(busy()||!items.length)return;
+            const sequence=generation;
+            if(dirty()||inputDirty){
+                phase='confirming';updateControls();let discard=false;
+                try{discard=await window.mauiConfirm?.({title:'Reload Tasks?',message:'Discard unsaved changes and reload all selected Tasks from MOVEit?',confirmText:'Discard Changes',cancelText:'Cancel',danger:true});}
+                finally{if(sequence===generation){phase='';updateControls();}}
+                if(!discard||sequence!==generation||!dialog.open)return;
+            }
+            phase='loading';loadedBytes=0;selected=null;inputDirty=false;matches=[];findComplete=false;findGeneration++;resetFindReplace();
+            for(const item of items)Object.assign(item,{original:null,document:null,leaves:[],leafMap:new Map(),bytes:0,blocked:false,message:'',status:'Loading',validation:false,checkoutConflict:false,savedRows:[]});
+            renderSelected();renderMatches();renderReview();renderTree();updateControls();
+            try{
+                for(let index=0;index<items.length;index++){
+                    if(sequence!==generation)return;
+                    notice(`Reloading Task ${index+1} of ${items.length}...`);
+                    await load(items[index],sequence);
+                    if(sequence!==generation)return;
+                    renderTree();
+                }
+                const failed=items.filter(item=>!item.document).length;
+                notice(failed?`${failed} ${failed===1?'Task could':'Tasks could'} not be reloaded. Review the affected Tasks.`:`${items.length} ${items.length===1?'Task':'Tasks'} reloaded.`,failed?'error':'default');
+            }finally{if(sequence===generation){phase='';renderSelected();renderMatches();renderReview();renderTree();updateControls();}}
         }
         function clearEditor() {
             if(!items.length&&!controller)return;
             generation++;findGeneration++;controller?.abort();controller=null;phase='';
             q('[data-task-json-save-progress]').hidden=true;q('[data-task-json-progress]').value=0;
+            q('[data-task-json-search-count]').hidden=true;q('[data-task-json-tree-search]').value='';q('[data-task-json-tree-search]').setCustomValidity('');
             for(const item of items)void (item.lease.dispose?.() || item.lease.close());
             items=[];selected=null;matches=[];findComplete=false;inputDirty=false;loadedBytes=0;tree.replaceChildren();
             q('[data-task-json-matches]').replaceChildren();q('[data-task-json-review]').replaceChildren();q('[data-task-json-json]').textContent='';
@@ -345,7 +376,7 @@
             if(dialog.open||busy())return;
             const selectedIds=[...new Set((ids||[]).map(id=>String(id).trim()).filter(id=>/^\d{1,32}$/.test(id)))];
             if(!selectedIds.length)return;
-            resetFindReplace();window.MauiModalUI?.clear(dialog);dialog.showModal();
+            resetFindReplace();q('[data-task-json-tree-search]').value='';window.MauiModalUI?.clear(dialog);dialog.showModal();
             if(selectedIds.length>maxTasks){notice(`Select up to ${maxTasks} Tasks for the JSON Editor.`,'error');return;}
             const sequence=++generation;controller=new AbortController();loadedBytes=0;phase='loading';view='edit';selected=null;inputDirty=false;matches=[];findComplete=false;pageSize=preferredPageSize();matchPage=reviewPage=0;
             all('[data-task-json-page-size]').forEach(select=>{select.value=String(pageSize);});
@@ -376,6 +407,7 @@
         q('[data-task-json-apply]').addEventListener('click',applyValue);q('[data-task-json-find-button]').addEventListener('click',()=>{void findMatches();});
         q('[data-task-json-replace]').addEventListener('click',()=>{void replaceValues();});submit.addEventListener('click',()=>{void save();});
         q('[data-task-json-tree-search]').addEventListener('input',renderTree);
+        q('[data-task-json-reload]').addEventListener('click',()=>{void reloadTasks();});
         q('[data-task-json-expand]').title='Expand all selected Task roots';q('[data-task-json-expand]').addEventListener('click',()=>{[...tree.children].forEach(d=>{d.open=true;});});
         q('[data-task-json-collapse]').addEventListener('click',()=>tree.querySelectorAll('details').forEach(d=>{d.open=false;}));
         q('[data-task-json-select-all]').addEventListener('change',event=>{for(const match of matches)match.checked=match.editable&&event.target.checked;renderMatches();});

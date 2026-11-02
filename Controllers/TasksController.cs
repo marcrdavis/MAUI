@@ -490,7 +490,7 @@ public sealed class TasksController : Controller
         }
     }
 
-    // Imports a native Task package after applying per-object Overwrite or Rename conflict resolutions.
+    // Imports a native Task package after applying verified dependency reuse, Overwrite or Rename resolutions.
     [HttpPost]
     [ValidateAntiForgeryToken]
     [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
@@ -511,8 +511,8 @@ public sealed class TasksController : Controller
             await request.File.CopyToAsync(memory, cancellationToken);
             var result = await _nativePortabilityService.ImportAsync(memory.ToArray(), "Task", request.Passphrase, resolutions, request.LeaveTasksDisabled, request.AcknowledgeUnsupportedMetadata, session.Username, cancellationToken);
             _logger.LogInformation(
-                "Task portability import completed for {UserName}. File={FileName}; PackageBytes={PackageBytes}; ResolutionCount={ResolutionCount}; ImportedCount={ImportedCount}; OverwrittenCount={OverwrittenCount}; RenamedCount={RenamedCount}; HasWarning={HasWarning}.",
-                session.Username, Path.GetFileName(request.File.FileName), request.File.Length, resolutions.Count, result.ImportedCount, result.OverwrittenCount, result.RenamedCount, !string.IsNullOrWhiteSpace(result.Warning));
+                "Task portability import completed for {UserName}. File={FileName}; PackageBytes={PackageBytes}; ResolutionCount={ResolutionCount}; ImportedCount={ImportedCount}; OverwrittenCount={OverwrittenCount}; RenamedCount={RenamedCount}; ReusedCount={ReusedCount}; HasWarning={HasWarning}.",
+                session.Username, Path.GetFileName(request.File.FileName), request.File.Length, resolutions.Count, result.ImportedCount, result.OverwrittenCount, result.RenamedCount, result.ReusedCount, !string.IsNullOrWhiteSpace(result.Warning));
             return Json(new
             {
                 success = result.Success,
@@ -520,6 +520,7 @@ public sealed class TasksController : Controller
                 importedCount = result.ImportedCount,
                 overwrittenCount = result.OverwrittenCount,
                 renamedCount = result.RenamedCount,
+                reusedCount = result.ReusedCount,
                 items = result.Items,
                 warning = result.Warning
             });
@@ -547,6 +548,60 @@ public sealed class TasksController : Controller
                 session.Username, Path.GetFileName(request.File.FileName), request.File.Length, ex.Message);
             return MauiControllerExceptionMapper.Map(ex);
         }
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [MoveItObjectPermission("Task", "Edit", "TaskId")]
+    public async Task<IActionResult> RenameTask([FromBody] TaskRenameRequest? request, CancellationToken cancellationToken = default)
+    {
+        var id = (request?.TaskId ?? string.Empty).Trim();
+        var name = (request?.Name ?? string.Empty).Trim();
+        if (!ModelState.IsValid || id.Length is 0 or > 32 || !id.All(char.IsAsciiDigit))
+            return BadRequest(new { message = "Select a valid Task." });
+        if (name.Length is 0 or > 254) return BadRequest(new { message = "Task Name must contain 1–254 characters." });
+        var session = _sessionService.Get();
+        if (session is null) return MauiControllerExceptionMapper.SessionExpired();
+        var attempted = false; var saved = false;
+        try
+        {
+            await _taskCrud.ValidateRenameAsync(id, name, request!.OriginalName, cancellationToken);
+            await _taskUndoService.CaptureAsync(id, session.Username, cancellationToken);
+            attempted = true;
+            await _taskCrud.RenameAsync(id, name, request.OriginalName, cancellationToken);
+            saved = true;
+            await _metadataRepository.RecordObjectConfigurationModifiedAsync(session.GetEnvironmentKey(), ObjectType, id, session.Username, cancellationToken);
+            return Json(new { success = true, taskId = id, taskName = name });
+        }
+        catch (TraditionalTaskPartialSaveException ex)
+        {
+            _logger.LogWarning("Rename Task {TaskId} has an unverified save outcome ({ErrorType}).", id, ex.GetType().Name);
+            return StatusCode(502, new { message = ex.Message, moveItSaved = true, outcomeUnknown = true });
+        }
+        catch (Exception ex) when (saved && ex is not OperationCanceledException)
+        {
+            // This is a local metadata failure after a verified native save. Retain the database
+            // cause and stack trace so a DbUpdateException does not hide the actionable error.
+            _logger.LogWarning(ex, "Task {TaskId} was renamed, but its audit update failed ({ErrorType}). Database cause: {DatabaseCause}",
+                id, ex.GetType().Name, ex.GetBaseException().Message);
+            return StatusCode(500, new { message = "The Task was renamed, but MAUI could not finish its audit update. Close this dialog and refresh the Tasks grid.", moveItSaved = true });
+        }
+        catch (TaskNameAlreadyExistsException ex) { return Conflict(new { message = ex.Message }); }
+        catch (ObjectEditConflictException)
+        {
+            return Conflict(new { message = "The Task name changed in MOVEit. Close this dialog and refresh the Tasks grid before renaming it.", editConflict = true });
+        }
+        catch (Exception ex) when (ex is MoveItApiException or MoveItAuthenticationException or MoveItComException or InvalidOperationException or ArgumentException)
+        { return MauiControllerExceptionMapper.Map(ex); }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Rename Task {TaskId} failed ({ErrorType}).", id, ex.GetType().Name);
+            return StatusCode(500, new { message = attempted
+                ? "The Task rename result could not be confirmed. Close this dialog and refresh the Tasks grid before trying again."
+                : "MAUI could not rename the Task. See Configuration > Logs for details.", moveItSaved = attempted, outcomeUnknown = attempted });
+        }
+        finally { if (attempted) _taskService.InvalidateCache(); }
     }
 
     // Clones one Task by exporting it to memory, renaming the portable package, and importing it as a new disabled Task.

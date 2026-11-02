@@ -46,6 +46,8 @@ public interface ITaskCrudCoordinator
     Task<MoveItTaskConfiguration> UpdateTraditionalNativeSchedulesAsync(string taskId, JsonArray schedulePatch, CancellationToken cancellationToken = default);
     Task<MoveItTaskConfiguration> CreateFromNativeConfigurationAsync(string name, string xml, bool leaveDisabled, CancellationToken cancellationToken = default);
     Task UpdateBasicDetailsAsync(string taskId, string name, string description, string notes, CancellationToken cancellationToken = default);
+    Task ValidateRenameAsync(string taskId, string name, string originalName, CancellationToken cancellationToken = default);
+    Task RenameAsync(string taskId, string name, string originalName, CancellationToken cancellationToken = default);
     Task SetEnabledAsync(string taskId, bool enabled, CancellationToken cancellationToken = default);
     Task<MoveItTaskConfiguration> GetNativeConfigurationAsync(string taskId, CancellationToken cancellationToken = default);
     Task<MoveItTaskConfiguration> RestoreNativeConfigurationAsync(string taskId, string xml, CancellationToken cancellationToken = default);

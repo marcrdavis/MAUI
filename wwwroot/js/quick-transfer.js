@@ -25,14 +25,9 @@
     const pgpKey = root.querySelector('[data-quick-pgp-key]');
     const pgpProcessingCards = Array.from(root.querySelectorAll('[data-quick-pgp-processing-option]'));
     const pgpProcessingInputs = pgpProcessingCards.map(card => card.querySelector('input[name="quickProcessingMode"]')).filter(Boolean);
-    const persistTask = root.querySelector('[data-quick-persist-task]');
-    const taskNameRow = root.querySelector('[data-quick-task-name-row]');
-    const taskName = root.querySelector('[data-quick-task-name]');
-    const taskAutoFormat = root.querySelector('[data-quick-task-auto-format]');
     const deleteTemp = root.querySelector('[data-quick-delete-temp]');
     const confirmationCheckbox = root.querySelector('[data-quick-confirm-email]');
     const confirmationRecipients = root.querySelector('[data-quick-confirm-recipients]');
-    const confirmationRow = root.querySelector('[data-quick-confirm-recipients-row]');
     const preflightButton = root.querySelector('[data-quick-preflight]');
     const transferButton = root.querySelector('[data-quick-transfer]');
     const statusCard = root.querySelector('[data-quick-status-card]');
@@ -48,7 +43,6 @@
     let transferToken = '';
     let preparedTaskId = '';
     let busy = false;
-    let deleteTempPreference = Boolean(deleteTemp?.checked);
     let transferInProgress = false;
     let cancelRequested = false;
     let cancelRequestInFlight = false;
@@ -162,21 +156,15 @@
     }
 
     function currentMode() { return root.querySelector('input[name="quickProcessingMode"]:checked')?.value || 'none'; }
-    function formatTaskName() {
-        if (!taskName || !taskAutoFormat?.checked) return;
-        taskName.value = taskName.value.toUpperCase().replaceAll(' ', '_');
-    }
     function syncConditionalControls() {
         syncPgpLicenseState();
         const mode = currentMode();
         const locked = busy || transferInProgress;
         if (pgpRow) pgpRow.hidden = mode !== 'encrypt';
-        if (persistTask && taskNameRow) taskNameRow.hidden = !persistTask.checked;
-        if (confirmationRow) confirmationRow.hidden = !confirmationCheckbox?.checked;
-        if (deleteTemp && persistTask) {
-            deleteTemp.disabled = locked || persistTask.checked;
-            deleteTemp.checked = persistTask.checked ? false : deleteTempPreference;
-        }
+        if (deleteTemp) deleteTemp.disabled = locked;
+        const emailAvailable = cfg.confirmationEmailAvailable === 'true';
+        if (confirmationCheckbox) confirmationCheckbox.disabled = locked || !emailAvailable;
+        if (confirmationRecipients) confirmationRecipients.disabled = locked || !emailAvailable || !confirmationCheckbox?.checked;
         [sourceHost, destinationHost].forEach((select, index) => {
             const button = root.querySelector(`[data-quick-browse="${index === 0 ? 'source' : 'destination'}"]`);
             const selected = select?.selectedOptions?.[0];
@@ -190,8 +178,8 @@
 
     function clearPreparedTransfer() {
         if (busy || transferInProgress) return;
-        // Keep the prepared token. The server uses it to replace an unstarted temporary task or update
-        // an unstarted persistent task in place after the request changes.
+        // Keep the prepared token. The server uses it to replace an unstarted temporary task
+        // after the request changes.
         showInfo('');
     }
 
@@ -247,8 +235,6 @@
             overwriteExistingFile: overwriteExisting ? Boolean(overwriteExisting.checked) : true,
             destinationRootName: destinationRoot.name || '',
             destinationRootId: destinationRoot.id || '',
-            createTraditionalTask: Boolean(persistTask?.checked),
-            taskName: taskName?.value || '',
             deleteTemporaryTaskAfterSuccess: Boolean(deleteTemp?.checked),
             sendTransferConfirmationEmail: Boolean(confirmationCheckbox?.checked),
             confirmationEmailRecipients: confirmationCheckbox?.checked ? (confirmationRecipients?.value || "") : "",
@@ -265,7 +251,6 @@
         if (!request.destinationPath.trim() && !isRootBasedHost(destinationHost)) return 'Destination Folder is required.';
         if (/[*?;]/.test(request.sourceFileSpec) && request.destinationFileName.trim() && !/\[OrigName\]/i.test(request.destinationFileName))
             return 'A wildcard or multi-file Source Filespec cannot use one fixed Destination Filename. Leave it blank or include [OrigName].';
-        if (request.createTraditionalTask && !request.taskName.trim()) return 'Task Name is required when Create Traditional Task is selected.';
         if (request.sendTransferConfirmationEmail && !request.confirmationEmailRecipients.trim()) return 'Enter at least one confirmation email recipient.';
         return '';
     }
@@ -715,13 +700,10 @@
     destinationHost?.addEventListener('change', () => clearRootForContext('destination'));
     root.querySelectorAll('[data-quick-new-host]').forEach(button => button.addEventListener('click', () => openNewHost(button.dataset.quickNewHost)));
     root.querySelectorAll('[data-quick-browse]').forEach(button => button.addEventListener('click', () => openBrowse(button.dataset.quickBrowse)));
-    deleteTemp?.addEventListener('change', () => { if (!persistTask?.checked) deleteTempPreference = deleteTemp.checked; });
     root.querySelectorAll('input,select').forEach(control => control.addEventListener('change', () => { clearPreparedTransfer(); syncConditionalControls(); }));
     root.querySelectorAll('input[type="text"]').forEach(control => control.addEventListener('input', clearPreparedTransfer));
     root.querySelectorAll('input[name="quickProcessingMode"]').forEach(control => control.addEventListener('change', syncConditionalControls));
-    persistTask?.addEventListener('change', syncConditionalControls);
     confirmationCheckbox?.addEventListener('change', syncConditionalControls);
-    taskName?.addEventListener('input', formatTaskName);
     preflightButton?.addEventListener('click', runPreflight);
     transferButton?.addEventListener('click', startTransfer);
 

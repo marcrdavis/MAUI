@@ -46,8 +46,6 @@ public sealed class QuickTransferRequest
     public bool OverwriteExistingFile { get; set; } = true;
     public string DestinationRootName { get; set; } = string.Empty;
     public string DestinationRootId { get; set; } = string.Empty;
-    public bool CreateTraditionalTask { get; set; }
-    public string TaskName { get; set; } = string.Empty;
     public bool DeleteTemporaryTaskAfterSuccess { get; set; } = true;
     public bool SendTransferConfirmationEmail { get; set; }
     public string ConfirmationEmailRecipients { get; set; } = string.Empty;
@@ -64,7 +62,6 @@ public sealed record QuickTransferPreparationResult(
     string TransferToken,
     string TaskId,
     string TaskName,
-    bool PersistentTask,
     bool DeleteTemporaryTaskAfterSuccess,
     bool ReusedPreparedTask);
 
@@ -73,7 +70,6 @@ public sealed record QuickTransferStartResult(
     string TaskId,
     string TaskName,
     string NominalStart,
-    bool PersistentTask,
     bool DeleteTemporaryTaskAfterSuccess);
 
 public sealed record QuickTransferStatusResult(

@@ -42,6 +42,8 @@ public interface IAutomationHostService
     Task<MoveItCreatedHost> CloneHostAsync(string sourceId, string name, CancellationToken cancellationToken = default);
     // Updates the common editable Host Name and Description while preserving the rest of the native Host configuration.
     Task UpdateBasicDetailsAsync(string hostId, string name, string description, CancellationToken cancellationToken = default);
+    Task ValidateRenameAsync(string hostId, string name, string originalName, CancellationToken cancellationToken = default);
+    Task RenameAsync(string hostId, string name, string originalName, CancellationToken cancellationToken = default);
     // Reads the complete Host configuration used by the per-user undo snapshot.
     Task<HostConfigurationSnapshot> GetHostConfigurationSnapshotAsync(string hostId, CancellationToken cancellationToken = default);
     // Restores a complete Host configuration from an undo snapshot and invalidates cached Host state.
@@ -320,6 +322,12 @@ public sealed class AutomationHostService : IAutomationHostService
 
         await MutateAsync(() => _crud.UpdateBasicDetailsAsync(normalizedHostId, normalizedName, description ?? string.Empty, cancellationToken));
     }
+
+    public Task ValidateRenameAsync(string hostId, string name, string originalName, CancellationToken cancellationToken = default)
+        => _crud.ValidateRenameAsync(NormalizeHostId(hostId), name, originalName, cancellationToken);
+
+    public Task RenameAsync(string hostId, string name, string originalName, CancellationToken cancellationToken = default)
+        => MutateAsync(() => _crud.RenameAsync(NormalizeHostId(hostId), name, originalName, cancellationToken));
 
     // Purpose: Returns host configuration snapshot.
     public async Task<HostConfigurationSnapshot> GetHostConfigurationSnapshotAsync(string hostId, CancellationToken cancellationToken = default)

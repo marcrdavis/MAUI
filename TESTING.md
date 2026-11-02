@@ -1,8 +1,8 @@
 # MAUI Testing Guide
 
-- **Version:** `0.18.511-RC3`
+- **Version:** `0.18.521-RC3`
 - **Release:** Release Candidate 3 (pre-release)
-- **Build:** `20261029`
+- **Build:** `20261101`
 - **Database schema / configuration version:** `1` / `1`
 
 > **Release Candidate 3 — not the final release.** Bugs and regressions may remain. Passing CI validates the covered contracts and fixtures; it does not certify the candidate as bug-free or replace testing against your MOVEit environment.
@@ -15,9 +15,11 @@ The development regression suite runs outside IIS. Automated tests use fixtures,
 
 ### Current validation
 
-0.18.511 adds the explicit Task JSON save warning. Controller regressions verify that every affected Task captures undo before its save and that snapshot failure prevents the write. Browser checks cover the exact warning, shared destructive Proceed button options, Cancel preserving the draft without a write, and the existing reviewed save workflow. [Full Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/40965532186) passed for application/test commit `b77f056ca59e7dbd0fb804a606c8ebf448b1d591`: zero build warnings/errors, all 2,591 xUnit tests (zero skipped) and all Node/Edge suites, including 131 Task JSON browser checks. The result-recording follow-up changes documentation only. No live MOVEit or deployed IIS testing is claimed.
+Application/test commit `a0d739e4e83524fb27841da40e387e4ce8979495` for **0.18.521-RC3, build 20261101** passed [full Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/41261226182): zero build warnings/errors, all **2,745 xUnit tests** with none failed/skipped, package/publish verification and all registered Node/Edge suites. The run includes 15 native import dependency-action scenarios and 197 Copy Between Environments checks. Earlier results for JSON search, Quick Transfer and Task/Host rename are retained with their exact commits in the [RC3 changelog](CHANGELOG.md#rc3-version-history).
 
-Historical release results through 0.18.510 are in the corresponding [RC3 changelog entries](CHANGELOG.md#rc3-release-overview). Each applies to its exact tested commit, not later releases.
+Coverage includes native import dependency matching/exclusion and differing-ID reference remapping, destination read access, stale/ambiguous targets, Script language aliases, read-only metadata/audit behavior, controller result fields and unknown native commit outcomes. Rename tests cover configured formatting, validation, authoritative name-only saves and conservative acknowledgement/retry handling. Grid search tests cover prefix/operators, refresh races, cancellation and Report restrictions.
+
+This documentation follow-up updates the guides and acceptance instructions without changing application/test code, release identity or the integration assets. It does not represent a new build or a new live validation run. No live MOVEit or deployed IIS testing is claimed. The reported SQLite rename audit failure's underlying cause remains unconfirmed.
 
 ### Historical validation
 
@@ -60,6 +62,10 @@ node MoveItAutomationUI.Tests/Browser/grid-date-filters-smoke.cjs
 node MoveItAutomationUI.Tests/Browser/moveit-grid-connection-smoke.cjs
 node MoveItAutomationUI.Tests/Browser/object-access-smoke.cjs
 node MoveItAutomationUI.Tests/Browser/task-json-model-smoke.cjs
+node MoveItAutomationUI.Tests/Browser/grid-json-search-smoke.cjs
+node MoveItAutomationUI.Tests/Browser/grid-json-search-integration-smoke.cjs
+node MoveItAutomationUI.Tests/Browser/rename-result-smoke.cjs
+node MoveItAutomationUI.Tests/Browser/native-portability-reuse-smoke.cjs
 node MoveItAutomationUI.Tests/Browser/editor-actions-smoke.cjs
 node MoveItAutomationUI.Tests/Browser/browser-notifications-smoke.cjs
 node MoveItAutomationUI.Tests/Browser/modal-ui-smoke.cjs
@@ -96,6 +102,10 @@ Then run the rendered suites from the same source root:
 ```powershell
 node MoveItAutomationUI.Tests/Browser/task-filename-search-browser.cjs
 node MoveItAutomationUI.Tests/Browser/task-json-editor-browser.cjs
+node MoveItAutomationUI.Tests/Browser/grid-json-search-browser.cjs
+node MoveItAutomationUI.Tests/Browser/task-rename-browser.cjs
+node MoveItAutomationUI.Tests/Browser/host-rename-browser.cjs
+node MoveItAutomationUI.Tests/Browser/quick-transfer-options-browser.cjs
 node MoveItAutomationUI.Tests/Browser/backup-restore-browser.cjs
 node MoveItAutomationUI.Tests/Browser/script-editor-browser.cjs
 node MoveItAutomationUI.Tests/Browser/date-list-editor-browser.cjs
@@ -172,19 +182,22 @@ Automated tests deliberately do not replace live product validation. Before a pu
 
 - Login, logout, idle/session-expiration behavior, and MAUI Admin/User authorization.
 - Dashboard plus representative Tasks, Hosts, Resources, Records, Reports, and Configuration grids.
-- Native MOVEit editor launch and Undo Last Change on a safe test object.
+- Configured MAUI editor launches and Undo on safe test objects. Include native MOVEit editor launch/Undo only when that integration is used.
 - Task Run/Preflight and Host connection-test paths appropriate to the environment.
 - Task Notifications in both Text and HTML modes, including legacy and explicitly formatted templates.
 - Report Run Now and scheduled delivery with the configured SMTP server; verify normal users cannot use administrator-only Report sources.
 - Backup creation, inventory/download, retention cleanup, and a controlled restore validation appropriate to the environment.
 - System Jobs, including Reports, Backup Cleanup, Host Health Check, and Job History Cleanup.
 - SQLite or SQL Server metadata behavior for the provider actually deployed. For SQL Server, validate the selected authentication mode.
-- Chrome and Edge rendering/navigation, including saved grid state and native-editor return paths.
+- Chrome and Edge rendering/navigation, including saved grid state and native-editor return paths where that integration is used.
 - IIS recycle behavior: existing transient sessions should require reauthentication when the server-side MOVEit session is lost.
 
 ## Tasks, Hosts and checkout
 
 ### Task JSON Editor acceptance
+
+- In Edit Values, search plain text and expressions such as `DoIfFailure=1`, `RetryCount>=3`, `Name contains invoice` and `Task.NextActions.NextAction[*].DoIfFailure!=0`. Verify only matching Tasks/instances appear and the footer counts matching Tasks, including zero matches. Check empty/invalid input, quoted empty strings, case-insensitive text and numeric ordered comparisons. Searching must not make new server calls or change the underlying selected set.
+- Verify Reload Tasks is before Expand All and that individual Reload Task buttons are absent. Reload must include Tasks hidden by the search. Cancel the discard prompt and retain staged edits; accept it and verify current server definitions, reset Find/Replace and updated counts. A failed reload must not leave stale editable definitions; retry, duration checkout and close/reopen must remain reliable.
 
 Enable Task JSON Editor under Experimental, save configuration and reload Tasks. Verify it is absent when off and denied without Task Edit access. Select mixed Traditional/Advanced/Sync Tasks; confirm collapsed trees, protected IDs/credentials, typed edits and unchanged fields. Find OnlyUntilFirstSuccess, preview 0 to 1, uncheck matches, apply locally, review and save. Verify full-batch validation precedes writes, saved values match MOVEit, failed Tasks are highlighted and unaffected saves are not repeated. Test both checkout modes, close/abandonment cleanup, administrator override, concurrent edits, a lost save response and an overnight Schedule pair. Validate all changed Tasks in MOVEit before running them. The session limits are 100 Tasks / 16 MiB total, 1 MiB / 20,000 nodes per Task and 2,000 changes per Task.
 
@@ -215,7 +228,7 @@ Use disposable Tasks/Hosts on the actual MOVEit build and both MOVEit administra
 | Checkout and concurrency | With edit-duration checkout Off, verify save-scoped checkout and stale-change rejection. With it On, verify checkout on open for every editable Task editor, Host 0/other Hosts, Script and Date List, retention after manual/Auto Save, separate nested-editor leases and release on Close/logout. Override the native checkout from another MOVEit administrator and save there; MAUI must block the stale save. Cancel/confirm Reload and administrator-only Override Checkout; ordinary users must not have takeover authority. Override retains form values but never auto-saves; manual Save uses a fresh revision and Undo baseline. Further concurrent changes remain blocked. |
 | Abandoned checkout recovery | Close a tab, lose connectivity, expire the login and restart MAUI; verify cleanup after the five-minute heartbeat deadline or login-idle deadline, without reviving a user session. Test failed release, unavailable/expired cleanup credentials, fresh owner login and retained retry records. Old retired ownership must never release a later editor's checkout. Restrict and preserve Data/ObjectEditLeases and Data/DataProtection-Keys. |
 | Uncertain outcomes | Interrupt acknowledgement/readback/release after dispatch and inspect native state. No automatic POST/PUT replay or transport fallback. Preserve known ID, refresh inventory and show modal-local recovery. Reload must inspect the authoritative object before another save; do not infer success from an HTTP response alone. |
-| Retained native paths | Confirm configured Host spreadsheet create/update, Clone Host, Task clone, native XML/schedule operations, Undo/Recycle restore and native editor launch still work with COM installed. Verify capacity, dependency and delete guardrails. |
+| Retained native paths | Confirm configured Host spreadsheet create/update, Clone Host, Task clone, native XML/schedule operations, Undo/Recycle restore and, where used, native editor launches still work with COM installed. Verify capacity, dependency and delete guardrails. |
 | UI and local writes | Check footer No unsaved changes/Unsaved changes/Saving/Saved, error precedence and Close/reopen timer isolation. Check notification-template failures stay in the active modal, Information read-only fields/Type/ID alignment, Close labels, checkbox/ellipsis centering and menu arrows. Validate metadata first and distinguish a native success followed by a local audit/metadata failure. |
 
 ### Task filename search acceptance
@@ -227,11 +240,29 @@ Use disposable Tasks/Hosts on the actual MOVEit build and both MOVEit administra
 - Clear or change the search during a delayed request, invalidate during a read and return with browser Back/Forward. Late results must not override a newer index, produce an obsolete error toast or expire the current session from an obsolete unauthorized response. Invalidate while JSON is loading and verify the old body is not indexed. Empty global searches must skip per-row search-text reads, and repeated renders must not repeat a failed read's error toast. HTTP, network, invalid JSON and incomplete responses must show one standard error toast explaining that results include Task details only. Change the query or use Refresh Now to retry; clearing/retyping must also work. Test an open unrelated modal: the asynchronous grid error must appear in the active modal footer as a labelled Page update, preserving native editor error/dirty state. No toast may remain visible behind the modal. No automatic retry loop or false successful empty filename index is allowed. After a failed read, dispatch/perform a Back/Forward cached-page restoration with an active search and confirm one fresh read succeeds without repeating the old error toast. Restore an empty search and confirm no filename read occurs. Known malformed For/If/Otherwise containers must fail the read, while omitted/null optional containers and unknown step types retain valid filenames. An upstream timeout must return the safe JSON error; a cancelled browser request must propagate cancellation.
 - Validate with an administrator and a non-admin/read-only user. Invisible Task filenames must not appear in the response or create grid rows. Test root and IIS virtual-application URLs and expired sessions. Measure the on-demand bulk response/time with the target environment's Task count before broad rollout; automated fixtures do not establish live MOVEit performance.
 
+### Tasks and Hosts JSON grid search acceptance
+
+- On Tasks and Hosts, verify ordinary text searches and textbox hints are unchanged. A case-insensitive `JSON:` prefix alone activates element/value search; try `JSON: DoIfFailure=1` and equivalent fields present in the selected Host type. Test `<`, `<=`, `=`, `>=`, `>`, `!=`, `contains`, numeric/Boolean flags, case-insensitive text and nested paths. Only matching objects should enter the existing column filters, sorting, paging, selection, export and print results.
+- Confirm the experimental JSON Editor toggle does not control grid search. Use ordinary/read-only and administrator sessions; credentials and secure Parameter values must not appear in searchable projections, and the reads must not acquire edit checkout or write definitions.
+- Change/clear the query during delayed reads, close/navigate/reopen, and edit or manually refresh while another row refresh is in flight. Obsolete results must not replace current matches, failed/incomplete reads must not look like successful empty results, and forced refresh must invalidate definitions even when a grid refresh is already running.
+- Check invalid-expression, loading and failure feedback in the existing pager. Send Now can use a completed JSON-filtered snapshot; pending/invalid/failed searches must block submission. Scheduled Task/Host Reports and saved Report updates must reject `JSON:` expressions rather than storing them as ordinary text.
+- Calendar Search and Filter remain Task-name searches: Search highlights matching days/time slots while retaining all runs; Filter hides nonmatching runs and adjusts displayed counts. The counter represents runs, not distinct Tasks.
+
+### Task and Host rename acceptance
+
+- Verify Rename Task / Rename Host appears immediately below Export in the corresponding row menu. The modal must preload the saved name, honor **Auto Format New Task/Host Names** and format immediately on opening when checked. Toggling formatting, Cancel, reopen and an unchanged draft must preserve the established behavior in both themes and at narrow widths.
+- Exercise required/invalid/overlength names, live duplicates, case-only changes, permission denial and concurrent renames. Check Traditional, Advanced and Sync Tasks and supported Host types. Local File System Host 0 must remain non-renamable. Errors stay in the modal footer; busy controls prevent duplicate submissions.
+- Confirm Undo is captured before the native change, only Name changes on the authoritative definition, unrelated fields/credentials/groups survive, and readback confirms the selected ID/requested name before closing or enabling Undo. Refresh the grid/search data after completed, conflicting or unverified saves.
+- Test definitive pre-write/validation failures separately from lost responses, invalid JSON, mismatched acknowledgements and unqualified server failures. Uncertain outcomes retain the draft, require refresh/verification and block repeated Rename; confirmed pre-write rejections can be corrected and retried.
+- Run the controlled SQLite audit-write failure regressions. A verified native rename must not be replayed when local audit recording fails; Configuration > Logs retains the underlying database details and the modal reports the saved/audit-failed state safely. These cases validate diagnostics and recovery, not the cause or resolution of the reported runtime SQLite failure.
+
 ### Shared New Host acceptance
 
 Open New Host from Hosts and from each Quick Transfer panel. Verify matching branding and controls, Resource UNC required only for UNC Share, name formatting and inline errors. Confirm non-admin Hosts creation requires an allowed Resource Group, with admins seeing no Resource Group field. Quick Transfer itself remains MOVEit-admin-only. Test both Host editor preferences and confirm the transfer draft remains in place, the new Host selects in the originating Source/Destination dropdown and edited Host details refresh on return. Confirm uncertain creation responses do not permit duplicate submissions.
 
 ### Native editor return acceptance
+
+**The MOVEit Integration components are not required if using only the MAUI Editors.** Run this section only when native MOVEit editor launches from MAUI are used; install the bridge/CSS/logo and configure trusted origins as described in [Installation](INSTALLATION.md#7-configure-maui-integration-on-moveit-web-admin). For a MAUI-only deployment, validate applicable MAUI editor preferences and launches without Web Admin asset changes. COM-backed operations still require the locally registered COM API.
 
 From a MAUI Task Editor, use Edit Host while the Host preference selects MOVEit. Verify that the Task modal keeps its layout and draft when returning, with no opening/sign-in/opened banner or toast. Close the native Host window and verify Host properties refresh and Task editing resumes. Also check native Task, Script, Date List and navigation launches; blocked popups, unavailable sessions and login/skin failures must remain visible as errors. Local production-handshake, shared routing, PathBase and modal feedback checks passed.
 
@@ -297,16 +328,16 @@ Quick Transfer depends on live MOVEit Host, Task, Script, key, browse, run-statu
 - Run a basic transfer for each installed/supported saved Host profile that the environment uses: UNC Share (`Share`), MOVEit Transfer (`siLock`), FTP/FTPS (`FTP`), SSH/SFTP (`SSHFTP`), Amazon S3 (`S3`), Azure Blob (`AzureBlob`), SharePoint (`SharePoint`), and Google Storage (`GoogleStorage`). Verify the generated Traditional Task contains the expected native Source/Destination Host IDs and location/root fields. Confirm the MOVEit `(Default)` Local File System Host (ID `0`) is absent from both Quick Transfer Host dropdowns and is rejected server-side if posted by a stale client.
 - Verify Browse is offered only for Host types with a captured browse contract. For a saved Host whose authentication/proxy/blind-download shape is intentionally non-browsable, confirm the server-side browse request is rejected with the specific MAUI guidance rather than guessing a native request. For an otherwise supported root-based profile, verify leaving the root unselected uses the saved Host default root; manual folder/path entry must not make an unsupported transfer profile valid.
 - Test Source wildcards/multiple-file filespecs. A fixed Destination Filename must be rejected unless it contains `[OrigName]`; leaving Destination Filename blank must preserve the source filename behavior. Confirm Source/Destination paths containing a relative `..` segment are rejected before Task creation.
-- Run **Preflight** before a transfer. Confirm the Task is prepared but not started, the standard eight Task preflight stages run, and **Run Preflight Again** reuses the prepared Task safely. Editing the request before start must update the same named persistent Task when appropriate or replace the superseded temporary Task rather than accumulating stale prepared Tasks.
+- Run **Preflight** before a transfer. Confirm the Task is prepared but not started, the standard eight Task preflight stages run, and **Run Preflight Again** reuses the prepared Task safely. Editing the request before start must replace the superseded unstarted temporary Task rather than accumulating stale prepared Tasks.
 - With PGP licensed, validate **Encrypt** and **Decrypt**. Expired PGP keys must not appear in the Encrypt dropdown, and a stale request that posts an expired PGP key ID must be rejected server-side. Encrypt must require a selected PGP key and the saved Task must contain the selected key's native ID after MOVEit Task PUT; a missing/mismatched persisted recipient must block the transfer. Decrypt must use MOVEit's built-in `PGP Decrypt` Script. Repeat in a non-PGP-licensed environment and confirm Encrypt/Decrypt are visibly disabled, hovering either disabled card shows the MOVEit PGP-license tooltip, a reference refresh preserves the disabled state, and direct/stale requests remain blocked server-side.
 - Exhaust or simulate the finite Task license limit and confirm Quick Transfer is blocked before creation with the standard capacity guidance. A Quick Transfer always requires one Traditional Task slot, even when the Task is temporary.
 - Under Source > Filename / Filespec, confirm **Delete Source File After Successful Transfer** is unchecked by default. Prepare/run once cleared and verify the generated MOVEit Source step contains `DeleteOrig=0`; repeat with it checked and verify `DeleteOrig=1` and that MOVEit removes the source file only after the transfer succeeds. Change only this checkbox after Preflight/Prepare and confirm MAUI prepares a new Task contract rather than reusing one created with the opposite source-delete setting.
 - Under Destination > Filename, confirm **Overwrite Existing File** is checked by default. Prepare/run once checked and verify the generated MOVEit Destination step contains `OverwriteOrig=1`; repeat with it cleared and verify `OverwriteOrig=0`. Change only this checkbox after Preflight/Prepare and confirm MAUI prepares a new Task contract rather than reusing one created with the opposite overwrite setting.
-- With **Delete temporary task after successful transfer** enabled, confirm a successful temporary `ADHOC_*` Task is removed and its MAUI metadata is cleaned up. Confirm failed/cancelled/no-transfer Tasks are retained for troubleshooting. With **Create Traditional Task from this request**, confirm the named Task remains and normal MAUI Created/Modified audit metadata is recorded.
+- With **Delete temporary task after successful transfer** enabled, confirm a successful temporary `ADHOC_*` Task is removed and its MAUI metadata is cleaned up. Confirm failed/cancelled/no-transfer Tasks are retained for troubleshooting. With cleanup unchecked, confirm the generated Task remains; the removed Create Traditional Task option and Task Name controls must be absent. Preserve normal MAUI Created audit metadata.
 - Force an ambiguous error after the native start boundary (for example, an upstream timeout/5xx after MOVEit may have accepted Run Task Now). MAUI must not submit a second start automatically; status should move through the outcome-unknown/verifying path and the prepared Task must be retained for operator verification.
 - Start a transfer and confirm the **Transfer** button becomes **Cancel** as soon as the prepared Task is being submitted. Cancel a visible running transfer and verify MAUI uses the matching `TaskID`/`NominalStart`, reports **Cancelled**, stops polling as an active run, and retains the generated Task. Repeat while the browser is still waiting for the native start response; the UI must remain responsive, request cancellation without resubmitting the start, and either confirm **Cancelled** or report the actual terminal MOVEit outcome if the run finished first.
 - Create an ambiguous multiple-running-instance condition for a retained Quick Transfer Task and confirm cancellation does not guess which run to kill when no exact/current identity can be isolated.
-- On a 1920×1080 display, confirm Quick Transfer uses the same page-heading title/description size, position, and spacing as Tasks/Hosts grid pages. Verify the three workflow cards remain on the first row, all three Task Options checkboxes share one row, the conditional confirmation recipients and Task Name fields appear below that row, and the options reflow into two/one columns at smaller widths. Transfer Status presents Task, Files, and Transferred on one compact summary row; no Temporary Task status field should be shown. Preflight and Transfer/Cancel must appear in the panel footer using the established modal-footer treatment; narrower displays must reflow without clipped controls or undersized body text.
+- On a 1920×1080 display, confirm Quick Transfer uses the same page-heading title/description size, position, and spacing as Tasks/Hosts grid pages. Verify the three workflow cards remain on the first row. Task Options contains the retention and confirmation-email groupings; the recipients textbox is inside the email grouping, always visible and disabled while unchecked or SMTP is unavailable. Preserve draft recipients when toggling. Check available confirmations and recipient validation, and confirm the groupings reflow at smaller widths without the removed Task Name controls. Transfer Status presents Task, Files, and Transferred on one compact summary row; no Temporary Task status field should be shown. Preflight and Transfer/Cancel must appear in the panel footer using the established modal-footer treatment; narrower displays must reflow without clipped controls or undersized body text.
 - Verify running/progress/completion status is associated with the current Quick Transfer run rather than an older run of a retained persistent Task. Confirm successful completion reports file/byte totals when MOVEit supplies them.
 - Validate the RC3 transient-state boundary in a controlled test: do not expect a Quick Transfer token to survive an IIS/application recycle. If a run was already submitted, confirm MOVEit continues/records the authoritative run independently and that the operator can find it through normal Task Run/File Activity records. Confirm any temporary `ADHOC_*` Task left because MAUI did not observe successful completion is retained for explicit review rather than being silently assumed deleted.
 - Use a short transfer that can leave the running-task list before Task Run history refreshes. The status should move to **Finalizing** without clearing the last verified byte progress, then resolve to the completed Task Run once it is visible.
@@ -434,7 +465,7 @@ Verify required input rows appear automatically without inserting blank Task/Pro
 - In Host, Traditional/Advanced/Sync Task, Script and Date List Actions, verify labels name their object (for example Export Task, Clone Host and Delete Script). Export a saved object and confirm **Exported 1 {object}.** appears in the originating editor footer. Successful Host/Task Clone completion must also use the footer, without inserting a banner or changing header/tab/workspace/footer dimensions.
 - Fail an export with a server error, non-JSON/malformed response, empty download or lost connection. No download or success message should appear. Task/Host errors stay in the open Export dialog footer; Script/Date List errors stay in their editor footer. Retry successfully and confirm the prior error clears, the correct filename downloads and unsaved editor values remain intact. Check both themes and desktop/narrow widths; unresolved editor errors must retain priority over unrelated informational feedback.
 - Resource Information Edge coverage opens PGP Public/Private keys and then SSH/TLS Information using the production modal/client. It verifies the PGP-only Key Type identity column, missing-value handling and no stale Key Type on other resources. It also exercises shared feedback in real nested dialogs.
-- Verify Task, Host, Script, Date List and Groups & Permissions links follow their preferences without an intermediate fallback page. Keep native integration available for disabled preferences and native-only types/operations.
+- Verify Task, Host, Script, Date List and Groups & Permissions links follow their preferences without an intermediate fallback page. Where native editor launches are used, keep their integration available for disabled preferences and native-only types/operations.
 
 ## Imports, exports and environment copy
 
@@ -509,9 +540,9 @@ For RC3 release validation, validate the Task/Host `.maui` workflow against a re
 - Wrong passphrase returns a controlled decode failure and does not expose the native MOVEit response.
 - Duplicate Task and Host **Overwrite Existing** matches native MOVEit behavior and captures the normal MAUI Undo snapshot before overwrite.
 - Duplicate Task and Host **Import as New / Rename** creates the new non-conflicting names while MOVEit remaps native relationships.
-- Dependency conflicts that MAUI has not captured native rename semantics for offer **Overwrite** only.
+- Compatible dependency conflicts offer **Reuse Existing** as the default. Scripts/Date Lists and key/certificate dependencies do not gain Import as New / Rename; retain Overwrite Existing where allowed. See [dependency reuse acceptance](#native-import-dependency-reuse-acceptance).
 - For Script, Date List, SSH key, TLS certificate, and PGP key dependency conflicts, verify Overwrite is rejected when ID and Name point to different destination objects, when the target disappears after analysis, when the analyzed target is replaced by a different destination object, or when MOVEit marks the target read-only. Built-in Scripts must remain non-overwritable.
-- For **Use Existing** key/certificate conflicts, analyze the package, then delete or replace the exact destination key/certificate before Import. Import must fail before native commit and require a fresh **Analyze Package** pass; it must never silently import the packaged key or bind to a different same-name target.
+- For **Reuse Existing** key/certificate conflicts, analyze the package, then delete or replace the exact destination key/certificate before Import. Import must fail before native commit and require a fresh **Analyze Package** pass; it must never silently import the packaged key or bind to a different same-name target.
 - Imported Tasks remain disabled when the default **Leave imported Tasks disabled** option is selected.
 - MAUI custom metadata fields and Tags are restored to the final destination IDs after both overwrite and rename/create import paths.
 - Simulate or force a post-commit reconciliation failure (for example, make the authoritative inventory refresh fail after a successful native import). MAUI must report that MOVEit completed the import, warn the administrator to refresh/verify before retrying, and must not present the operation as a generic failed import.
@@ -545,28 +576,37 @@ Before functional Task/Host portability testing, build the full solution in Rele
 - Confirm Script, Date List, and Report downloads use ZIP content (`application/zip`) while retaining the `.maui` filename extension.
 - Confirm package-type mismatch validation still blocks, for example, importing a Script package through Date List import or a Host package through Task import.
 
+### Native import dependency reuse acceptance
+
+- Analyze a Task package containing existing compatible Hosts, Scripts and Date Lists. **Reuse Existing** should be first/default for eligible dependency conflicts and display the exact destination name/ID. Hosts require the same protocol, Scripts the same normalized language (including PowerShell/PS1 and VBS/VBScript aliases), and Date Lists one unambiguous matching name. All Task choices and selected export-root choices remain unchanged.
+- Import with same-ID and differing-ID matches. Verify recognized Host/Script/Date List references point to the chosen destination IDs, including shared references and DateListRef IDs. Reused definitions must be absent from the working native XML and freshly encoded import model; destination configuration, credentials, Resource Groups, metadata and audit fields stay unchanged. No creation/overwrite permission, capacity consumption or Undo capture applies to a reused resource; read access is still required.
+- Confirm key/certificate reuse requires the same native ID; name-only matches must not offer Reuse Existing. Global Parameters remain name-resolved and do not appear as new dependency conflict rows. Reuse must not rewrite Script/macro text or other literal values.
+- Reject incompatible protocols/languages, ambiguous name/ID matches, a reuse target ID also used by a remaining imported object, lost read access, and targets removed/renamed/replaced between Analyze and Import. Recheck after Undo capture and immediately before native commit. A re-encoded model that restores an excluded dependency or changes the planned object identities/names/types must block import.
+- Select Overwrite Existing or Import as New / Rename where those actions are supported and verify their existing guards still apply. After successful reuse/import, distinguish imported and reused counts. Test post-commit reconciliation failure and lost native commit acknowledgement: report completed/unreconciled or unknown state as appropriate, with no automatic second commit.
+- Automated coverage is in `NativePortabilityReuseTests`, `NativePortabilityReuseImportTests` and `native-portability-reuse-smoke.cjs`. These fixtures do not replace live same-environment and cross-environment native import checks.
+
 ### Native key/certificate dependency conflict validation
 
-- Export a Task with an included PGP dependency, then analyze/import that package back into the same MOVEit instance where the original PGP key still exists. Confirm the PGP dependency is shown as a conflict with **Overwrite Existing**, not as **import as new**.
-- Repeat with an included SSH client key and TLS certificate dependency. Existing same-ID or same-Name dependencies must be presented as conflicts. Apply the same-ID Use Existing rule in the next section; name-only conflicts are overwrite-only.
+- Export a Task with an included PGP dependency, then analyze/import that package back into the same MOVEit instance where the original PGP key still exists. Confirm the dependency is a conflict with **Reuse Existing** selected for the verified same-native-ID match and **Overwrite Existing** as the alternate; **Import as New / Rename** is unavailable.
+- Repeat with an included SSH client key and TLS certificate dependency. Existing same-ID or same-Name dependencies must be presented as conflicts. Apply the same-ID Reuse Existing rule in the next section; name-only conflicts are overwrite-only.
 - Confirm a dependency that does not exist by either native ID or Name remains classified as a new dependency.
 - Create/identify a test condition where the imported dependency ID matches one destination key/certificate but its Name matches a different destination object. Analyze must stop with an ambiguity error before native import is attempted.
-- Confirm key/certificate dependency conflicts do not offer **Import as New / Rename**. Same-ID dependencies may offer **Use Existing**; name-only conflicts remain overwrite-only.
+- Confirm key/certificate dependency conflicts do not offer **Import as New / Rename**. Same-ID dependencies may offer **Reuse Existing**; name-only conflicts remain overwrite-only.
 
 ### Task/Host portability - key/certificate ID conflicts
 
 - Export a Task that references an existing PGP key, SSH client key, or TLS/SSL certificate and import it back into the same MOVEit environment.
-- Analyze Package should show the dependency as a conflict with **Use Existing** selected by default and **Overwrite Existing** as the alternate choice.
-- With **Use Existing**, verify the existing key/certificate is unchanged and the imported Task/Host still references that same native ID.
+- Analyze Package should show the dependency as a conflict with **Reuse Existing** selected by default and **Overwrite Existing** as the alternate choice.
+- With **Reuse Existing**, verify the existing key/certificate is unchanged and the imported Task/Host still references that same native ID.
 - With **Overwrite Existing**, verify the existing dependency is intentionally replaced using the native MOVEit import path.
-- If a dependency conflicts by Name only and not by native ID, **Use Existing** must not be offered.
+- If a dependency conflicts by Name only and not by native ID, **Reuse Existing** must not be offered.
 
 ### Cross-environment Task/Host portability validation
 
 - Export a portable/passphrase Task package containing at least one Host and one PGP/SSH/TLS dependency; import it into a different MOVEit Automation environment.
 - Verify a truly new dependency imports with the Task/Host and that relationships remain valid.
 - Verify a key/certificate conflict detected only by MAUI live inventory does **not** cause MAUI to synthesize undocumented key `duplicate` fields or a `Duplicated[]` entry. **Overwrite Existing** must preserve MOVEit's `/config/encode` key/certificate object unchanged.
-- Verify **Use Existing** removes the same-ID key/certificate from the working native XML, re-runs `/config/encode`, and submits the fresh MOVEit-generated import model; the destination key/certificate must remain unchanged.
+- Verify **Reuse Existing** removes the same-ID key/certificate from the working native XML, re-runs `/config/encode`, and submits the fresh MOVEit-generated import model; the destination key/certificate must remain unchanged.
 - Force a definitive MOVEit 4xx from native import and verify the browser receives structured MOVEit error detail or a conservatively sanitized short plain-text validation message. Raw Settings/configuration/XML/JSON bodies and opaque encrypted material must never be returned.
 
 ### MOVEit whole-configuration import / backup restore regression

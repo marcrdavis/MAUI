@@ -242,6 +242,7 @@ builder.Services.AddScoped<ITaskCrudStrategy>(sp => new RestV0TaskCrudStrategy(M
 builder.Services.AddScoped<ITaskCrudStrategy>(sp => new RestV0TaskCrudStrategy(MoveItTaskKind.Synchronization, sp.GetRequiredService<IMoveItRestClient>()));
 builder.Services.AddScoped<ITaskCrudCoordinator, TaskCrudCoordinator>();
 builder.Services.AddScoped<ITaskFilenameSearchService, TaskFilenameSearchService>();
+builder.Services.AddScoped<IObjectJsonSearchService, ObjectJsonSearchService>();
 builder.Services.AddScoped<ITaskJsonValueService, TaskJsonValueService>();
 // Short-lived checkout intent shares the edit-lease cleanup token protection format.
 builder.Services.AddSingleton<ShortCheckoutRecoveryService>();

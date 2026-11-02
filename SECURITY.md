@@ -1,8 +1,8 @@
 # MAUI Security Policy and Engineering Notes
 
-- **Version:** `0.18.511-RC3`
+- **Version:** `0.18.521-RC3`
 - **Release:** Release Candidate 3 (pre-release)
-- **Build:** `20261029`
+- **Build:** `20261101`
 
 > **Release Candidate 3 — not the final release.** This pre-release may contain defects, including security defects. The controls described here document implemented behavior, not a guarantee of security or production readiness.
 
@@ -12,7 +12,7 @@ MAUI is an administrative UI for MOVEit Automation. Security-sensitive behavior 
 
 ## Supported versions
 
-Security fixes are applied to the current supported MAUI release line. The current RC3 candidate is `0.18.511-RC3` build `20261029`. Older prerelease/candidate builds should be upgraded before security evaluation or deployment.
+Security fixes are applied to the current supported MAUI release line. The current RC3 candidate is `0.18.521-RC3` build `20261101`. Older prerelease/candidate builds should be upgraded before security evaluation or deployment.
 
 ## Reporting a vulnerability
 
@@ -63,6 +63,10 @@ These findings are treated as false positives rather than replacing the existing
 - Native-editor `postMessage` processing requires the per-launch nonce, exact expected MOVEit origin, and exact popup `WindowProxy` before a message is accepted.
 - Native-editor session-expiration redirects are constrained to the current MAUI origin.
 
+### Native editor integration assets
+
+**The MOVEit Integration components are not required if using only the MAUI Editors.** The bridge, CSS and logo under `IntegrationAssets/MOVEitWebAdmin` apply to native MOVEit editor launches from MAUI; the locally registered COM API remains a separate prerequisite. For native integration, configure exact trusted MAUI origins and keep the packaged assets/script reference consistent on applicable Web Admin nodes. The existing nonce, expected-origin and popup checks still apply. See [installation instructions](INSTALLATION.md#7-configure-maui-integration-on-moveit-web-admin).
+
 ### Client-visible notification logs
 
 Signed-in UI notices are recorded through an authenticated, antiforgery-protected endpoint in the existing MAUI application log. User and MOVEit environment are taken from the server session. Only the displayed message, severity, origin and page path are submitted; no form values, native definitions, request bodies or URL query strings are collected. Common named credential/token values are redacted in the browser and again on the server; treat logs as sensitive operational data and avoid putting secrets in user-visible messages. Messages are bounded and control characters normalized. Records are marked ClientReported and are not authoritative MOVEit audit events. Delivery uses the existing bounded log channel/retention policy; unavailable services and logging database failures can prevent capture.
@@ -86,6 +90,10 @@ Browse authentication/proxy fields use shared server-side composition across Tas
 Host diagnostics/listings have a native-aware budget (5-minute minimum, 30-minute maximum) that covers headers and response-body reads. An acquired diagnostic checkout gets an independent cleanup budget, even if its caller cancels; normal editor-write cleanup and borrowed editor leases retain their established behavior. Failed acquisitions never authorize DELETE or force, and failed writes/tests are not automatically replayed.
 
 The shared browser only lists saved Host contents; choosing a file does not download, upload or delete it. Host Editor inspection requires a live MOVEit administrator and antiforgery validation. Borrowing an existing editor checkout for listing does not release/reacquire that checkout or write a definition. Other browse reads retain bounded checkout cleanup. Cancelling or replacing the modal invalidates pending responses before they can affect another caller.
+
+### Task and Host rename
+
+Grid Rename endpoints retain authentication, antiforgery and native Edit authorization. The shared object services validate names and live duplicates, capture Undo, patch only Name on the current authoritative definition and verify readback. Local File System Host 0 cannot be renamed. Missing/mismatched acknowledgements and uncertain transport results block repeated submissions until the grid/object is refreshed and verified. A confirmed native rename followed by a MAUI audit failure remains a saved-state diagnostic, not permission to repeat the native mutation. Database details stay in Configuration > Logs; the reported SQLite audit failure's cause remains unconfirmed.
 
 ### Version-specific and cloud Hosts
 
@@ -131,6 +139,8 @@ Group dataset saves require the captured successful v0 acknowledgement (status s
 - MOVEit's successful `/api/v0/config/import` response can contain broad Settings/configuration data; MAUI intentionally discards that successful response body server-side and never returns it to the browser.
 - Host export uses a uniquely named temporary disabled carrier Task only because MOVEit does not support direct Host export. The carrier consumes one temporary MOVEit Task license slot, is deleted in cleanup, and is never stored in the package. Host import never creates a carrier Task.
 - Current Task/Host portability packages preserve MAUI configured custom metadata fields and Tags for native objects represented in the package. Folder placement, audit timestamps, and Undo/Recycle history are intentionally excluded.
+- Compatible dependency conflicts default to **Reuse Existing** only after server-side matching. Hosts require the same protocol, Scripts the same normalized language and Date Lists one unambiguous matching name; key/certificate reuse retains the same-native-ID requirement. Selected export roots and all Task import choices are unchanged. Reused resources require read access and retain destination configuration, credentials, groups, metadata and audit history; they receive no creation/overwrite operation or Undo capture.
+- Reuse removes selected dependency definitions from the working native XML, remaps recognized structured references using Copy To's shared rules and obtains a fresh authoritative MOVEit import model. Ambiguous/incompatible targets, stale identities, conflicting imported IDs and unexpected re-encoding results fail before native commit. Final target revalidation and the existing single-commit/unknown-outcome rules remain in force. Global Parameters continue to resolve by name rather than becoming dependency conflict rows.
 
 ### Quick Transfer
 
@@ -150,6 +160,10 @@ Cleanup and optional success-confirmation intent are persisted separately in `Da
 This experimental feature defaults off and checks the saved setting, live session and per-Task Edit authorization at its endpoints. Writes require antiforgery protection and opaque current revisions; the browser sends scalar-path changes, never a full Task replacement. Native identities/references, Resource Groups, protected credentials/parameters and managed fields are not editable. Credential values are masked before reaching the browser. JSON content is rendered as text; no JSON is evaluated as code, stored in browser drafts or included in server diagnostic logs. Existing checkout ownership, explicit administrator override and persisted-value verification apply. Bulk saves are independent operations; validation is not a transaction and a concurrent change can still stop a later Task save.
 
 The JSON Editor requires the corruption-warning Proceed confirmation before its Save sequence. Confirmation does not grant permissions or bypass revision/checkout checks. Each affected Task captures its ordinary per-user undo snapshot before the update; snapshot failure blocks that Task's write. A later Task's failure does not roll back earlier successful saves.
+
+### Tasks and Hosts JSON grid search
+
+Only a case-insensitive `JSON:` prefix activates element/value search. Shared Task/Host reads use the current native session without edit checkout; searchable projections exclude credentials and secure Parameter values. Bounded temporary page caches and cancellable requests do not become a persisted JSON index. Errors/partial reads are not presented as completed matches. Grid search is independent of the experimental JSON Editor setting and cannot write definitions. Scheduled Task/Host Reports cannot treat a `JSON:` expression as ordinary text; Send Now can use a completed filtered grid snapshot.
 
 ### Experimental environment copy
 

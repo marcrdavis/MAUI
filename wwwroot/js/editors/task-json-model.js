@@ -54,16 +54,17 @@
             .filter(change => text(change.before) !== text(change.value));
         changeCache.set(task.document,{original:task.original,value});return value;
     }
+    const pathPattern = window.MauiJsonSearch.pathPattern;
     function match(leaf, find, mode, filter) {
         const source = mode === 'path' ? leaf.pathText : leaf.name;
         let yes;
         if (mode === 'path') {
             // Only * is a wildcard; all regular-expression punctuation, including [*], is literal except its star.
-            const pattern = find.split('*').map(part => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*');
-            yes = new RegExp('^' + pattern + '$', 'i').test(source);
+            yes = pathPattern(find).test(source);
         } else yes = String(source).toLowerCase() === find.toLowerCase();
         return yes && (filter === '' || String(leaf.value) === filter || text(leaf.value) === filter);
     }
+    const compileTreeSearch = window.MauiJsonSearch.compileTreeSearch;
     // Explicit checkout recovery keeps only the intended leaf changes. An array element's native identity must still match.
     function rebase(previous, fresh) {
         const pending = changes(previous), locked = new Set(fresh.readOnlyPaths.map(key)), document = clone(fresh.definition);
@@ -82,5 +83,5 @@
         }
         return document;
     }
-    window.MauiTaskJsonModel = { key, clone, type, text, pathText, get, set, parse, leaves, changes, match, rebase };
+    window.MauiTaskJsonModel = { key, clone, type, text, pathText, get, set, parse, leaves, changes, match, compileTreeSearch, rebase };
 })();

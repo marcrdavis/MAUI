@@ -18,4 +18,13 @@ public static class OutboundReportSourcePolicy
         if (!IsAllowed(gridKey, isAdmin))
             throw new InvalidOperationException("This Report source requires MAUI Administrator access.");
     }
+    // JSON matching is currently a grid-only read. Scheduled Reports have no definition matcher;
+    // reject this search explicitly instead of saving/executing an ordinary-text filter that returns no rows.
+    public static void EnsureScheduledSearchSupported(string? gridKey, string? searchText)
+    {
+        var key = (gridKey ?? string.Empty).Trim();
+        if ((key.Equals("tasks", StringComparison.OrdinalIgnoreCase) || key.Equals("hosts", StringComparison.OrdinalIgnoreCase))
+            && searchText?.StartsWith("JSON:", StringComparison.OrdinalIgnoreCase) == true)
+            throw new InvalidOperationException("JSON searches can only be sent now. Clear the JSON search before scheduling a Report.");
+    }
 }

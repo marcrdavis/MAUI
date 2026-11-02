@@ -46,6 +46,7 @@ public sealed class OutboundReportDataSource : IOutboundReportDataSource
         ArgumentNullException.ThrowIfNull(report);
         OutboundReportSourcePolicy.EnsureAllowed(report.GridKey, _security.IsAdmin(report.OwnerUsername));
         var state = Deserialize<ReportGridViewState>(report.ViewStateJson, "report view state");
+        OutboundReportSourcePolicy.EnsureScheduledSearchSupported(report.GridKey, state.SearchText);
         var context = Deserialize<ReportSourceContext>(report.SourceContextJson, "report source context");
         var rows = await LoadSourceRowsAsync(report.GridKey, context, cancellationToken);
         return ApplyViewState(state, rows);

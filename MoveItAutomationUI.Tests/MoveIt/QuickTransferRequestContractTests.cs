@@ -89,20 +89,16 @@ public sealed class QuickTransferRequestContractTests
     }
 
     [Fact]
-    public void NormalizeRequest_ClearsTemporaryOnlyFieldsForPersistentTask()
+    public void DeleteTemporaryTaskAfterSuccess_DefaultsEnabled()
+        => Assert.True(new QuickTransferRequest().DeleteTemporaryTaskAfterSuccess);
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void NormalizeRequest_PreservesDeleteTemporaryTaskChoice(bool delete)
     {
-        var request = new QuickTransferRequest
-        {
-            CreateTraditionalTask = true,
-            TaskName = "  TEST_TASK  ",
-            DeleteTemporaryTaskAfterSuccess = true
-        };
-
-        var normalized = QuickTransferService.NormalizeRequest(request);
-
-        Assert.True(normalized.CreateTraditionalTask);
-        Assert.Equal("TEST_TASK", normalized.TaskName);
-        Assert.False(normalized.DeleteTemporaryTaskAfterSuccess);
+        var normalized = QuickTransferService.NormalizeRequest(new QuickTransferRequest { DeleteTemporaryTaskAfterSuccess = delete });
+        Assert.Equal(delete, normalized.DeleteTemporaryTaskAfterSuccess);
     }
 
     [Fact]
@@ -121,18 +117,12 @@ public sealed class QuickTransferRequestContractTests
     }
 
     [Fact]
-    public void NormalizeRequest_ClearsTaskNameForTemporaryTask()
+    public void RetentionUsesOneOptionWithoutNamedPersistentTaskContract()
     {
-        var request = new QuickTransferRequest
-        {
-            CreateTraditionalTask = false,
-            TaskName = "STALE_HIDDEN_NAME"
-        };
-
-        var normalized = QuickTransferService.NormalizeRequest(request);
-
-        Assert.False(normalized.CreateTraditionalTask);
-        Assert.Equal(string.Empty, normalized.TaskName);
+        Assert.Null(typeof(QuickTransferRequest).GetProperty("CreateTraditionalTask"));
+        Assert.Null(typeof(QuickTransferRequest).GetProperty("TaskName"));
+        Assert.Null(typeof(QuickTransferPreparationResult).GetProperty("PersistentTask"));
+        Assert.Null(typeof(QuickTransferStartResult).GetProperty("PersistentTask"));
     }
 
 }

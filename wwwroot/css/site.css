@@ -2851,18 +2851,20 @@ html[data-theme="dark"] .metadata-tag-remove:focus-visible { background: rgba(25
 .quick-transfer-pgp-key { margin-top: 9px; }
 .quick-transfer-inline-option { margin-top: -1px; }
 .quick-transfer-options-card { display: flex; flex-direction: column; }
-/* Three Task Options share the desktop row; dependent fields span the full grid beneath it. */
-.quick-transfer-options-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: start; }
+/* Task retention and confirmation share a row; recipients stay inside the email option. */
+.quick-transfer-options-list { display: grid; grid-template-columns: minmax(300px, 1fr) minmax(0, 2fr); gap: 8px; align-items: stretch; }
 .quick-transfer-switch-row { display: flex; align-items: flex-start; gap: 9px; min-width: 0; padding: 9px 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2); cursor: pointer; }
-.quick-transfer-switch-row > input[type="checkbox"] { flex: 0 0 auto; margin: 2px 0 0; accent-color: var(--accent); }
-.quick-transfer-switch-row > span { display: grid; gap: 2px; min-width: 0; }
+.quick-transfer-switch-row > input[type="checkbox"],
+.quick-transfer-confirm-toggle > input[type="checkbox"] { flex: 0 0 auto; margin: 2px 0 0; accent-color: var(--accent); }
+.quick-transfer-switch-row > span,
+.quick-transfer-confirm-toggle > span { display: grid; gap: 2px; min-width: 0; }
 .quick-transfer-switch-row strong { color: var(--text); font-size: 12px; }
 .quick-transfer-switch-row small { color: var(--text-soft); font-size: 12px; line-height: 1.35; }
-.quick-transfer-switch-row:has(input:disabled) { cursor: default; opacity: .62; }
-.quick-transfer-task-name { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end; padding: 2px 10px 0; }
-.quick-transfer-task-name[hidden] { display: none !important; }
-.quick-transfer-task-name .text-input { min-height: 38px; height: 38px; }
-.quick-transfer-task-name .new-task-auto-format { min-height: 38px; align-items: center; }
+.quick-transfer-switch-row:has(> input[type="checkbox"]:disabled),
+.quick-transfer-email-option:has([data-quick-confirm-email]:disabled) { cursor: default; opacity: .62; }
+.quick-transfer-email-option { display: grid; grid-template-columns: max-content minmax(0, 1fr); align-items: center; gap: 12px; cursor: default; }
+.quick-transfer-confirm-toggle { display: flex; align-items: flex-start; gap: 9px; min-width: 0; cursor: pointer; }
+.quick-transfer-email-option .text-input { width: 100%; min-width: 0; height: 36px; min-height: 36px; }
 .quick-transfer-status-card { display: grid; grid-template-rows: auto auto auto; gap: 0; overflow: hidden; }
 .quick-transfer-status-card[hidden] { display: none !important; }
 .quick-transfer-status-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; padding: 14px 16px 10px; }
@@ -2894,18 +2896,14 @@ html[data-theme="dark"] .metadata-tag-remove:focus-visible { background: rgba(25
 .quick-transfer-status-header .status-pill[data-state="prepared"] { color: var(--accent-strong); background: var(--accent-soft); }
 .quick-transfer-pgp-key[hidden] { display: none !important; }
 
-@media (max-width: 1500px) and (min-width: 1101px) {
-    .quick-transfer-options-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
 @media (max-width: 1100px) {
     .quick-transfer-workflow-grid { grid-template-columns: 1fr; }
     .quick-transfer-options-list { grid-template-columns: 1fr; }
-    .quick-transfer-task-name { grid-column: auto; }
 }
 @media (max-width: 720px) {
     .quick-transfer-control-row,
     .quick-transfer-file-row,
-    .quick-transfer-task-name { grid-template-columns: 1fr; }
+    .quick-transfer-email-option { grid-template-columns: 1fr; }
     .quick-transfer-macro-select { width: 100%; min-width: 0; }
     .quick-transfer-control-row .secondary-button { width: 100%; }
     .quick-transfer-status-header { align-items: flex-start; }

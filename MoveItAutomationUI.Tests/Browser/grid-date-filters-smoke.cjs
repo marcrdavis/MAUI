@@ -62,7 +62,7 @@ check(match('2026-10-21T14:30:00.1234567Z', '2026-10-21 14:30:00.123', clock), t
 // Run getFilteredRows from grid.js, including its datetime-vs-text/number routing.
 const grid = read('wwwroot/js/grid.js');
 const functions = grid.slice(grid.indexOf('        function splitFilterAlternatives('), grid.indexOf('        // Sorts a row collection'));
-Object.assign(context, { dateMacros: helper, dateMacroClock: clock,
+Object.assign(context, { jsonSearch: null, dateMacros: helper, dateMacroClock: clock,
     resolveDateMacro: value => helper.parseFilter(value, clock), matchesDateMacro: (cell, f) => helper.matches(cell, f, clock),
     updateDateMacroHint() {}, cssEscape: s => s, getRowSearchText: row => row.text,
     search: { value: '' }, scopeFilters: [], filters: [], rows: [],

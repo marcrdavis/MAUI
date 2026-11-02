@@ -307,7 +307,7 @@ public sealed partial class HostsController : Controller
         }
     }
 
-    // Imports a native Host package after applying per-object Overwrite or Rename conflict resolutions.
+    // Imports a native Host package after applying verified dependency reuse, Overwrite or Rename resolutions.
     [HttpPost]
     [ValidateAntiForgeryToken]
     [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
@@ -328,8 +328,8 @@ public sealed partial class HostsController : Controller
             await request.File.CopyToAsync(memory, cancellationToken);
             var result = await _nativePortabilityService.ImportAsync(memory.ToArray(), "Host", request.Passphrase, resolutions, leaveTasksDisabled: true, acknowledgeUnsupportedMetadata: request.AcknowledgeUnsupportedMetadata, username: session.Username, cancellationToken: cancellationToken);
             _logger.LogInformation(
-                "Host portability import completed for {UserName}. File={FileName}; PackageBytes={PackageBytes}; ResolutionCount={ResolutionCount}; ImportedCount={ImportedCount}; OverwrittenCount={OverwrittenCount}; RenamedCount={RenamedCount}; HasWarning={HasWarning}.",
-                session.Username, Path.GetFileName(request.File.FileName), request.File.Length, resolutions.Count, result.ImportedCount, result.OverwrittenCount, result.RenamedCount, !string.IsNullOrWhiteSpace(result.Warning));
+                "Host portability import completed for {UserName}. File={FileName}; PackageBytes={PackageBytes}; ResolutionCount={ResolutionCount}; ImportedCount={ImportedCount}; OverwrittenCount={OverwrittenCount}; RenamedCount={RenamedCount}; ReusedCount={ReusedCount}; HasWarning={HasWarning}.",
+                session.Username, Path.GetFileName(request.File.FileName), request.File.Length, resolutions.Count, result.ImportedCount, result.OverwrittenCount, result.RenamedCount, result.ReusedCount, !string.IsNullOrWhiteSpace(result.Warning));
             return Json(new
             {
                 success = result.Success,
@@ -337,6 +337,7 @@ public sealed partial class HostsController : Controller
                 importedCount = result.ImportedCount,
                 overwrittenCount = result.OverwrittenCount,
                 renamedCount = result.RenamedCount,
+                reusedCount = result.ReusedCount,
                 items = result.Items,
                 warning = result.Warning
             });

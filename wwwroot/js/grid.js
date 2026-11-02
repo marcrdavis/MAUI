@@ -341,6 +341,11 @@
             });
         }
 
+        const jsonSearch = window.MauiGridJsonSearch?.create({ grid, search,
+            getIds: () => rows.map(row => row.dataset.rowId), changed: () => render()
+        });
+        grid.addEventListener('maui:grid-ready', () => jsonSearch?.ensure());
+
         const filenameSearch = window.MauiTaskFilenameSearch?.create({ grid, search,
             changed: () => render()
         });
@@ -492,7 +497,8 @@
         // per-column filter. Scope filters represent the broad view (for example Key/Certificate Type)
         // and intentionally run before all other user-entered filters.
         function getFilteredRows() {
-            const searchFilter = parseFilterExpression(search?.value, parseTextFilter);
+            const jsonMode = jsonSearch?.active();
+            const searchFilter = jsonMode ? null : parseFilterExpression(search?.value, parseTextFilter);
             const activeScopeFilters = scopeFilters
                 .map(control => ({
                     key: String(control.dataset.filterColumn || '').trim(),
@@ -522,6 +528,8 @@
                     return cellValue === filter.value;
                 });
                 if (!matchesScope) return false;
+
+                if (jsonMode && !jsonSearch.matches(row.dataset.rowId)) return false;
 
                 // Empty global searches need no row-text DOM reads or filename-index lookups.
                 if (searchFilter && !matchesTextFilter(getRowSearchText(row), searchFilter)) return false;
@@ -601,11 +609,12 @@
 
         // Recalculates visible rows, paging controls, counts, and selection state after any grid interaction.
         function render() {
-            if (initialLoadingComplete) filenameSearch?.ensure();
+            if (initialLoadingComplete) { jsonSearch?.ensure(); filenameSearch?.ensure(); }
             applyTaskFailureHighlighting();
             const filtered = sortRows(getFilteredRows());
             applyRowOrder(filtered);
             viewState.render(filtered);
+            jsonSearch?.renderStatus();
 
             // Keep the table/header visible when filters return zero rows so users can see and correct
             // the active column filters. Only tbody rows are hidden through normal paging/filtering.
@@ -1261,8 +1270,18 @@
             getActiveView: () => activeSavedView
         };
 
+        // Scheduled Reports regenerate ordinary grid columns; JSON searches use live definitions.
+        // Send Now can safely use the completed, already-filtered grid snapshot.
+        function getReportCreationIssue(deliveryMode) {
+            if (!jsonSearch?.active()) return '';
+            jsonSearch.ensure();
+            if (deliveryMode !== 'Now') return 'JSON searches can only be sent now. Clear the JSON search before scheduling a Report.';
+            return jsonSearch.ready() ? '' : 'Complete a valid JSON search before sending a Report.';
+        }
+
         const reportApi = {
             gridKey: String(grid.dataset.grid || ''),
+            getCreateIssue: getReportCreationIssue,
             captureViewState: captureReportViewState,
             captureSourceContext: captureReportSourceContext,
             captureSnapshot: () => exporter.captureCurrentViewSnapshot(),

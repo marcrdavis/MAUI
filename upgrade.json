@@ -1,7 +1,7 @@
 {
   "ManifestVersion": 1,
-  "Description": "Add opt-in Task JSON value editing and reviewed bulk replacements.",
-  "TargetVersion": "0.18.511-RC3",
+  "Description": "Reuse compatible existing native import dependencies by default while preserving Task import choices and destination configuration.",
+  "TargetVersion": "0.18.521-RC3",
   "MinimumSupportedVersion": "0.16.77-integration",
   "RequiredSchemaVersion": 1,
   "RequiredConfigurationVersion": 1,

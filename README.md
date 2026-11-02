@@ -1,8 +1,8 @@
 # MAUI — MOVEit Automation User Interface
 
-- **Version:** `0.18.511-RC3`
+- **Version:** `0.18.521-RC3`
 - **Release:** Release Candidate 3 (RC3) — **not the final release**
-- **Build:** `20261029`
+- **Build:** `20261101`
 - **Target framework:** .NET 8
 - **Database schema / configuration version:** `1` / `1`
 
@@ -48,6 +48,8 @@ MOVEit version-specific controls are gated by the connected server's reported ca
 
 Shared grids provide sorting, column filters, saved views, CSV/Print and per-user preferences. MAUI metadata includes Tags and organization-defined fields. Task filename search reads configured Source masks and Destination filenames on demand; ordinary grid loads do not fetch Task steps. Date/time filters support comparison operators, alternatives and relative-date macros; use the grid's Filter Help for syntax and examples.
 
+Tasks and Hosts also support JSON element/value searches when the search begins with **`JSON:`**, for example `JSON: DoIfFailure=1`. Only matching objects appear; ordinary search and textbox hints are unchanged. This read-only search is independent of the experimental JSON Editor. Calendar **Search** highlights matching days/time slots while keeping all runs visible; **Filter** shows only matching runs. Both Calendar modes match Task names.
+
 Task editors and Quick Transfer use the same sortable Browse modal. Double-click a file to select its folder and filename, or select a folder and click OK to leave the filename unchanged. Host Editor **Browse Host** is inspection-only; selecting an entry there does not transfer or modify it.
 
 ## Editors and experimental features
@@ -86,7 +88,7 @@ Both features below are configured under **Configuration > Settings > Experiment
 
 #### Task JSON Editor
 
-Select Tasks and choose **Bulk Actions > JSON Editor**. Edit existing scalar values or find matching elements across Traditional, Advanced and Sync Tasks. **Apply Value / Apply Changes stage edits locally**; **Review Changes** opens the review step, and only **Save** writes them. Find and Replace with reset when the modal opens or a Task reload succeeds. Both result tables use standard Rows and paging controls.
+Select Tasks and choose **Bulk Actions > JSON Editor**. Edit existing scalar values or find matching elements across Traditional, Advanced and Sync Tasks. **Apply Value / Apply Changes stage edits locally**; **Review Changes** opens the review step, and only **Save** writes them. The **Find** and **Replace with** fields reset when the modal opens or Tasks reload successfully. Both result tables use standard Rows and paging controls. The tree search shows only matching Tasks and counts them in the footer. Combine an element with a value using expressions such as `DoIfFailure=1`, `RetryCount>=3` or `Name contains invoice`; ordered comparisons are numeric and text matching ignores case. **Reload Tasks** reloads the entire selected set, even Tasks hidden by the search, and confirms discarding unsaved edits. Filtering changes visibility only; review/save still includes all staged changes.
 
 Save requires an explicit corruption warning with **Cancel / Proceed**. Each affected Task gets its normal undo snapshot before its update; a snapshot failure prevents that Task's write. Shared Task Edit permissions, checkout, revision checks and readback verification still apply. Native identities/references, credentials and other managed values are read-only. There is no Auto Save or durable browser draft. Bulk saves are independent Task operations, not one transaction.
 
@@ -132,6 +134,8 @@ Checkout conflicts show MOVEit's owner/time. Only a MOVEit administrator may exp
 
 Task and Host Auto Save are independent per-user preferences; supported Script/Date List editors also offer Auto Save. Editor **Undo Last Change** reverses one local edit in the current opening and is consumed after use; reopening/reloading resets it. Grid saved-history Undo is a separate operation.
 
+**Rename Task / Rename Host** is below Export in each grid row menu. The modal preloads the current name and immediately honors **Auto Format New Task/Host Names**. Rename validates the name and live duplicates, uses the shared save/Undo/audit workflow and preserves unrelated configuration. Uncertain save responses require refresh and verification before another Rename submission. Local File System Host 0 cannot be renamed.
+
 Passwords/tokens stay server-side; COM/native editing can require the MOVEit password in active-session memory. See [SECURITY.md](SECURITY.md) for credential handling, authorization, antiforgery and checkout details, and [editor acceptance](TESTING.md#rc3-editor-and-crud-acceptance) for validation.
 
 <a id="deployment-topology"></a>
@@ -146,11 +150,13 @@ Passwords/tokens stay server-side; COM/native editing can require the MOVEit pas
 
 ## Getting started
 
-**Do not install MAUI on the MOVEit Automation server.** Use a dedicated Windows/IIS host with network access to MOVEit Web Admin and the metadata database. MAUI uses REST for supported operations, a locally registered COM client for retained native operations, and the native Web Admin integration for editor launches. SQLite/SQL Server stores MAUI-owned state; MOVEit remains authoritative.
+**Do not install MAUI on the MOVEit Automation server.** Use a dedicated Windows/IIS host with network access to MOVEit Web Admin and the metadata database. MAUI uses REST for supported operations, a locally registered COM client for retained native operations, and the native Web Admin integration when launching MOVEit's editors. SQLite/SQL Server stores MAUI-owned state; MOVEit remains authoritative.
+
+**The MOVEit Integration components are not required if using only the MAUI Editors.** These are the browser bridge, styling and logo assets under `IntegrationAssets/MOVEitWebAdmin`. Install them when launching native MOVEit editors from MAUI; enable the applicable MAUI editor preferences for MAUI-only editing. The locally registered MOVEit COM API remains a separate prerequisite.
 
 1. Review [prerequisites and database choices](INSTALLATION.md#2-prerequisite-checklist).
 2. Build/publish from source or prepare a complete matching publish package. See [Build MAUI](INSTALLATION.md#4-build-maui); Visual Studio 2022 or later with the ASP.NET/web workload and .NET 8 is supported.
-3. Prepare IIS, install/register the compatible COM API, and configure the [native Web Admin integration](INSTALLATION.md#7-configure-maui-integration-on-moveit-web-admin) on applicable nodes. Configure exact trusted MAUI browser origins.
+3. Prepare IIS and install/register the compatible COM API. If native MOVEit editors will be launched from MAUI, configure the [native Web Admin integration](INSTALLATION.md#7-configure-maui-integration-on-moveit-web-admin) on applicable nodes with exact trusted MAUI browser origins.
 4. For a **new installation only**, create `appsettings.json` containing `{}` if absent. Grant application Read access and Modify only on that existing file and `Data`, following the installation guide. Preserve any existing settings/data.
 5. Open MAUI and complete [Initial Setup](INSTALLATION.md#8-run-initial-setup), which tests REST, COM and database access, provisions the database and proceeds to Login.
 6. Configure [Data Access credentials, backups, SMTP and optional workflows](INSTALLATION.md#9-after-setup---first-steps), then complete the applicable [live acceptance checks](TESTING.md#manual-rc3-smoke-test).
@@ -179,9 +185,11 @@ Connection-list updates apply to new logins/background connections without resta
 
 Scheduled reports need configured SMTP. IIS startup/preload is needed for scheduled work when the pool would otherwise be cold; **Keep Alive cannot start a stopped application**. See [IIS scheduling guidance](INSTALLATION.md#keep-maui-running-for-scheduled-jobs).
 
-Quick Transfer is separately enabled under General and uses an available Traditional Task slot. Successful temporary Tasks are eligible for verified cleanup; unsuccessful/ambiguous runs are retained. Unattended cleanup needs Data Access credentials. See [Quick Transfer acceptance](TESTING.md#quick-transfer-validation).
+Quick Transfer is separately enabled under General and uses an available Traditional Task slot. **Delete temporary task after successful transfer** controls retention; the redundant Create Traditional Task option has been removed. Successful temporary Tasks are eligible for verified cleanup; unsuccessful/ambiguous runs are retained. Confirmation-email recipients stay visible inside the email option grouping and are disabled while it is unchecked. Unattended cleanup needs Data Access credentials. See [Quick Transfer acceptance](TESTING.md#quick-transfer-validation).
 
 Use the packaged spreadsheets under `Templates/TaskImport` and `Templates/HostImport`, outside `wwwroot`, for imports. Restore and import operations need their normal permissions and backups; see the relevant [acceptance guidance](TESTING.md#imports-exports-and-environment-copy). Back up external SQL Server databases separately from MAUI file backups.
+
+Native Task/Host `.maui` imports default compatible dependency conflicts to **Reuse Existing**. Reused Hosts, Scripts and Date Lists retain destination configuration, credentials, Resource Groups and MAUI metadata; recognized references are remapped when IDs differ. Key/certificate reuse requires the same native ID. Task overwrite/import-as-new choices are unchanged, and Global Parameters continue to resolve by name. See [dependency reuse acceptance](TESTING.md#native-import-dependency-reuse-acceptance).
 
 ### MOVEit connection feedback
 
@@ -209,7 +217,8 @@ Back up first, finish active work, take MAUI offline, replace release-owned file
 - **AS1/AS2/AS3 Host/editor support is deferred** because the required license is unavailable. SSO is not supported.
 - **OneDrive Host** configuration, Test and Browse are implemented for supported 2026 servers. OneDrive Task-step editing and Quick Transfer composition await native Source/Destination patterns.
 - **MOVEit System Log, Service Shutdown, Virus Test and Watched Tasks** have no MAUI replacement in RC3; use native MOVEit where applicable.
-- The COM support layer and native Web Admin integration remain required. MOVEit upgrades may replace Tomcat `index.html`; recheck the integration assets and script reference afterward.
+- The COM support layer remains required for retained native operations. If native MOVEit editor integration is used, MOVEit upgrades may replace Tomcat `index.html`; recheck the deployed integration assets and script reference afterward.
+- A native rename can complete before a local MAUI audit update fails. Logging preserves the underlying database details, but the reported SQLite audit failure's cause remains unconfirmed. Verify the saved name before retrying.
 - MAUI's web tier is limited to the [single-instance topology](#requirements-and-compatibility). Copy To has additional [object/dependency limitations](#copy-between-environments--copy-to).
 
 ## Documentation, project origin and license

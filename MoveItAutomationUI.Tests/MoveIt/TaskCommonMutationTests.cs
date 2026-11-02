@@ -12,6 +12,86 @@ public sealed class TaskCommonMutationTests
 {
     [Theory]
     [InlineData("")] [InlineData("Tr")] [InlineData("COS")] [InlineData("Sy")]
+    public async Task RenameChangesOnlyNameOnTheFreshDefinitionAndVerifiesTheCorrectTransport(string type)
+    {
+        var fixture = new Fixture(type);
+        fixture.OnCheckout = task => task["NativeOnly"]!["Fresh"] = "concurrent";
+        var expected = fixture.Saved.DeepClone().AsObject();
+        expected["Name"] = "Renamed"; expected["NativeOnly"]!["Fresh"] = "concurrent";
+        await fixture.Crud.RenameAsync(" 1 ", " Renamed ", "Original");
+        Assert.True(JsonNode.DeepEquals(expected, fixture.Submitted));
+        Assert.True(JsonNode.DeepEquals(expected, fixture.Saved));
+        Assert.Equal(new[] { "GET", "name-check:Renamed:1", "checkout", "GET", type is "" or "Tr" ? "PUT-v1" : "PUT-v0", "GET", "release" }, fixture.Calls);
+        Assert.Equal(0, fixture.ComReads); Assert.Equal(0, fixture.ComWrites);
+    }
+
+    [Theory]
+    [InlineData("Tr")] [InlineData("COS")] [InlineData("Sy")]
+    public async Task RenameRejectsADuplicateBeforeCheckout(string type)
+    {
+        var fixture = new Fixture(type) { DuplicateName = true };
+        await Assert.ThrowsAsync<TaskNameAlreadyExistsException>(() => fixture.Crud.RenameAsync("1", "Taken", "Original"));
+        Assert.Equal(new[] { "GET", "name-check:Taken:1" }, fixture.Calls);
+        Assert.Equal(0, fixture.Writes);
+    }
+
+    [Theory] [InlineData("")] [InlineData("   ")] [InlineData(null)]
+    public async Task RenameRequiresANameBeforeAnyNativeCalls(string? name)
+    {
+        var fixture = new Fixture("Tr");
+        await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Crud.RenameAsync("1", name!, "Original"));
+        Assert.Empty(fixture.Calls);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Crud.RenameAsync("1", new string('x', 255), "Original"));
+        Assert.Empty(fixture.Calls);
+    }
+
+    [Theory] [InlineData("Tr")] [InlineData("COS")] [InlineData("Sy")]
+    public async Task RenameAllowsCaseOnlyAndMaximumLengthNames(string type)
+    {
+        var fixture = new Fixture(type);
+        await fixture.Crud.RenameAsync("1", "ORIGINAL", "Original");
+        await fixture.Crud.RenameAsync("1", new string('x', 254), "ORIGINAL");
+        Assert.Equal(new string('x', 254), fixture.Saved["Name"]!.ToString());
+        Assert.Equal(2, fixture.Writes);
+    }
+
+    [Theory] [InlineData(false)] [InlineData(true)]
+    public async Task RenameDetectsAConcurrentRenameBeforeOrDuringCheckout(bool duringCheckout)
+    {
+        var fixture = new Fixture("COS");
+        if (duringCheckout) fixture.OnCheckout = task => task["Name"] = "Concurrent";
+        else fixture.Saved["Name"] = "Concurrent";
+        await Assert.ThrowsAsync<ObjectEditConflictException>(() => fixture.Crud.RenameAsync("1", "Renamed", "Original"));
+        Assert.Equal(0, fixture.Writes);
+        Assert.Equal(duringCheckout ? new[] { "GET", "name-check:Renamed:1", "checkout", "GET", "release" } : new[] { "GET" }, fixture.Calls);
+    }
+
+    [Theory] [InlineData("permission")] [InlineData("identity")] [InlineData("checkout")]
+    public async Task RenameStopsOnDeniedAccessWrongIdentityOrAnotherOwnersCheckout(string failure)
+    {
+        var fixture = new Fixture("Sy");
+        if (failure == "permission") fixture.Saved["xAlter"] = 0;
+        if (failure == "identity") fixture.Saved["ID"] = "2";
+        if (failure == "checkout") fixture.CheckoutFailure = new MoveItApiException("Checked out", HttpStatusCode.Conflict);
+        await Assert.ThrowsAnyAsync<Exception>(() => fixture.Crud.RenameAsync("1", "Renamed", "Original"));
+        Assert.Equal(0, fixture.Writes); Assert.DoesNotContain("release", fixture.Calls);
+    }
+
+    [Theory]
+    [InlineData("Tr", "write")] [InlineData("COS", "ack")] [InlineData("Sy", "ack")]
+    [InlineData("Tr", "name")] [InlineData("COS", "name")] [InlineData("Sy", "name")]
+    [InlineData("Tr", "readback")] [InlineData("COS", "readback")] [InlineData("Sy", "readback")]
+    [InlineData("Tr", "release")] [InlineData("COS", "release")] [InlineData("Sy", "release")]
+    public async Task RenameUnverifiedWritesNeverRetryOrUseCom(string type, string failure)
+    {
+        var fixture = new Fixture(type) { Failure = failure };
+        await Assert.ThrowsAsync<TraditionalTaskPartialSaveException>(() => fixture.Crud.RenameAsync("1", "Renamed", "Original"));
+        Assert.Equal(1, fixture.Writes); Assert.Equal("release", fixture.Calls.Last());
+        Assert.Equal(0, fixture.ComReads); Assert.Equal(0, fixture.ComWrites);
+    }
+
+    [Theory]
+    [InlineData("")] [InlineData("Tr")] [InlineData("COS")] [InlineData("Sy")]
     public async Task InformationChangesOnlyNameDescriptionAndNotesThroughTheCorrectRestVersion(string type)
     {
         var fixture = new Fixture(type); var before = fixture.Saved.DeepClone().AsObject();
@@ -156,6 +236,7 @@ public sealed class TaskCommonMutationTests
         public Action<JsonObject>? OnCheckout { get; set; }
         public Exception? CheckoutFailure { get; set; }
         public string? Failure { get; set; }
+        public bool DuplicateName { get; set; }
         public Fixture(string type)
         {
             Saved = type == "COS" ? AdvancedTaskEditorTests.Capture(0) : JsonNode.Parse("""{"steps":[{"Source":{"ID":"11","HostID":"42","Type":"Share","Path":"/a","FileMask":"*.*","Password":null,"SyF":1,"SyT":0,"SyDel":1}},{"Source":{"ID":"12","HostID":"43","Type":"Share","Path":"/b","FileMask":"*.*","Password":null,"SyF":0,"SyT":1,"SyDel":0}}]}""")!.AsObject();
@@ -169,6 +250,8 @@ public sealed class TaskCommonMutationTests
             {
                 switch (method.Name)
                 {
+                    case nameof(IMoveItRestClient.TaskNameExistsForOtherTaskAsync):
+                        Calls.Add($"name-check:{args[0]}:{args[1]}"); return Task.FromResult(DuplicateName);
                     case nameof(IMoveItRestClient.CheckoutTaskV0Async):
                         Calls.Add("checkout"); if (CheckoutFailure is not null) throw CheckoutFailure;
                         OnCheckout?.Invoke(Saved); return Task.CompletedTask;

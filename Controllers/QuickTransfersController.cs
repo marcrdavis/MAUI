@@ -147,7 +147,6 @@ public sealed class QuickTransfersController : Controller
                 transferToken = result.TransferToken,
                 taskId = result.TaskId,
                 taskName = result.TaskName,
-                persistentTask = result.PersistentTask,
                 deleteTemporaryTaskAfterSuccess = result.DeleteTemporaryTaskAfterSuccess,
                 reusedPreparedTask = result.ReusedPreparedTask
             });
@@ -175,7 +174,6 @@ public sealed class QuickTransfersController : Controller
                 taskId = result.TaskId,
                 taskName = result.TaskName,
                 nominalStart = result.NominalStart,
-                persistentTask = result.PersistentTask,
                 deleteTemporaryTaskAfterSuccess = result.DeleteTemporaryTaskAfterSuccess
             });
         }

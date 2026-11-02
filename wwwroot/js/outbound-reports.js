@@ -269,6 +269,8 @@
             error.hidden = false;
             return;
         }
+        const issue = currentApi?.getCreateIssue?.(schedule.deliveryMode);
+        if (issue) { error.textContent = issue; error.hidden = false; return; }
         const payload = {
             gridKey: currentApi?.gridKey || '',
             title: dialog.querySelector('[data-report-title]').value,
@@ -300,6 +302,8 @@
             window.mauiShowToast?.('Report creation is unavailable.', 'error');
             return;
         }
+        const issue = api.getCreateIssue?.('Now');
+        if (issue) { window.mauiShowToast?.(issue, 'error'); return; }
         ensureDialog();
         reset(api);
         dialog.showModal();

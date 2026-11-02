@@ -45,7 +45,9 @@
         const response = await (window.MauiMoveItGridConnection?.fetch || window.fetch.bind(window))(url, { ...options, headers });
         if (response.status === 401) {
             window.location.replace(endpoint('loginUrl') || window.mauiAppUrl('/Account/SessionExpired'));
-            throw new Error('MOVEit session expired.');
+            const error = new Error('MOVEit session expired.');
+            error.status = 401;
+            throw error;
         }
 
         const contentType = response.headers.get('content-type') || '';
@@ -303,16 +305,20 @@
     }
 
     // Keeps Auto Format limited to only the two requested transformations: uppercase and spaces to underscores.
-    function applyNewTaskNameFormat() {
-        if (!newTaskName || !newTaskAutoFormat?.checked) return;
-        const start = newTaskName.selectionStart;
-        const end = newTaskName.selectionEnd;
-        const formatted = newTaskName.value.toUpperCase().replaceAll(' ', '_');
-        if (formatted === newTaskName.value) return;
-        newTaskName.value = formatted;
+    function applyTaskNameFormat(field, autoFormat) {
+        if (!field || !autoFormat?.checked) return;
+        const start = field.selectionStart;
+        const end = field.selectionEnd;
+        const formatted = field.value.toUpperCase().replaceAll(' ', '_');
+        if (formatted === field.value) return;
+        field.value = formatted;
         if (typeof start === 'number' && typeof end === 'number') {
-            try { newTaskName.setSelectionRange(start, end); } catch { /* unsupported input selection */ }
+            try { field.setSelectionRange(start, end); } catch { /* unsupported input selection */ }
         }
+    }
+
+    function applyNewTaskNameFormat() {
+        applyTaskNameFormat(newTaskName, newTaskAutoFormat);
     }
 
     // Purpose: Set new task busy.
@@ -442,8 +448,101 @@
     }
 
     // ---------------------------------------------------------------------
-    // Clone Task modal
+    // Rename Task modal
     // ---------------------------------------------------------------------
+    // Rename Task: reuse the common modal controls and name formatting rules.
+    const renameTaskDialog = document.querySelector('[data-rename-task-dialog]');
+    const renameTaskForm = renameTaskDialog?.querySelector('[data-rename-task-form]');
+    const renameTaskName = renameTaskDialog?.querySelector('[data-rename-task-name]');
+    const renameTaskAutoFormat = renameTaskDialog?.querySelector('[data-rename-task-auto-format]');
+    const renameTaskSubmit = renameTaskDialog?.querySelector('[data-rename-task-submit]');
+    const renameTaskCancel = renameTaskDialog?.querySelector('[data-rename-task-cancel]');
+    const renameTaskClose = renameTaskDialog?.querySelector('[data-rename-task-close]');
+    const renameTaskSpinner = renameTaskDialog?.querySelector('[data-rename-task-spinner]');
+    const renameTaskSubmitLabel = renameTaskDialog?.querySelector('[data-rename-task-submit-label]');
+    let renameTaskSource = null;
+    let renameTaskBusy = false;
+    let renameTaskRequiresReload = false;
+    let renameTaskGeneration = 0;
+    const updateRenameTaskAction = window.MauiModalUI.watchAction(renameTaskDialog, renameTaskSubmit,
+        () => !renameTaskBusy && !renameTaskRequiresReload && Boolean(renameTaskSource),
+        () => Boolean(renameTaskName?.value.trim()) && renameTaskName.value.trim().length <= 254
+            && renameTaskName.value.trim() !== renameTaskSource?.taskName);
+
+    function openRenameTaskDialog(taskId, taskName) {
+        if (!renameTaskDialog || renameTaskBusy) return;
+        resetRenameTaskDialog();
+        renameTaskSource = { taskId: String(taskId || '').trim(), taskName: String(taskName || '').trim() };
+        if (renameTaskName) renameTaskName.value = renameTaskSource.taskName;
+        applyTaskNameFormat(renameTaskName, renameTaskAutoFormat);
+        renameTaskDialog.showModal();
+        updateRenameTaskAction();
+        window.requestAnimationFrame(() => { renameTaskName?.focus(); renameTaskName?.select(); });
+    }
+
+    function resetRenameTaskDialog() {
+        ++renameTaskGeneration;
+        renameTaskSource = null;
+        renameTaskRequiresReload = false;
+        if (renameTaskName) renameTaskName.value = '';
+        if (renameTaskAutoFormat) renameTaskAutoFormat.checked = renameTaskAutoFormat.defaultChecked;
+        window.MauiModalUI.clear(renameTaskDialog);
+        setRenameTaskBusy(false);
+    }
+
+    function setRenameTaskBusy(busy) {
+        renameTaskBusy = Boolean(busy);
+        if (renameTaskName) renameTaskName.readOnly = renameTaskBusy;
+        if (renameTaskAutoFormat) renameTaskAutoFormat.disabled = renameTaskBusy;
+        if (renameTaskCancel) renameTaskCancel.disabled = renameTaskBusy;
+        if (renameTaskClose) renameTaskClose.disabled = renameTaskBusy;
+        if (renameTaskSpinner) renameTaskSpinner.hidden = !renameTaskBusy;
+        if (renameTaskSubmitLabel) renameTaskSubmitLabel.textContent = renameTaskBusy ? 'Renaming…' : 'Rename';
+        renameTaskDialog?.classList.toggle('is-busy', renameTaskBusy);
+        updateRenameTaskAction();
+    }
+
+    async function submitRenameTask() {
+        if (renameTaskBusy || renameTaskRequiresReload || !renameTaskSource) return;
+        window.MauiModalUI.clear(renameTaskDialog);
+        applyTaskNameFormat(renameTaskName, renameTaskAutoFormat);
+        const name = String(renameTaskName?.value || '').trim();
+        if (!name || name.length > 254) {
+            window.MauiModalUI.showError('Task Name must contain 1–254 characters.', renameTaskDialog);
+            renameTaskName?.focus();
+            return;
+        }
+        if (name === renameTaskSource.taskName) return;
+        const source = renameTaskSource;
+        const generation = renameTaskGeneration;
+        setRenameTaskBusy(true);
+        let refresh = false;
+        try {
+            const result = await fetchJson(endpoint('renameTaskUrl'), { method: 'POST', body: JSON.stringify({
+                taskId: source.taskId, name, originalName: source.taskName
+            }) });
+            window.MauiRenameResult.requireConfirmation(result, 'Task', source.taskId, name);
+            setTaskUndoAvailable(source.taskId, true);
+            refresh = true;
+            if (generation === renameTaskGeneration) renameTaskDialog?.close();
+        } catch (error) {
+            refresh = window.MauiRenameResult.requiresReload(error);
+            if (generation === renameTaskGeneration) {
+                renameTaskRequiresReload = refresh;
+                window.MauiModalUI.showError(window.MauiRenameResult.failureMessage(error, 'Task'), renameTaskDialog);
+            }
+        } finally {
+            if (generation === renameTaskGeneration) setRenameTaskBusy(false);
+        }
+        // A grid refresh failure must never turn a completed rename into a retryable save error.
+        if (refresh) {
+            try { await refreshTaskGrid(true); }
+            catch { showNativeEditorStatus('Refresh the Tasks grid to see the latest Task names.', 5000, 'warning', 'page'); }
+        }
+    }
+    // End Rename Task.
+
+    // Clone Task modal.
     const cloneTaskDialog = document.querySelector('[data-clone-task-dialog]');
     const cloneTaskForm = cloneTaskDialog?.querySelector('[data-clone-task-form]');
     const cloneTaskName = cloneTaskDialog?.querySelector('[data-clone-task-name]');
@@ -727,6 +826,10 @@
         }
         if (command === 'export') {
             nativePortability?.openExport([action.taskId], [action.taskName]);
+            return;
+        }
+        if (command === 'rename') {
+            openRenameTaskDialog(action.taskId, action.taskName);
             return;
         }
         if (command === 'edit') {
@@ -2830,7 +2933,10 @@
 
     // Automatic refresh polls MAUI through the shared cache contract; only Refresh Now forces a live MOVEit read.
     async function refreshTaskGrid(forceRefresh) {
-        if (taskRefreshInFlight || !taskGrid) return;
+        if (!taskGrid) return;
+        // A completed edit must invalidate search data even when another row refresh is in flight.
+        if (forceRefresh) taskGrid.dispatchEvent(new CustomEvent('maui:task-filename-search-invalidated'));
+        if (taskRefreshInFlight) return;
         closeTaskRowActionMenu();
         setRefreshBusy(true);
         clearTaskRefreshTimer();
@@ -2842,7 +2948,6 @@
                 method: 'GET',
                 cache: 'no-store'
             });
-            if (forceRefresh) taskGrid.dispatchEvent(new CustomEvent('maui:task-filename-search-invalidated'));
             applyTaskGridPayload(payload);
         } catch (error) {
             console.warn('Task grid refresh failed.');
@@ -3029,6 +3134,19 @@
         if (newTaskBusy) event.preventDefault();
     });
     newTaskDialog?.addEventListener('close', resetNewTaskDialog);
+
+    // Rename Task events.
+    renameTaskName?.addEventListener('input', () => applyTaskNameFormat(renameTaskName, renameTaskAutoFormat));
+    renameTaskAutoFormat?.addEventListener('change', () => {
+        applyTaskNameFormat(renameTaskName, renameTaskAutoFormat);
+        updateRenameTaskAction();
+    });
+    renameTaskForm?.addEventListener('submit', event => { event.preventDefault(); void submitRenameTask(); });
+    renameTaskClose?.addEventListener('click', () => { if (!renameTaskBusy) renameTaskDialog?.close(); });
+    renameTaskCancel?.addEventListener('click', () => { if (!renameTaskBusy) renameTaskDialog?.close(); });
+    renameTaskDialog?.addEventListener('cancel', event => { if (renameTaskBusy) event.preventDefault(); });
+    renameTaskDialog?.addEventListener('close', () => { if (!renameTaskDialog.open) resetRenameTaskDialog(); });
+    // End Rename Task events.
 
     cloneTaskForm?.addEventListener('submit', event => {
         event.preventDefault();

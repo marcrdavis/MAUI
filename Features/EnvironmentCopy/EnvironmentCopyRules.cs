@@ -54,6 +54,20 @@ public static class EnvironmentCopyRules
     public static string Rewrite(string xml, string id, string name, IReadOnlyDictionary<string, string> mappings, IReadOnlyList<string>? groups = null, bool disableTask = false)
     {
         var root = XElement.Parse(xml);
+        RewriteReferences(root, mappings);
+        root.SetAttributeValue("ID", id); root.SetAttributeValue("Name", Name(name));
+        if (disableTask && root.Name.LocalName == "Task") root.SetAttributeValue("Active", "0");
+        if (groups is not null)
+        {
+            root.Elements().Where(e => e.Name.LocalName == "Group").Remove();
+            foreach (var group in groups) root.Add(new XElement("Group", group));
+        }
+        return root.ToString(SaveOptions.DisableFormatting);
+    }
+    // Native import shares Copy To's structured reference rules without changing object identities,
+    // Task activation, groups, protected credentials or literal script/macro text.
+    internal static void RewriteReferences(XElement root, IReadOnlyDictionary<string, string> mappings)
+    {
         foreach (var attribute in root.DescendantsAndSelf().Attributes())
         {
             var type = ReferenceType(attribute);
@@ -69,14 +83,6 @@ public static class EnvironmentCopyRules
             if (mappings.TryGetValue("KeyCertificate|pgp|" + value.Trim(), out var key))
             { var mapped = key[(key.IndexOf('|') + 1)..]; if (parameter.Attribute("value") is { } attr) attr.Value = mapped; else parameter.Value = mapped; }
         }
-        root.SetAttributeValue("ID", id); root.SetAttributeValue("Name", Name(name));
-        if (disableTask && root.Name.LocalName == "Task") root.SetAttributeValue("Active", "0");
-        if (groups is not null)
-        {
-            root.Elements().Where(e => e.Name.LocalName == "Group").Remove();
-            foreach (var group in groups) root.Add(new XElement("Group", group));
-        }
-        return root.ToString(SaveOptions.DisableFormatting);
     }
     public static IReadOnlyList<string> Order(IReadOnlyDictionary<string, IReadOnlyList<string>> graph)
     {

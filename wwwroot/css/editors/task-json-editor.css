@@ -57,6 +57,7 @@
 .task-json-results > .grid-pager { flex: 0 0 auto; flex-wrap: wrap; gap: 8px; }
 .task-json-apply-changes { margin-top: 12px; }
 .task-json-card > footer > .maui-modal-feedback { max-width: none; }
+.task-json-search-count { flex: 0 1 auto; color: var(--text-soft); font-size: 12px; }
 .task-json-save-progress { flex: 0 1 180px; min-width: 80px; }
 .task-json-save-progress progress { width: 100%; height: 12px; accent-color: var(--accent); }
 .task-json-card > footer > .maui-modal-feedback[data-task-json-saving="true"][data-feedback-kind="default"] { color: var(--text-soft); font-size: 11px; line-height: 1.45; }

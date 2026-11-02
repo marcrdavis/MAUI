@@ -166,13 +166,13 @@ public sealed class QuickTransferService : IQuickTransferService
 
             // Persist the intended cleanup *before* crossing the non-idempotent Run boundary.
             // If tracking cannot be recorded, do not start a disposable Task that would be orphaned.
-            if ((!state.PersistentTask && state.DeleteAfterSuccess) || normalizedRequest.SendTransferConfirmationEmail)
+            if (state.DeleteAfterSuccess || normalizedRequest.SendTransferConfirmationEmail)
             {
                 try
                 {
                     await _cleanupTracker.TrackAsync(state.Token, state.TaskId, state.TaskName,
                         state.StartedUtc!.Value, RequireSession(), CancellationToken.None,
-                        !state.PersistentTask && state.DeleteAfterSuccess,
+                        state.DeleteAfterSuccess,
                         normalizedRequest.SendTransferConfirmationEmail ? normalizedRequest.ConfirmationEmailRecipients : string.Empty,
                         state.SourceHostName, normalizedRequest.SourcePath, normalizedRequest.SourceFileSpec,
                         state.DestinationHostName, normalizedRequest.DestinationPath);
@@ -190,7 +190,7 @@ public sealed class QuickTransferService : IQuickTransferService
             // Do not submit the native start after cancellation has already been requested.
             if (state.CancelRequested || state.Completed)
             {
-                if ((!state.PersistentTask && state.DeleteAfterSuccess) || normalizedRequest.SendTransferConfirmationEmail)
+                if (state.DeleteAfterSuccess || normalizedRequest.SendTransferConfirmationEmail)
                     await _cleanupTracker.StopTrackingAsync(state.Token, CancellationToken.None);
                 lock (state.SyncRoot)
                 {
@@ -214,7 +214,7 @@ public sealed class QuickTransferService : IQuickTransferService
                     PutState(state);
                 }
 
-                if ((!state.PersistentTask && state.DeleteAfterSuccess) || normalizedRequest.SendTransferConfirmationEmail)
+                if (state.DeleteAfterSuccess || normalizedRequest.SendTransferConfirmationEmail)
                 {
                     try { await _cleanupTracker.SetNominalStartAsync(state.Token, state.NominalStart, CancellationToken.None); }
                     catch (Exception ex) { _logger.LogError(ex, "Quick Transfer {TaskId} started but cleanup tracking could not update the run identity; safe background tracking remains pending.", state.TaskId); }
@@ -223,11 +223,11 @@ public sealed class QuickTransferService : IQuickTransferService
                     await TryCancelVisibleRunAsync(state, CancellationToken.None);
 
                 _logger.LogInformation(
-                    "Quick Transfer started. TaskId={TaskId}, TaskName={TaskName}, Persistent={Persistent}, DeleteAfterSuccess={DeleteAfterSuccess}, NominalStart={NominalStart}.",
-                    state.TaskId, state.TaskName, state.PersistentTask, state.DeleteAfterSuccess, state.NominalStart);
+                    "Quick Transfer started. TaskId={TaskId}, TaskName={TaskName}, DeleteAfterSuccess={DeleteAfterSuccess}, NominalStart={NominalStart}.",
+                    state.TaskId, state.TaskName, state.DeleteAfterSuccess, state.NominalStart);
 
                 return new QuickTransferStartResult(
-                    state.Token, state.TaskId, state.TaskName, state.NominalStart, state.PersistentTask, state.DeleteAfterSuccess);
+                    state.Token, state.TaskId, state.TaskName, state.NominalStart, state.DeleteAfterSuccess);
             }
             catch (Exception ex)
             {
@@ -276,7 +276,7 @@ public sealed class QuickTransferService : IQuickTransferService
 
         // Cancellation intent disqualifies this Task from automatic deletion, even if MOVEit
         // finishes successfully before the native Kill operation is observed.
-        if (!state.PersistentTask && state.DeleteAfterSuccess)
+        if (state.DeleteAfterSuccess)
             await _cleanupTracker.StopTrackingAsync(state.Token, CancellationToken.None);
 
         if (cancelledBeforeStart)
@@ -387,7 +387,7 @@ public sealed class QuickTransferService : IQuickTransferService
                 state.CancelRequested = false;
                 state.FilesTransferred = runRecord.FilesSent ?? state.FilesTransferred;
                 state.TotalBytesTransferred = runRecord.TotalBytesSent ?? state.TotalBytesTransferred;
-                if (!state.PersistentTask && state.DeleteAfterSuccess)
+                if (state.DeleteAfterSuccess)
                 {
                     try
                     {
@@ -429,7 +429,7 @@ public sealed class QuickTransferService : IQuickTransferService
                 state.CancelRequested = false;
                 state.FilesTransferred = runRecord.FilesSent ?? state.FilesTransferred;
                 state.TotalBytesTransferred = runRecord.TotalBytesSent ?? state.TotalBytesTransferred;
-                if (!state.PersistentTask && state.DeleteAfterSuccess)
+                if (state.DeleteAfterSuccess)
                     await _cleanupTracker.StopTrackingAsync(state.Token, CancellationToken.None);
                 PutState(state);
                 return ToStatus(state);
@@ -464,47 +464,24 @@ public sealed class QuickTransferService : IQuickTransferService
         var existing = GetState(normalized.TransferToken);
         if (existing is not null && existing.Fingerprint.Equals(fingerprint, StringComparison.Ordinal))
         {
-            return new QuickTransferPreparationResult(existing.Token, existing.TaskId, existing.TaskName, existing.PersistentTask, existing.DeleteAfterSuccess, true);
+            return new QuickTransferPreparationResult(existing.Token, existing.TaskId, existing.TaskName, existing.DeleteAfterSuccess, true);
         }
 
         var context = await ValidateAndResolveAsync(normalized, cancellationToken);
 
         if (existing is not null && !existing.Started && !existing.StartAttempted)
         {
-            if (existing.PersistentTask
-                && normalized.CreateTraditionalTask
-                && existing.TaskName.Equals(normalized.TaskName, StringComparison.OrdinalIgnoreCase))
+            try
             {
-                await _taskCrud.UpdateTraditionalFreshAsync(existing.TaskId,
-                    current => { ConfigureTask(current, context, normalized, existing.TaskId, existing.TaskName); return current; },
-                    context.ProcessScript is null ? null : persisted => VerifyPersistedProcess(existing.TaskId, persisted, context, normalized),
-                    cancellationToken: cancellationToken);
+                await _taskCrud.DeleteAsync(existing.TaskId, CancellationToken.None);
                 _tasks.InvalidateCache();
-                await RecordTaskModifiedAuditAsync(existing.TaskId);
-                existing.Fingerprint = fingerprint;
-                existing.SourceHostName = context.SourceHost.Name;
-                existing.DestinationHostName = context.DestinationHost.Name;
-                PutState(existing);
-                _logger.LogInformation("Quick Transfer persistent Task {TaskId} ({TaskName}) was updated from the revised prepared request.", existing.TaskId, existing.TaskName);
-                return new QuickTransferPreparationResult(existing.Token, existing.TaskId, existing.TaskName, true, false, true);
+                await DeleteTaskMetadataAsync(existing.TaskId);
             }
-
-            if (!existing.PersistentTask)
-            {
-                try
-                {
-                    await _taskCrud.DeleteAsync(existing.TaskId, CancellationToken.None);
-                    _tasks.InvalidateCache();
-                    await DeleteTaskMetadataAsync(existing.TaskId);
-                }
-                catch (Exception ex) { _logger.LogWarning(ex, "MAUI could not remove superseded Quick Transfer temporary Task {TaskId}.", existing.TaskId); }
-                _cache.Remove(CacheKey(existing.Token));
-            }
+            catch (Exception ex) { _logger.LogWarning(ex, "MAUI could not remove superseded Quick Transfer temporary Task {TaskId}.", existing.TaskId); }
+            _cache.Remove(CacheKey(existing.Token));
         }
 
-        var taskName = normalized.CreateTraditionalTask
-            ? normalized.TaskName
-            : BuildTemporaryTaskName(context.SourceHost.Name, normalized.SourceFileSpec);
+        var taskName = BuildTemporaryTaskName(context.SourceHost.Name, normalized.SourceFileSpec);
 
         TaskCreationResult? created = null;
         try
@@ -525,12 +502,11 @@ public sealed class QuickTransferService : IQuickTransferService
                 TaskName = taskName,
                 SourceHostName = context.SourceHost.Name,
                 DestinationHostName = context.DestinationHost.Name,
-                PersistentTask = normalized.CreateTraditionalTask,
-                DeleteAfterSuccess = !normalized.CreateTraditionalTask && normalized.DeleteTemporaryTaskAfterSuccess
+                DeleteAfterSuccess = normalized.DeleteTemporaryTaskAfterSuccess
             };
             PutState(state);
-            _logger.LogInformation("Quick Transfer Task prepared. TaskId={TaskId}, TaskName={TaskName}, Persistent={Persistent}.", state.TaskId, state.TaskName, state.PersistentTask);
-            return new QuickTransferPreparationResult(token, created.Id, taskName, state.PersistentTask, state.DeleteAfterSuccess, false);
+            _logger.LogInformation("Quick Transfer Task prepared. TaskId={TaskId}, TaskName={TaskName}, DeleteAfterSuccess={DeleteAfterSuccess}.", state.TaskId, state.TaskName, state.DeleteAfterSuccess);
+            return new QuickTransferPreparationResult(token, created.Id, taskName, state.DeleteAfterSuccess, false);
         }
         catch
         {
@@ -561,22 +537,6 @@ public sealed class QuickTransferService : IQuickTransferService
             _logger.LogError(ex,
                 "Quick Transfer Task {TaskId} ({TaskName}) was created and configured, but MAUI could not record its Created/Modified audit metadata.",
                 taskId, taskName);
-        }
-    }
-
-    private async Task RecordTaskModifiedAuditAsync(string taskId)
-    {
-        try
-        {
-            var session = RequireSession();
-            await _metadata.RecordObjectConfigurationModifiedAsync(
-                session.GetEnvironmentKey(), "Task", taskId, session.Username, CancellationToken.None);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            _logger.LogError(ex,
-                "Quick Transfer Task {TaskId} was updated, but MAUI could not record its Modified audit metadata.",
-                taskId);
         }
     }
 
@@ -642,10 +602,8 @@ public sealed class QuickTransferService : IQuickTransferService
         if (request.SourceHostId.Length == 0) throw new InvalidOperationException("Select a Source Host.");
         if (request.SourceFileSpec.Length == 0) throw new InvalidOperationException("Source Filename / Filespec is required.");
         if (request.DestinationHostId.Length == 0) throw new InvalidOperationException("Select a Destination Host.");
-        if (request.CreateTraditionalTask && request.TaskName.Length == 0) throw new InvalidOperationException("Task Name is required when Create Traditional Task is selected.");
         if (session.Info?.IsAdmin != true)
             throw new InvalidOperationException("Quick Transfer is available only to MOVEit administrators.");
-        if (request.TaskName.Length > 254) throw new InvalidOperationException("Task Name cannot exceed 254 characters.");
         if (MayMatchMultipleFiles(request.SourceFileSpec)
             && request.DestinationFileName.Length > 0
             && !request.DestinationFileName.Contains("[OrigName]", StringComparison.OrdinalIgnoreCase))
@@ -701,7 +659,7 @@ public sealed class QuickTransferService : IQuickTransferService
         steps.Add(WrapStep("Destination", BuildDestinationBody(context.DestinationHost, context.DestinationProfile, request)));
         _composer.ApplyRootDefinition(task, new TraditionalTaskRootDefinition(
             taskName, false,
-            request.CreateTraditionalTask ? "Created from MAUI Quick Transfer." : "Temporary Task created by MAUI Quick Transfer.",
+            "Temporary Task created by MAUI Quick Transfer.",
             "Created by MAUI Quick Transfer.",
             new JsonObject { ["Schedule"] = new JsonArray() }, steps,
             NextActions: new JsonArray()));
@@ -905,7 +863,6 @@ public sealed class QuickTransferService : IQuickTransferService
     {
         ArgumentNullException.ThrowIfNull(request);
         var processingMode = NormalizeMode(request.ProcessingMode);
-        var persistentTask = request.CreateTraditionalTask;
         return new QuickTransferRequest
         {
             SourceHostId = (request.SourceHostId ?? string.Empty).Trim(),
@@ -922,9 +879,7 @@ public sealed class QuickTransferService : IQuickTransferService
             OverwriteExistingFile = request.OverwriteExistingFile,
             DestinationRootName = (request.DestinationRootName ?? string.Empty).Trim(),
             DestinationRootId = (request.DestinationRootId ?? string.Empty).Trim(),
-            CreateTraditionalTask = persistentTask,
-            TaskName = persistentTask ? (request.TaskName ?? string.Empty).Trim() : string.Empty,
-            DeleteTemporaryTaskAfterSuccess = !persistentTask && request.DeleteTemporaryTaskAfterSuccess,
+            DeleteTemporaryTaskAfterSuccess = request.DeleteTemporaryTaskAfterSuccess,
             SendTransferConfirmationEmail = request.SendTransferConfirmationEmail,
             ConfirmationEmailRecipients = request.SendTransferConfirmationEmail ? (request.ConfirmationEmailRecipients ?? string.Empty).Trim() : string.Empty,
             TransferToken = (request.TransferToken ?? string.Empty).Trim()
@@ -955,8 +910,6 @@ public sealed class QuickTransferService : IQuickTransferService
             request.OverwriteExistingFile,
             request.DestinationRootName,
             request.DestinationRootId,
-            request.CreateTraditionalTask,
-            request.TaskName,
             request.DeleteTemporaryTaskAfterSuccess,
             request.SendTransferConfirmationEmail,
             request.ConfirmationEmailRecipients
@@ -1197,7 +1150,6 @@ public sealed class QuickTransferService : IQuickTransferService
         public string TaskName { get; init; } = string.Empty;
         public string SourceHostName { get; set; } = string.Empty;
         public string DestinationHostName { get; set; } = string.Empty;
-        public bool PersistentTask { get; init; }
         public bool DeleteAfterSuccess { get; init; }
         public SemaphoreSlim Gate { get; } = new(1, 1);
         public object SyncRoot { get; } = new();

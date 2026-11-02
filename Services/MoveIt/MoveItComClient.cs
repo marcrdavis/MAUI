@@ -84,6 +84,7 @@ public interface IMoveItComClient
 
     // Updates the common Host Friendly Name and Description through CheckoutItem/ModifyItem.
     Task UpdateHostBasicDetailsAsync(string hostId, string name, string description, CancellationToken cancellationToken = default);
+    Task RenameHostAsync(string hostId, string name, string originalName, CancellationToken cancellationToken = default);
 
     // Reads the complete Host configuration XML without checking out the Host.
     Task<MoveItHostConfiguration> GetHostConfigurationAsync(string hostId, CancellationToken cancellationToken = default);
@@ -1863,8 +1864,17 @@ public sealed class MoveItComClient : IMoveItComClient
         return Task.Run(() => UpdateHostBasicDetailsCore(normalizedHostId, normalizedName, description ?? string.Empty), cancellationToken);
     }
 
-    // Purpose: Updates host basic details core.
-    private void UpdateHostBasicDetailsCore(string hostId, string name, string description)
+    public Task RenameHostAsync(string hostId, string name, string originalName, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(hostId)) throw new ArgumentException("Host ID is required.", nameof(hostId));
+        var hostName = (name ?? "").Trim();
+        if (hostName.Length is 0 or > 254) throw new InvalidOperationException("Host Name must contain 1–254 characters.");
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.Run(() => UpdateHostBasicDetailsCore(hostId.Trim(), hostName, null, originalName ?? ""), cancellationToken);
+    }
+
+    // Name-only callers retain Description and all native fields from the checkout.
+    private void UpdateHostBasicDetailsCore(string hostId, string name, string? description, string? originalName = null)
     {
         if (!OperatingSystem.IsWindows())
             throw new MoveItComException("MOVEit Host editing requires Windows because the MOVEit Automation COM API is a Windows component.");
@@ -1878,6 +1888,7 @@ public sealed class MoveItComClient : IMoveItComClient
         dynamic? api = null;
         var checkedOut = false;
         bool writeCommitted = false;
+        bool writeAttempted = false;
         bool completed = false;
         Exception? releaseFailure = null;
 
@@ -1905,13 +1916,16 @@ public sealed class MoveItComClient : IMoveItComClient
             var current = ParseHostConfiguration(currentXml, hostId, "current checkout");
             var root = XElement.Parse(current.Xml, LoadOptions.PreserveWhitespace);
             ObjectEditVersion.Verify("Host", hostId, ObjectEditVersion.Named((string?)root.Attribute("Name") ?? "", ObjectEditVersion.InformationValue(root, "Desc", "Description")));
-            root.SetAttributeValue("Name", name);
-            SetHostDescription(root, description);
+            if (originalName is not null) HostRenameDefinition.Apply(root, name, originalName);
+            else root.SetAttributeValue("Name", name);
+            if (description is not null) SetHostDescription(root, description);
 
             var updatedXml = root.ToString(SaveOptions.DisableFormatting);
+            writeAttempted = true;
             object? modifyResult = api.ModifyItem("Host", hostId, updatedXml, false);
             if (!ComResultSucceeded(modifyResult))
             {
+                writeAttempted = false; // A definitive rejection is distinct from a lost acknowledgement.
                 var failure = BuildApiException(comObject!, $"MOVEit rejected changes to Host '{hostId}'");
                 writeCommitted = failure.ErrorCode == 53; // Native UNC mount failure follows persistence.
                 throw failure;
@@ -1929,10 +1943,11 @@ public sealed class MoveItComClient : IMoveItComClient
             completed = true;
             _logger.LogInformation("Updated common MOVEit Host information for Host {HostId} ({HostName}).", hostId, name);
         }
-        catch (Exception ex) when (writeCommitted)
+        catch (Exception ex) when (writeCommitted || originalName is not null && writeAttempted)
         {
             throw new HostPartialSaveException("MOVEit accepted the Host write, but its saved configuration could not be verified. Review the Host before retrying.", ex, hostId);
         }
+        catch (ObjectEditConflictException) when (originalName is not null) { throw; }
         catch (MoveItComException) { throw; }
         catch (COMException ex)
         {

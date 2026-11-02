@@ -18,10 +18,13 @@ const control=(action,disabled=false)=>({dataset:{taskRowCommand:action},disable
  assert.equal(api.canCreate('Task'),true);assert.equal(api.canCreate('Host'),false);
  assert.equal(await api.mayEdit('Task','visible'),false);assert.equal(messages.length,1);
  const edit=control('edit'),del=control('delete'),clone=control('clone'),undo=control('undo',true),history=control('run-history');
- const buttons=[edit,del,clone,undo,history];const menu={querySelectorAll:selector=>selector.includes('base-disabled')?buttons.filter(button=>'objectAccessBaseDisabled'in button.dataset):buttons};
- await api.menu(menu,'Task','1');assert.equal(edit.disabled,true);assert.equal(history.disabled,false);
+ const rename=control('rename');const buttons=[edit,del,clone,undo,history,rename];const menu={querySelectorAll:selector=>selector.includes('base-disabled')?buttons.filter(button=>'objectAccessBaseDisabled'in button.dataset):buttons};
+ await api.menu(menu,'Task','1');assert.equal(edit.disabled,true);assert.equal(rename.disabled,true);assert.equal(history.disabled,false);
  api.reset(menu);assert.equal(edit.disabled,false);assert.equal(edit.title,'original');
- allow=true;await api.menu(menu,'Task','2');assert.equal(edit.disabled,false);assert.equal(clone.disabled,false);assert.equal(del.disabled,true);assert.equal(undo.disabled,true);
+ allow=true;await api.menu(menu,'Task','2');assert.equal(edit.disabled,false);assert.equal(rename.disabled,false);assert.equal(clone.disabled,false);assert.equal(del.disabled,true);assert.equal(undo.disabled,true);
+ const hostRename=control('');hostRename.dataset={hostRowCommand:'rename'};const hostRenameMenu={querySelectorAll:()=>[hostRename]};
+ allow=false;await api.menu(hostRenameMenu,'Host','denied');assert.equal(hostRename.disabled,true,'Host Rename requires Edit');
+ api.reset(hostRenameMenu);allow=true;await api.menu(hostRenameMenu,'Host','editable');assert.equal(hostRename.disabled,false,'Host Rename permits Edit');
  // Edit Existing remains sufficient for all edits; Delete and Clone/New stay independent.
  api.reset(menu);assert.equal(del.disabled,false);assert.equal(undo.disabled,true);
  const exp=control('');exp.dataset.gridAction='Export Tasks';const bulkMenu={querySelectorAll:()=>[exp]};

@@ -76,6 +76,7 @@
      data-create-task-url="@Url.Action("CreateTask", "Tasks")"
      data-resource-groups-url="@Url.Action("ResourceGroupSetup", "Tasks")"
      data-new-task-groups-url="@Url.Action("AvailableCreationResourceGroups", "Tasks")"
+     data-rename-task-url="@Url.Action("RenameTask", "Tasks")"
      data-clone-task-url="@Url.Action("CloneTask", "Tasks")"
      data-create-advanced-task-url="@Url.Action("CreateAdvancedFromTraditional", "Tasks")"
      data-advanced-tasks-licensed="@(Model.AdvancedTasksLicensed ? "true" : "false")"
@@ -135,6 +136,7 @@
     <button type="button" role="menuitem" data-task-row-command="copy-name">Copy Task Name</button>
     <button type="button" role="menuitem" data-task-row-command="clone">Clone Task</button>
     <button type="button" role="menuitem" data-task-row-command="export">Export Task</button>
+    <button type="button" role="menuitem" data-task-row-command="rename">Rename Task</button>
     <button type="button" role="menuitem" data-task-row-command="edit">Edit Task</button>
     <button type="button" role="menuitem" data-task-row-command="notifications">Edit Notifications</button>
     <button type="button" role="menuitem" data-task-row-command="undo">Undo Changes</button>
@@ -209,6 +211,33 @@
             <button type="submit" class="primary-button new-task-submit" data-new-task-submit>
                 <span class="inline-spinner button-spinner" data-new-task-spinner hidden aria-hidden="true"></span>
                 <span data-new-task-submit-label>Create Task</span>
+            </button>
+        </div>
+    </form>
+</dialog>
+
+<dialog class="new-task-dialog" data-rename-task-dialog aria-labelledby="rename-task-title">
+    <form class="new-task-card" data-rename-task-form>
+        <div class="settings-header">
+            <div><h2 id="rename-task-title">Rename Task</h2><p>Change the selected Task's name.</p></div>
+            <button type="button" class="dialog-close" data-rename-task-close aria-label="Close">×</button>
+        </div>
+        <div class="new-task-body">
+            <label class="field-block full-span">
+                <span>Task Name</span>
+                <input class="text-input" type="text" maxlength="254" autocomplete="off" data-rename-task-name />
+            </label>
+            <label class="new-task-auto-format" title="When enabled, converts the name to uppercase and replaces spaces with underscores. Example: My Task → MY_TASK.">
+                <input type="checkbox" data-rename-task-auto-format @(Model.AutoFormatNewTaskHostNames ? "checked" : null) />
+                <span>Auto Format Name</span>
+            </label>
+        </div>
+        <div class="settings-footer new-task-footer">
+            <p class="maui-modal-feedback" data-rename-task-error data-maui-modal-feedback data-feedback-kind="error" role="alert" aria-live="assertive" hidden></p>
+            <button type="button" class="secondary-button" data-rename-task-cancel>Cancel</button>
+            <button type="submit" class="primary-button new-task-submit" data-rename-task-submit>
+                <span class="inline-spinner button-spinner" data-rename-task-spinner hidden aria-hidden="true"></span>
+                <span data-rename-task-submit-label>Rename</span>
             </button>
         </div>
     </form>
@@ -583,6 +612,7 @@
     }
     <script src="~/js/task-spreadsheet-import.js" asp-append-version="true"></script>
     <script src="~/js/resource-groups.js" asp-append-version="true"></script>
+    <script src="~/js/shared/rename-result.js" asp-append-version="true"></script>
     <script src="~/js/tasks.js" asp-append-version="true"></script>
 }
 

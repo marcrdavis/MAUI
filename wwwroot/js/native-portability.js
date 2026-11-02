@@ -315,14 +315,13 @@
             const select = document.createElement('select');
             select.className = 'text-input';
             select.dataset.nativePortabilityResolution = '';
-            const keyType = ['sshclientkey', 'sslclientcert', 'pgpkey'].includes(String(item.objectType || '').toLowerCase());
-            const idConflict = Array.isArray(item.duplicateReasons)
-                && item.duplicateReasons.some(reason => String(reason || '').toLowerCase() === 'id');
-            if (keyType && idConflict) {
+            const canReuse = item.canReuseExisting === true;
+            if (canReuse) {
                 const useExisting = document.createElement('option');
                 useExisting.value = 'useexisting';
-                useExisting.textContent = 'Use Existing';
+                useExisting.textContent = 'Reuse Existing';
                 select.appendChild(useExisting);
+                reasons.textContent += ` Destination: ${item.reuseTargetName || item.conflictTargetId} (ID: ${item.conflictTargetId}). Reuse retains its configuration, credentials and MAUI metadata.`;
             }
             const overwrite = document.createElement('option');
             overwrite.value = 'overwrite';
@@ -334,9 +333,8 @@
                 rename.textContent = 'Import as New / Rename';
                 select.appendChild(rename);
                 select.value = 'rename';
-            } else if (keyType && idConflict) {
-                select.value = 'useexisting';
             }
+            if (canReuse) select.value = 'useexisting';
             selectLabel.append(selectCaption, select);
 
             const nameLabel = document.createElement('label');
@@ -491,8 +489,10 @@
 
                 importDialog?.close();
                 const count = Number(payload?.importedCount || 0);
+                const reused = Number(payload?.reusedCount || 0);
                 const warning = String(payload?.warning || '').trim();
-                status(warning || `Imported ${count} native object${count === 1 ? '' : 's'} successfully.`, 6000, warning ? 'warning' : 'default');
+                const reuseSummary = reused > 0 ? ` Reused ${reused} existing dependenc${reused === 1 ? 'y' : 'ies'}.` : '';
+                status(warning || `Imported ${count} native object${count === 1 ? '' : 's'} successfully.${reuseSummary}`, 6000, warning ? 'warning' : 'default');
 
                 // The server has already committed the native MOVEit import once an OK response reaches this point.
                 // Refresh the corresponding MAUI grid; do not automatically open the imported object editor.
