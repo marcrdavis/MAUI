@@ -160,6 +160,7 @@ async function run() {
     assert.equal(fields.action.textContent, 'Import Complete');
     assert.equal(fields.action.disabled, true);
     assert.equal(fields['progress-text'].textContent, 'Import Progress: 1 of 1');
+    assert.equal(fields.progress.hidden, true, 'completion hides the progress bar and its text');
     assert.ok(counters().includes('Created: 1'));
     assert.equal(fields.body.children[0].children[1].children[0].textContent, 'Created');
     assert.equal(fields.results.children[2].children[0].textContent, 'Created');
@@ -183,6 +184,7 @@ async function run() {
     await fields.action.emit('click');
     for (let i = 0; i < 20; i++) await Promise.resolve();
     assert.equal(fields.action.textContent, 'Import Finished (review needed)');
+    assert.equal(fields.progress.hidden, true, 'review-needed imports also hide progress');
     assert.ok(counters().includes('Needs Attention: 1'));
     assert.equal(fields.action.disabled, true);
 
@@ -193,6 +195,7 @@ async function run() {
     await fields.action.emit('click');
     for (let i = 0; i < 20; i++) await Promise.resolve();
     assert.equal(fields.action.textContent, 'Import Finished (with failures)');
+    assert.equal(fields.progress.hidden, true, 'failed imports also hide progress');
     assert.ok(counters().includes('Failed: 1'));
     assert.equal(fields.action.disabled, true);
 

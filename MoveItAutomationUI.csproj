@@ -8,15 +8,19 @@
     <RootNamespace>MoveItAutomationUI</RootNamespace>
     <AssemblyName>MoveItAutomationUI</AssemblyName>
     <Authors>Marc R. Davis (marcdavis@comcast.net)</Authors>
-    <Version>0.18.521-RC3</Version>
-    <AssemblyVersion>0.18.521.0</AssemblyVersion>
-    <FileVersion>0.18.521.0</FileVersion>
-    <InformationalVersion>0.18.521-RC3+build.20261101</InformationalVersion>
+    <Version>0.18.529-RC3</Version>
+    <AssemblyVersion>0.18.529.0</AssemblyVersion>
+    <FileVersion>0.18.529.0</FileVersion>
+    <InformationalVersion>0.18.529-RC3+build.20261105</InformationalVersion>
 
-    <!-- The test project is intentionally stored beneath the source root for packaging convenience.
-         Exclude its entire subtree from ASP.NET Core Web SDK default item globs so test source,
-         bin/obj output, and future test artifacts can never be treated as application content. -->
-    <DefaultItemExcludes>$(DefaultItemExcludes);MoveItAutomationUI.Tests\**;MoveItAutomationUI.Tests/**</DefaultItemExcludes>
+    <!-- Separate tools/tests and any nested build output are outside the application.
+         Keep these exclusions even when those projects are absent from the solution:
+         switching branches or unpacking into a reused folder can leave their files behind.
+         SDK targets still explicitly add MAUI's own generated assembly metadata. -->
+    <!-- User Management remains on its own branch. Ignore its files in reused folders
+         until its inclusion in master is explicitly approved. -->
+    <MauiHeldFeatureItems>Features/UserManagement/**;Views/Configuration/_UserManagement*.cshtml;wwwroot/js/user-management.js;wwwroot/css/user-management.css;IntegrationAssets/MOVEitUserManagement/**</MauiHeldFeatureItems>
+    <DefaultItemExcludes>$(DefaultItemExcludes);Tools\**;Tools/**;MoveItAutomationUI.Tests\**;MoveItAutomationUI.Tests/**;**/bin/**;**/obj/**;$(MauiHeldFeatureItems)</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup><EmbeddedResource Include="Templates/Scripts/*.ps1" /></ItemGroup>
@@ -28,20 +32,18 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Defense in depth: tests are compiled only by the dedicated test project. -->
-    <Compile Remove="MoveItAutomationUI.Tests\**\*.cs" />
-    <Content Remove="MoveItAutomationUI.Tests\**\*" />
-    <None Remove="MoveItAutomationUI.Tests\**\*" />
-    <EmbeddedResource Remove="MoveItAutomationUI.Tests\**\*" />
+    <!-- Separate project trees must not become application source or shipped content. -->
+    <Compile Remove="Tools\**;Tools/**;MoveItAutomationUI.Tests\**;MoveItAutomationUI.Tests/**;$(MauiHeldFeatureItems)" />
+    <Content Remove="Tools\**;Tools/**;MoveItAutomationUI.Tests\**;MoveItAutomationUI.Tests/**;$(MauiHeldFeatureItems)" />
+    <None Remove="Tools\**;Tools/**;MoveItAutomationUI.Tests\**;MoveItAutomationUI.Tests/**;$(MauiHeldFeatureItems)" />
+    <EmbeddedResource Remove="Tools\**;Tools/**;MoveItAutomationUI.Tests\**;MoveItAutomationUI.Tests/**;$(MauiHeldFeatureItems)" />
   </ItemGroup>
 
-  <!-- Guard against nested test obj/AssemblyInfo.cs entering the main Web project's
-       Compile items, including after the test project has generated obj files.
-       Project-level Remove excludes normal test sources; this late removal also
-       covers compile items added later by imported SDK/build targets. -->
-  <Target Name="MauiExcludeNestedTestCompileItems" BeforeTargets="CoreCompile">
+  <!-- Recheck separate project trees immediately before compilation. Do not remove
+       MAUI's root obj metadata, which the SDK intentionally adds after evaluation. -->
+  <Target Name="MauiExcludeNonApplicationCompileItems" BeforeTargets="CoreCompile">
     <ItemGroup>
-      <Compile Remove="MoveItAutomationUI.Tests\**;MoveItAutomationUI.Tests/**;$(MSBuildProjectDirectory)\MoveItAutomationUI.Tests\**" />
+      <Compile Remove="Tools\**;Tools/**;MoveItAutomationUI.Tests\**;MoveItAutomationUI.Tests/**;$(MSBuildProjectDirectory)/Tools/**;$(MSBuildProjectDirectory)/MoveItAutomationUI.Tests/**;Features/UserManagement/**;$(MSBuildProjectDirectory)/Features/UserManagement/**" />
     </ItemGroup>
   </Target>
 

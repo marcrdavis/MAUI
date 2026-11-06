@@ -34,6 +34,11 @@ public sealed partial class HostDefinitionSaveService
         return (matches[0].TypeCode, host);
     }
 
+    private sealed class RequestedHostFieldMismatch(string field) : InvalidOperationException
+    {
+        public string Field { get; } = field;
+    }
+
     // Controlled diagnostics retain the failed stage without logging native bodies,
     // submitted credentials, opaque definitions or arbitrary exception messages.
     private static string SaveFailureReason(Exception failure) => failure switch

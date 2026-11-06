@@ -258,6 +258,7 @@ public sealed class HostSpreadsheetImportService : IHostSpreadsheetImportService
         {
             if (!state.ConsumedRows.Add(rowNumber)) throw new InvalidOperationException("This Host row has already been submitted.");
         }
+        using var retry500 = MoveItImportRowRetryScope.Enter();
         // Consume each row exactly once. Host updates keep the existing MOVEit ID,
         // capture Undo first, and do not consume a license slot.
         string targetId = string.Empty;

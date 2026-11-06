@@ -3213,6 +3213,8 @@ html[data-theme="dark"] .metadata-tag-remove:focus-visible { background: rgba(25
     line-height: 1.4;
 }
 
+.task-spreadsheet-footer-progress[hidden] { display: none !important; }
+
 .task-spreadsheet-footer-progress {
     display: grid;
     grid-template-columns: auto minmax(150px, 260px);

@@ -446,6 +446,7 @@
 
         const scriptGuidance = window.MauiTaskScriptGuidance?.create({ root: dialog,
             url: () => dialog.dataset.scriptMetadataUrl,
+            globalUrl: () => dialog.dataset.scriptGlobalParameterUrl,
             scripts: () => scriptOptions, process: () => activeStep()?.process,
             processes: () => taskSteps.filter(step => step.kind === 'Process').map(step => step.process),
             advanced: isAdvancedTask, taskParameters: () => taskParameters, canEdit: () => canAlterTask,
@@ -4880,7 +4881,8 @@
             const existing = process.parameters.find(item => item.name.toLowerCase() === normalizedName.toLowerCase()) || null;
             processParameterEditName = existing?.name || '';
             const definition = scriptGuidance?.definition(normalizedName, 'process');
-            scriptGuidance?.parameterHelp(processParameterDialog.querySelector('[data-process-script-parameter-help]'), definition);
+            scriptGuidance?.parameterHelp(processParameterDialog.querySelector('[data-process-script-parameter-help]'), definition, 'process');
+            const inherited = scriptGuidance?.draft(definition, 'process');
             clearProcessParameterError();
             const preservedSecure = Boolean(existing?.secure && !existing.valueChanged);
             if (processParameterTitle) processParameterTitle.textContent = existing ? 'Edit Process Parameter' : 'Add Process Parameter';
@@ -4892,12 +4894,12 @@
                 processParameterName.readOnly = !existing && Boolean(definition);
             }
             if (processParameterValue) {
-                processParameterValue.value = preservedSecure ? '' : (existing?.value ?? definition?.defaultValue ?? '');
+                processParameterValue.value = preservedSecure ? '' : (existing?.value ?? inherited?.value ?? definition?.defaultValue ?? '');
                 processParameterValue.disabled = preservedSecure;
                 processParameterValue.placeholder = preservedSecure ? '(suppressed)' : 'Value';
             }
             if (processParameterSecure) {
-                processParameterSecure.checked = Boolean(existing?.secure);
+                processParameterSecure.checked = Boolean(existing?.secure ?? inherited?.secure);
                 processParameterSecure.disabled = preservedSecure;
             }
             if (processParameterReset) processParameterReset.hidden = !preservedSecure;
@@ -8401,7 +8403,8 @@
             const secureExisting = Boolean(existing?.secure);
             taskParameterEditName = existing?.name || '';
             const definition = scriptGuidance?.definition(normalizedName, 'task');
-            scriptGuidance?.parameterHelp(addParameterDialog.querySelector('[data-task-script-parameter-help]'), definition);
+            scriptGuidance?.parameterHelp(addParameterDialog.querySelector('[data-task-script-parameter-help]'), definition, 'task');
+            const inherited = scriptGuidance?.draft(definition, 'task');
             if (taskParameterError) { taskParameterError.hidden = true; taskParameterError.textContent = ''; }
 
             if (taskParameterDialogTitle) {
@@ -8420,12 +8423,12 @@
                 taskParameterName.readOnly = !existing && Boolean(definition);
             }
             if (taskParameterValue) {
-                taskParameterValue.value = secureExisting ? '' : (existing?.value ?? definition?.defaultValue ?? '');
+                taskParameterValue.value = secureExisting ? '' : (existing?.value ?? inherited?.value ?? definition?.defaultValue ?? '');
                 taskParameterValue.disabled = false;
                 taskParameterValue.placeholder = secureExisting ? 'Enter new secure value' : 'Value';
             }
             if (taskParameterSecure) {
-                taskParameterSecure.checked = Boolean(existing?.secure);
+                taskParameterSecure.checked = Boolean(existing?.secure ?? inherited?.secure);
                 taskParameterSecure.disabled = secureExisting;
             }
             if (taskParameterSave) taskParameterSave.textContent = secureExisting ? 'Change Value' : 'Apply';

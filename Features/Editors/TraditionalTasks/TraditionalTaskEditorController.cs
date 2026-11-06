@@ -135,6 +135,28 @@ public sealed partial class TraditionalTaskEditorController : Controller
         { return MauiControllerExceptionMapper.Map(ex); }
     }
 
+    // Read a named fallback through the current MOVEit session. Never return a secure value.
+    [HttpGet]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    [MoveItObjectPermission("GlobalParameter", "Read", "name")]
+    public async Task<IActionResult> ScriptGlobalParameter([FromServices] IAutomationGlobalParameterService globals,
+        string name, CancellationToken cancellationToken)
+    {
+        if (_sessionService.Get() is null) return Unauthorized(new { message = "MOVEit session expired. Your Task draft has been retained." });
+        if (string.IsNullOrWhiteSpace(name)) return BadRequest(new { message = "Parameter Name is required." });
+        try
+        {
+            var parameter = await globals.GetAsync(name.Trim(), cancellationToken);
+            return Json(new { success = true, present = true,
+                parameter = new { name = parameter.Name, value = parameter.Secure ? "" : parameter.Value, secure = parameter.Secure } });
+        }
+        catch (MoveItApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        { return Json(new { success = true, present = false }); }
+        catch (Exception ex) when (ex is MoveItApiException or InvalidOperationException or ArgumentException)
+        { return MauiControllerExceptionMapper.Map(ex); }
+    }
+
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]

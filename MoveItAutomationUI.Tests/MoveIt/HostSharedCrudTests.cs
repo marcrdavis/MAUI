@@ -788,6 +788,87 @@ public sealed class HostSharedCrudTests
     }
 
     [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("omit")]
+    public async Task FtpAccountReplacementAcceptsSuppressedReadback(string? projection)
+    {
+        var fixture = new Fixture("FTP")
+        {
+            ReadbackProjection = saved =>
+            {
+                if (projection == "omit") saved.Remove("DefAccount");
+                else saved["DefAccount"] = projection;
+            }
+        };
+        fixture.Saved["defAccount"] = "stored-account";
+        var request = new HostDefinitionSaveRequest("Host", "Old", new JsonObject { ["DefAccount"] = "  replacement  " });
+
+        Assert.True((await fixture.Coordinator.SaveDefinitionAsync("42", request, "tester", fixture.Live)).Changed);
+        Assert.Equal("  replacement  ", fixture.Submitted!["DefAccount"]!.GetValue<string>());
+        Assert.False(fixture.Submitted.ContainsKey("defAccount"));
+        Assert.Null(fixture.Submitted["DefPassword"]);
+        Assert.Equal(1, fixture.Writes);
+        Assert.Equal(1, fixture.Releases);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task BlankOrOmittedFtpAccountUsesNullPreserveOnAnUnrelatedSave(bool postBlank)
+    {
+        var fixture = new Fixture("FTP");
+        fixture.Saved["DefAccount"] = "stored-account";
+        var patch = new JsonObject { ["Port"] = 21 };
+        if (postBlank) patch["DefAccount"] = "";
+
+        Assert.True((await fixture.Coordinator.SaveDefinitionAsync("42", new("Host", "Old", patch), "tester", fixture.Live)).Changed);
+        Assert.True(fixture.Submitted!.ContainsKey("DefAccount"));
+        Assert.Null(fixture.Submitted["DefAccount"]);
+        Assert.Equal("stored-account", fixture.Saved["DefAccount"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task FtpAccountReplacementStillChecksOtherRequestedFields()
+    {
+        var fixture = new Fixture("FTP") { ReadbackProjection = saved => saved["Port"] = 22 };
+        var failure = await Assert.ThrowsAsync<HostPartialSaveException>(() => fixture.Coordinator.SaveDefinitionAsync(
+            "42", new("Host", "Old", new JsonObject { ["DefAccount"] = "test-account", ["Port"] = 21 }), "tester", fixture.Live));
+
+        Assert.Equal("saved-requested-field-mismatch:Port", failure.VerificationReason);
+        Assert.Equal(1, fixture.Writes);
+        Assert.Equal(1, fixture.Releases);
+    }
+
+    [Theory]
+    [InlineData("FTP", "DefUsername", "yes", "1")]
+    [InlineData("SSHFTP", "DefDestFileAttr", "644", "0644")]
+    public async Task CapturedHostTextChangesAreNotTreatedAsNumericOrBooleanEquivalents(
+        string type, string field, string previous, string requested)
+    {
+        var fixture = new Fixture(type);
+        fixture.Saved[field] = previous;
+        var result = await fixture.Coordinator.SaveDefinitionAsync(
+            "42", new("Host", "Old", new JsonObject { [field] = requested }), "tester", fixture.Live);
+
+        Assert.True(result.Changed);
+        Assert.Equal(requested, fixture.Submitted![field]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task StateCacheVerificationIgnoresInactiveUnitReturnedByMoveIt()
+    {
+        var fixture = new Fixture("FTP") { ReadbackProjection = saved => saved["StateCacheUnit"] = "Hours" };
+        var result = await fixture.Coordinator.SaveDefinitionAsync("42", new("Host", "Old", new JsonObject
+        {
+            ["UseDefStateCaching"] = false, ["StateCacheTime"] = 0, ["StateCacheUnit"] = "Minutes"
+        }), "tester", fixture.Live);
+
+        Assert.True(result.Changed);
+        Assert.False(fixture.Submitted!.ContainsKey("StateCacheUnit"));
+    }
+
+    [Theory]
     [InlineData("POP3")]
     [InlineData("SMTP")]
     public async Task Office365HelperComposesOnlyNativeOAuthFieldsAndEnablesTls(string type)
@@ -956,6 +1037,7 @@ public sealed class HostSharedCrudTests
         public string? CheckoutType { get; init; }
         public bool CorruptReadbackId { get; init; }
         public string? NativeXml { get; set; }
+        public Action<JsonObject>? ReadbackProjection { get; init; }
 
         public Fixture(string type, bool canEdit = true)
         {
@@ -982,7 +1064,7 @@ public sealed class HostSharedCrudTests
             { Id = id, Name = name, Description = "Old", TypeCode = type, CanEditDelete = canEdit } }, DateTimeOffset.UtcNow);
             var rest = Stub<IMoveItRestClient>((method, args) => method.Name switch
             {
-                nameof(IMoveItRestClient.GetHostAsync) => Task.FromResult(FlatRead ? Saved.DeepClone().AsObject() : Wrap()),
+                nameof(IMoveItRestClient.GetHostAsync) => Task.FromResult(Read()),
                 nameof(IMoveItRestClient.GetHostsAsync) => Inventory(),
                 nameof(IMoveItRestClient.GetCustomScriptsAsync) => Task.FromResult((IReadOnlyList<JsonObject>)Array.Empty<JsonObject>()),
                 nameof(IMoveItRestClient.GetStandardScriptsAsync) => Task.FromResult((IReadOnlyList<JsonObject>)new[] { new JsonObject { ["ID"] = "100401", ["Name"] = "Directory Parser" } }),
@@ -1005,6 +1087,12 @@ public sealed class HostSharedCrudTests
                 new HostDefinitionSaveService(rest, com, undo, NullLogger<HostDefinitionSaveService>.Instance));
 
             JsonObject Wrap() => new() { [type] = Saved.DeepClone() };
+            JsonObject Read()
+            {
+                var host = Saved.DeepClone().AsObject();
+                if (Writes > 0) ReadbackProjection?.Invoke(host);
+                return FlatRead ? host : new JsonObject { [type] = host };
+            }
             Task<IReadOnlyList<JsonObject>> Inventory()
             {
                 InventoryReads++;
@@ -1030,7 +1118,7 @@ public sealed class HostSharedCrudTests
                 Submitted = HostDefinitionJson.UnwrapHost(payload).Host.DeepClone().AsObject();
                 var previous = Saved;
                 Saved = HostDefinitionJson.UnwrapHost(payload).Host.DeepClone().AsObject();
-                foreach (var secret in new[] { "DefPassword", "OAuthClientSecret", "ProxyPassword", "ClientSecret" })
+                foreach (var secret in new[] { "DefPassword", "OAuthClientSecret", "ProxyPassword", "ClientSecret", "DefAccount" })
                     if (Saved.ContainsKey(secret) && Saved[secret] is null && previous.ContainsKey(secret))
                         Saved[secret] = previous[secret]?.DeepClone();
                     else if (Saved[secret] is not null && (secret == "DefPassword" && type is "Share" or "siLock"

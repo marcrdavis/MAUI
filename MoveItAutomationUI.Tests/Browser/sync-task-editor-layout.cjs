@@ -70,6 +70,13 @@ window.fetch = async (url, options = {}) => {
         if(window.taskExportMode==='malformed')return new Response('Gateway unavailable',{status:502,headers:{'Content-Type':'application/json'}});
         return new Response(new Uint8Array(window.taskExportMode==='empty'?[]:[80,75,3,4]),{headers:{'Content-Type':'application/zip','Content-Disposition':'attachment; filename="Task.maui"'}});
     }
+    if(String(url).includes('/ScriptGlobalParameter')) {
+        const name=new URL(url,location.href).searchParams.get('name');
+        window.scriptGlobalCalls=(window.scriptGlobalCalls||[]);scriptGlobalCalls.push(name);
+        const data=structuredClone(window.scriptGlobalReplies?.[name.toLowerCase()] || {success:true,present:false});
+        if(data.delay)await new Promise(resolve=>window.releaseScriptGlobal=resolve); // Ignore AbortSignal for reopen isolation.
+        return new Response(JSON.stringify(data),{status:data.failure?503:200,headers:{'Content-Type':'application/json'}});
+    }
     if(String(url).includes('/ScriptMetadata')) {
         const id=new URL(url,location.href).searchParams.get('id');window.scriptMetadataCalls=(window.scriptMetadataCalls||[]);scriptMetadataCalls.push(id);
         const data=structuredClone(window.scriptMetadataReplies?.[id] || {id,name:'Script',description:'',parametersAvailable:false,parameters:[]});
@@ -1544,6 +1551,8 @@ async function check(name) {
     for (const width of [1920,1366]) {
         await command('Emulation.setDeviceMetricsOverride',{width,height:1080,deviceScaleFactor:1,mobile:false});
         assert.equal(await evaluate(`(()=>{const header=document.querySelector('.task-script-reference-table th:nth-child(2)');const range=document.createRange();range.selectNodeContents(header);return getComputedStyle(header).whiteSpace==='nowrap'&&range.getClientRects().length===1;})()`),true,'Direction header stays on one line in the Advanced properties panel');checks++;
+        assert.equal(await evaluate("(()=>{const cell=document.querySelector('.task-script-reference-table tbody tr td:nth-child(3)');const header=document.querySelector('.task-script-reference-table th:nth-child(3)');const range=document.createRange();range.selectNodeContents(header);return cell.getBoundingClientRect().width>=119&&getComputedStyle(header).whiteSpace==='nowrap'&&range.getClientRects().length===1;})()"),true,'Description remains readable beside inherited-value actions');checks++;
+        assert.equal(await evaluate("document.querySelector('[aria-label=\"Override Required_Input for Process\"]').title"),'Create a Process override');checks++;
         await screenshot('Script-Guidance-Advanced-'+width);
     }
     await command('Emulation.setDeviceMetricsOverride',{width:1920,height:1080,deviceScaleFactor:1,mobile:false});
@@ -1566,6 +1575,102 @@ async function check(name) {
     await evaluate(`change('[data-editor-field="name"]','Secure retained');document.querySelector('[data-traditional-task-editor-save]').click()`);await pause(100);
     assert.deepEqual(await evaluate(`saveCalls.at(-1).payload.parameters.Parameter[0]`),{name:'Required_Input',originalName:'Required_Input',secure:true,preserve:true});
     checks+=2;
+    // Existing Step parameters must open at Process scope on Traditional Tasks too.
+    const stepGuide=structuredClone(guideModel);
+    stepGuide.task.steps[0].process.parameters=[{name:'required_input',value:'0xF8934AD6',secure:false}];
+    await evaluate('window.scriptGlobalCalls=[];loadFixture('+JSON.stringify(stepGuide)+')');await pause(150);
+    assert.match(await evaluate("document.querySelector('[data-script-guidance-rows]').textContent"),/Process value: 0xF8934AD6/);
+    assert.equal(await evaluate("document.querySelector('[data-script-guidance-required]').textContent"),'');
+    assert.equal(await evaluate("scriptGlobalCalls.some(name=>name.toLowerCase()==='required_input')"),false,'Existing Step values do not require Global reads');
+    await evaluate("document.querySelector('[data-script-guidance-rows] button').click()");
+    assert.equal(await evaluate("document.querySelector('[data-traditional-task-editor-process-parameter-dialog]').open"),true);
+    assert.equal(await evaluate("document.querySelector('[data-traditional-task-editor-process-parameter-value]').value"),'0xF8934AD6');
+    await screenshot('Script-Existing-Step-Parameter');
+    await evaluate("document.querySelector('[data-traditional-task-editor-process-parameter-cancel]').click();document.querySelector('[data-script-guidance-edit]').click()");
+    assert.equal(await evaluate("document.querySelectorAll('[data-script-required-name]').length"),0,'A configured Step must not create a missing Task placeholder');
+    assert.equal(await evaluate("document.querySelector('[data-traditional-task-editor-parameter-rows]').textContent.includes('required_input')"),false,'Task Parameters stays Task-scoped');
+    await evaluate("document.querySelector('[data-traditional-task-editor-parameters-close]').click();document.querySelector('[data-script-guidance-rows] button').click();change('[data-traditional-task-editor-process-parameter-value]','Updated Step');document.querySelector('[data-traditional-task-editor-process-parameter-save]').click();document.querySelector('[data-traditional-task-editor-save]').click()");await pause(150);
+    assert.equal(await evaluate("saveCalls.at(-1).payload.steps.find(step=>step.kind==='Process').patch.Parameters.any[0].value"),'Updated Step');
+    assert.deepEqual(await evaluate("saveCalls.at(-1).payload.parameters.Parameter.map(p=>p.name)"),['Existing_Param']);
+    checks+=9;
+
+    // Advanced inherited Task edits and explicit Process overrides use different dialogs.
+    await evaluate('loadFixture('+JSON.stringify(advancedGuide)+')');
+    await evaluate("insertStep('Process');change('[data-process-field=\"scriptId\"]','100001')");await pause(150);
+    await evaluate("document.querySelector('[data-script-guidance-rows] button').click()");
+    assert.equal(await evaluate("document.querySelector('[data-traditional-task-editor-add-parameter-dialog]').open"),true);
+    assert.equal(await evaluate("document.querySelector('[data-traditional-task-editor-new-parameter-value]').value"),'Task fallback');
+    await evaluate("change('[data-traditional-task-editor-new-parameter-value]','Task edited');document.querySelector('[data-traditional-task-editor-task-parameter-save]').click()");
+    assert.match(await evaluate("document.querySelector('[data-script-guidance-rows]').textContent"),/Inherited from Task: Task edited/);
+    await evaluate("document.querySelector('[aria-label=\"Override Required_Input for Process\"]').click()");
+    assert.equal(await evaluate("document.querySelector('[data-traditional-task-editor-process-parameter-value]').value"),'Task edited','Explicit overrides start with the visible nonsecure inherited value');
+    assert.match(await evaluate("document.querySelector('[data-process-script-parameter-help]').textContent"),/Inherited from Task: Task edited/);
+    await screenshot('Script-Advanced-Process-Override');
+    await evaluate("change('[data-traditional-task-editor-process-parameter-value]','Advanced Step');document.querySelector('[data-traditional-task-editor-process-parameter-save]').click();document.querySelector('[data-script-guidance-rows] button').click()");
+    assert.equal(await evaluate("document.querySelector('[data-traditional-task-editor-process-parameter-value]').value"),'Advanced Step','An existing Advanced Process override is edited at Process scope');
+    await evaluate("document.querySelector('[data-traditional-task-editor-process-parameter-cancel]').click();document.querySelector('[data-traditional-task-editor-save]').click()");await pause(150);
+    assert.equal(await evaluate("saveCalls.at(-1).payload.parameters.Parameter.find(p=>p.name==='Required_Input').value"),'Task edited');
+    assert.equal(await evaluate("saveCalls.at(-1).payload.steps.find(step=>step.kind==='Process').patch.Parameters.any[0].value"),'Advanced Step');
+    checks+=8;
+
+    // A blank local entry is an explicit override; a lower-scope value must not conceal it.
+    const blankStep=structuredClone(stepGuide);blankStep.task.parameters=[{name:'Required_Input',value:'Task must not win',secure:false}];
+    blankStep.task.steps[0].process.parameters[0].value='';
+    await evaluate('loadFixture('+JSON.stringify(blankStep)+')');await pause(150);
+    assert.match(await evaluate("document.querySelector('[data-script-guidance-rows]').textContent"),/Process value: \(empty\)/);
+    assert.match(await evaluate("document.querySelector('[data-script-guidance-required]').textContent"),/Required parameters not configured/);
+    await evaluate("document.querySelector('[data-script-guidance-rows] button').click()");
+    assert.equal(await evaluate("document.querySelector('[data-traditional-task-editor-process-parameter-value]').value"),'');
+    await evaluate("document.querySelector('[data-traditional-task-editor-process-parameter-cancel]').click()");checks+=3;
+
+    // Secure Step values remain suppressed and preserve the native secure entry on unrelated saves.
+    const secureStep=structuredClone(stepGuide);secureStep.task.steps[0].process.parameters[0]={name:'Required_Input',value:'should-never-be-shown',secure:true};
+    await evaluate('loadFixture('+JSON.stringify(secureStep)+')');await pause(150);
+    assert.match(await evaluate("document.querySelector('[data-script-guidance-rows]').textContent"),/Process value: \(suppressed\)/);
+    assert.equal(await evaluate("document.querySelector('[data-script-guidance-rows]').textContent.includes('should-never-be-shown')"),false);
+    await evaluate("document.querySelector('[data-script-guidance-rows] button').click()");
+    assert.equal(await evaluate("document.querySelector('[data-traditional-task-editor-process-parameter-value]').value"),'');
+    assert.equal(await evaluate("document.querySelector('[data-traditional-task-editor-process-parameter-value]').disabled"),true);
+    await evaluate("document.querySelector('[data-traditional-task-editor-process-parameter-cancel]').click();change('[data-editor-field=\"name\"]','Secure Step retained');document.querySelector('[data-traditional-task-editor-save]').click()");await pause(150);
+    const secured=await evaluate("saveCalls.at(-1).payload.steps.find(step=>step.kind==='Process').patch.Parameters.any[0]");
+    assert.equal(secured.preserve,true);assert.equal(secured.secure,1);assert.equal(secured.value,undefined);checks+=7;
+
+    // Read-only Global fallback guidance never inserts local values or exposes secure values.
+    const globalValue='<img src=x onerror=window.globalInjected=true> Global key';
+    await evaluate('window.scriptGlobalReplies={required_input:{success:true,present:true,parameter:{name:"Required_Input",value:'+JSON.stringify(globalValue)+',secure:false}}};loadFixture('+JSON.stringify(guideModel)+')');await pause(150);
+    assert.equal(await evaluate("document.querySelector('[data-script-guidance-required]').textContent"),'');
+    assert.equal(await evaluate("document.querySelector('[data-script-guidance-rows]').textContent.includes("+JSON.stringify(globalValue)+")"),true);
+    assert.equal(await evaluate("document.querySelector('[data-script-guidance] img')"),null);
+    assert.equal(await evaluate("document.querySelector('[data-traditional-task-editor-save]').disabled"),true);
+    await evaluate("document.querySelector('[data-script-guidance-rows] button').click()");
+    assert.equal(await evaluate("document.querySelector('[data-traditional-task-editor-new-parameter-value]').value"),globalValue);
+    assert.match(await evaluate("document.querySelector('[data-task-script-parameter-help]').textContent"),/Global value:/);
+    await evaluate("document.querySelector('[data-traditional-task-editor-add-parameter-close]').click();change('[data-editor-field=\"name\"]','Global retained');document.querySelector('[data-traditional-task-editor-save]').click()");await pause(150);
+    assert.deepEqual(await evaluate("saveCalls.at(-1).payload.parameters.Parameter.map(p=>p.name)"),['Existing_Param'],'Cancel does not materialize an inherited Global');
+    assert.deepEqual(await evaluate("saveCalls.at(-1).payload.steps.find(step=>step.kind==='Process').patch.Parameters.any"),[]);
+    checks+=8;
+    await evaluate('scriptGlobalReplies.required_input={success:true,present:true,parameter:{name:"Required_Input",value:"secret-from-old-endpoint",secure:true}};loadFixture('+JSON.stringify(guideModel)+')');await pause(150);
+    assert.match(await evaluate("document.querySelector('[data-script-guidance-rows]').textContent"),/Global value: \(suppressed\)/);
+    assert.equal(await evaluate("document.querySelector('[data-script-guidance-rows]').textContent.includes('secret-from-old-endpoint')"),false);
+    await evaluate("document.querySelector('[data-script-guidance-rows] button').click()");
+    assert.equal(await evaluate("document.querySelector('[data-traditional-task-editor-new-parameter-value]').value"),'');
+    assert.equal(await evaluate("document.querySelector('[data-traditional-task-editor-new-parameter-secure]').checked"),true);
+    await evaluate("document.querySelector('[data-traditional-task-editor-add-parameter-close]').click()");checks+=4;
+
+    await evaluate('scriptGlobalReplies.required_input={failure:true};loadFixture('+JSON.stringify(guideModel)+')');await pause(150);
+    assert.match(await evaluate("document.querySelector('[data-script-guidance-required]').textContent"),/Global values could not be verified/);
+    assert.equal(await evaluate("document.querySelector('[data-script-guidance-required]').textContent.includes('not configured')"),false);
+    assert.equal(await evaluate("document.querySelector('[data-traditional-task-editor-save]').disabled"),true);
+    await evaluate("scriptGlobalReplies={};document.querySelector('[data-script-guidance-retry]').click()");await pause(150);
+    assert.match(await evaluate("document.querySelector('[data-script-guidance-required]').textContent"),/Required parameters not configured/);
+    checks+=4;
+    await evaluate('scriptGlobalReplies.required_input={success:true,present:true,delay:true,parameter:{name:"Required_Input",value:"Stale Global",secure:false}};loadFixture('+JSON.stringify(guideModel)+')');await pause(100);
+    await evaluate('window.oldGlobalResponse=releaseScriptGlobal;loadFixture('+JSON.stringify(stepGuide)+')');await pause(100);
+    await evaluate("oldGlobalResponse()");await pause(100);
+    assert.match(await evaluate("document.querySelector('[data-script-guidance-rows]').textContent"),/Process value: 0xF8934AD6/);
+    assert.equal(await evaluate("document.querySelector('[data-script-guidance-rows]').textContent.includes('Stale Global')"),false);
+    await evaluate("window.scriptGlobalReplies={}");checks+=2;
+
     // An old selection or an old editor can never replace the current Script guidance.
     await evaluate(`scriptMetadataReplies['100001']={...scriptMetadataReplies['100001'],delay:true};loadFixture(${JSON.stringify(guideModel)})`);await pause(80);
     await evaluate(`change('[data-process-field="scriptId"]','42');releaseScriptMetadata()`);await pause(80);

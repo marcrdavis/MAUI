@@ -264,6 +264,7 @@ public sealed class TaskSpreadsheetImportService : ITaskSpreadsheetImportService
             throw new InvalidOperationException($"Row {rowNumber} has already been imported from this analysis. Analyze the file again before intentionally applying it another time.");
         }
 
+        using var retry500 = MoveItImportRowRetryScope.Enter();
         var taskId = string.Empty;
         var outcome = string.Empty;
         try

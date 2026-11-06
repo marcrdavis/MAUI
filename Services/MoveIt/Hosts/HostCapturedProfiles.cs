@@ -133,7 +133,7 @@ public static class HostCapturedProfiles
             }
             else if (ftp)
             {
-                Add("DefAccount", "Account", "authentication");
+                Add("DefAccount", "Account", "authentication", "Secret");
                 Add("Secure", "Secure Connection / TLS Mode", "security", "Select", choices: Choices(("none", "None"), ("on", "Explicit (Ctrl/Data)"), ("on-ccc", "Explicit (Ctrl/Data) with CCC"), ("tls-c", "Explicit (Ctrl Only)"), ("tls-c-ccc", "Explicit (Ctrl Only) with CCC"), ("implicit", "Implicit (Ctrl/Data)"), ("implicit-ccc", "Implicit (Ctrl/Data) with CCC")));
                 Flag("IgnoreCertProbs", "Ignore TLS Certificate Errors", "security");
             }
@@ -303,8 +303,9 @@ public static class HostCapturedProfiles
     private static void Set(JsonObject host, string name, JsonNode? value)
     {
         var keys = host.Select(pair => pair.Key).Where(key => key.Equals(name, StringComparison.OrdinalIgnoreCase)).ToArray();
-        var actualKey = keys.FirstOrDefault() ?? name;
-        foreach (var duplicate in keys.Skip(1)) host.Remove(duplicate);
+        // The captured FTP PUT contract spells this protected field DefAccount.
+        var actualKey = name == "DefAccount" ? name : keys.FirstOrDefault() ?? name;
+        foreach (var duplicate in keys.Where(key => key != actualKey)) host.Remove(duplicate);
         host[actualKey] = value;
     }
 

@@ -185,7 +185,7 @@ public sealed partial class HostDefinitionSaveService : IHostDefinitionSaveServi
             || typeCode is "POP3" or "SMTP" && HostMailOAuthSettings.HasChanges(rawHost, preview, configuration)
             || typeCode == "FTP" && HostFtpDirectoryParsing.HasChanges(rawHost, preview, configuration) || fields.Any(field => configuration.ContainsKey(field.Key)
             && (field.Sensitive ? HostDefinitionJson.ReadNode(configuration[field.Key]).Length > 0
-                : !Equivalent(HostDefinitionJson.GetNode(rawHost, field.Key), HostDefinitionJson.GetNode(preview, field.Key))));
+                : !Equivalent(HostDefinitionJson.GetNode(rawHost, field.Key), HostDefinitionJson.GetNode(preview, field.Key), field.Kind)));
         if (!changed) return new HostDefinitionSaveResult(false, live.Name, typeCode);
         EnsureCanEdit(live);
         ValidateCapturedEffective(preview, configuration, typeCode, id, liveSnapshot.Hosts);
@@ -310,8 +310,12 @@ public sealed partial class HostDefinitionSaveService : IHostDefinitionSaveServi
         {
             throw new HostPartialSaveException("MOVEit accepted the Host update, but the saved settings could not be verified. Reload the Host before retrying.",
                 new InvalidOperationException("Host saved-state verification failed."), id, "readback",
-                ex is MoveItApiException or HttpRequestException or OperationCanceledException or System.Text.Json.JsonException
-                    ? SaveFailureReason(ex) : reason);
+                ex switch
+                {
+                    RequestedHostFieldMismatch mismatch => reason + ":" + mismatch.Field,
+                    MoveItApiException or HttpRequestException or OperationCanceledException or System.Text.Json.JsonException => SaveFailureReason(ex),
+                    _ => reason
+                });
         }
     }
 
@@ -646,15 +650,19 @@ public sealed partial class HostDefinitionSaveService : IHostDefinitionSaveServi
         IEnumerable<string> writableKeys,
         string profileLabel)
     {
+        HostCapturedProfiles.TryGet(profileLabel, out var fields);
         foreach (var key in writableKeys)
         {
             // Native GET suppresses secrets; editor helper fields have no native representation.
             if (key is "DefPassword" or HostAuthenticationSettings.UncModeKey || HostMailOAuthSettings.IsField(key) || HostCloudAuthenticationSettings.IsCommand(key) || key == "AuthMethod") continue;
-            if (profileLabel == "FTP" && HostFtpDirectoryParsing.IsField(key)) continue;
+            if (HostStateCacheSettings.IsField(key) || profileLabel == "FTP" && HostFtpDirectoryParsing.IsField(key)) continue;
             if (!request.ContainsKey(key)) continue;
             if (key == "DefClientCertSHA1" && HostResourceContracts.Thumbprint(HostResourceContracts.Text(expected, key)) == HostResourceContracts.Thumbprint(HostResourceContracts.Text(actual, key))) continue;
-            if (!Equivalent(HostDefinitionJson.GetNode(expected, key), HostDefinitionJson.GetNode(actual, key)))
-                throw new InvalidOperationException($"MOVEit did not persist the requested '{key}' {profileLabel} Host value.");
+            var expectedValue = HostDefinitionJson.GetNode(expected, key);
+            var actualValue = HostDefinitionJson.GetNode(actual, key);
+            var kind = fields?.FirstOrDefault(field => field.Key == key)?.Kind;
+            if (Equivalent(expectedValue, actualValue, kind)) continue;
+            throw new RequestedHostFieldMismatch(key);
         }
         HostCloudAuthenticationSettings.Verify(expected, actual, request, profileLabel);
         HostStateCacheSettings.Verify(expected, actual, request);
@@ -689,14 +697,15 @@ public sealed partial class HostDefinitionSaveService : IHostDefinitionSaveServi
             throw new MoveItApiException("MOVEit returned an unexpected Host ID after the Host update.");
     }
 
-    private static bool Equivalent(JsonNode? left, JsonNode? right)
+    private static bool Equivalent(JsonNode? left, JsonNode? right, string? kind = null)
     {
         var leftText = HostDefinitionJson.ReadNode(left).Trim().Replace("\r\n", "\n", StringComparison.Ordinal).Replace("\r", "\n", StringComparison.Ordinal);
         var rightText = HostDefinitionJson.ReadNode(right).Trim().Replace("\r\n", "\n", StringComparison.Ordinal).Replace("\r", "\n", StringComparison.Ordinal);
-        if (long.TryParse(leftText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var leftNumber)
+        if (kind is null or "Number"
+            && long.TryParse(leftText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var leftNumber)
             && long.TryParse(rightText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var rightNumber))
             return leftNumber == rightNumber;
-        if (TryBool(leftText, out var leftBool) && TryBool(rightText, out var rightBool))
+        if (kind is null or "Boolean" && TryBool(leftText, out var leftBool) && TryBool(rightText, out var rightBool))
             return leftBool == rightBool;
         return leftText.Equals(rightText, StringComparison.Ordinal);
     }

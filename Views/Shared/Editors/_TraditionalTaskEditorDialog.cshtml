@@ -3,6 +3,7 @@
         data-traditional-task-editor-dialog
         data-traditional-task-editor-shell-url='@Url.Action("Shell", "TraditionalTaskEditor")'
         data-script-metadata-url='@Url.Action("ScriptMetadata", "TraditionalTaskEditor")'
+        data-script-global-parameter-url='@Url.Action("ScriptGlobalParameter", "TraditionalTaskEditor")'
         data-traditional-task-editor-save-url='@Url.Action("Save", "TraditionalTaskEditor")'
         data-traditional-task-editor-preferences-url='@Url.Action("SavePreferences", "TraditionalTaskEditor")'
         data-traditional-task-editor-transfer-exceptions-url='@Url.Action("TransferExceptions", "TraditionalTaskEditor")'
@@ -990,6 +991,7 @@
             <button type="button" class="dialog-close" data-traditional-task-editor-parameters-close aria-label="Close">×</button>
         </div>
         <div class="new-task-body traditional-task-editor-secondary-body traditional-task-editor-parameter-layout">
+            <p class="task-script-parameter-help">Task-scoped parameters only. Process parameters belong to individual steps; Global parameters are managed separately.</p>
             <div class="traditional-task-editor-parameter-table" data-traditional-task-editor-parameter-table>
                 <div class="traditional-task-editor-parameter-header"><div>Name</div><div>Value</div><div></div></div>
                 <div data-traditional-task-editor-parameter-rows></div>

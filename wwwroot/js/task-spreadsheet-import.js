@@ -147,12 +147,13 @@
             if (nativeAction) nativeAction.hidden = spreadsheet;
             panel.hidden = !spreadsheet;
             action.hidden = !spreadsheet;
-            if (progress) progress.hidden = !(spreadsheet && rowOutcomes.size > 0);
+            if (progress) progress.hidden = !(spreadsheet && busy);
             clearError();
             updateActionState();
         }
 
         function updateActionState() {
+            if (!busy && progress) progress.hidden = true;
             if (!action) return;
             // Only fully attempted imports are complete, including failed/unverified rows.
             // Derive the label on every state update so paging/refresh cannot reset it.

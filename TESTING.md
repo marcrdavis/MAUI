@@ -1,8 +1,8 @@
 # MAUI Testing Guide
 
-- **Version:** `0.18.521-RC3`
+- **Version:** `0.18.529-RC3`
 - **Release:** Release Candidate 3 (pre-release)
-- **Build:** `20261101`
+- **Build:** `20261105`
 - **Database schema / configuration version:** `1` / `1`
 
 > **Release Candidate 3 — not the final release.** Bugs and regressions may remain. Passing CI validates the covered contracts and fixtures; it does not certify the candidate as bug-free or replace testing against your MOVEit environment.
@@ -15,11 +15,17 @@ The development regression suite runs outside IIS. Automated tests use fixtures,
 
 ### Current validation
 
-Application/test commit `a0d739e4e83524fb27841da40e387e4ce8979495` for **0.18.521-RC3, build 20261101** passed [full Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/41261226182): zero build warnings/errors, all **2,745 xUnit tests** with none failed/skipped, package/publish verification and all registered Node/Edge suites. The run includes 15 native import dependency-action scenarios and 197 Copy Between Environments checks. Earlier results for JSON search, Quick Transfer and Task/Host rename are retained with their exact commits in the [RC3 changelog](CHANGELOG.md#rc3-version-history).
+Application/test commit `b2b53326d0f47132110f1ecd1da4f6fa5aa60734` for **0.18.529-RC3, build 20261105** passed [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42122499166). Visual Studio rebuilt both solution projects in Debug. Release built with zero warnings/errors. All **2,784 xUnit tests in each configuration** passed with none failed/skipped, along with the full browser and package/publish suites. The Task editor suite passed **3,152 checks**, including Traditional/Advanced parameter scope routing, inherited overrides, secure/blank values, Global reads and the narrow Advanced Description column.
 
-Coverage includes native import dependency matching/exclusion and differing-ID reference remapping, destination read access, stale/ambiguous targets, Script language aliases, read-only metadata/audit behavior, controller result fields and unknown native commit outcomes. Rename tests cover configured formatting, validation, authoritative name-only saves and conservative acknowledgement/retry handling. Grid search tests cover prefix/operators, refresh races, cancellation and Report restrictions.
+All **20 isolation probes** remained on disk and were excluded from the application/packages; MAUI's generated assembly metadata remained intact. The Release job passed on retry after its first attempt completed the Host Rename assertions but could not stop the test browser. This result-recording follow-up changes documentation only. No live MOVEit or deployed IIS validation is claimed.
 
-This documentation follow-up updates the guides and acceptance instructions without changing application/test code, release identity or the integration assets. It does not represent a new build or a new live validation run. No live MOVEit or deployed IIS testing is claimed. The reported SQLite rename audit failure's underlying cause remains unconfirmed.
+### Previous build validation
+
+Application/test/workflow commit `37da63d2e34fbc2da88a408963b1177dce1a3e7e` for **0.18.528-RC3, build 20261105** passed [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42072156374). Visual Studio rebuilt both solution projects in Debug with the leftover-file probes present. The Release command-line build reported zero warnings/errors. All **2,775 xUnit tests in each configuration** passed, with none failed/skipped, and the full Release Node/Edge and package/publish suites passed.
+
+The isolation checks verified all **20 synthetic probe files remained on disk** after the Debug rebuild and Release build/publish. The probes include Tools source, generated Core/Contracts/Service assembly attributes, held-feature source/tests/Razor views, generic nested bin/obj files, resources and web/integration assets. None entered the application DLL or packages, and MAUI's own generated assembly version remained correct. The solution still contains only MAUI and its existing test project.
+
+This result-recording follow-up changes documentation only. No live MOVEit or deployed IIS validation is claimed.
 
 ### Historical validation
 
@@ -47,7 +53,7 @@ Earlier exact build results are retained in the changelog: [0.18.495](CHANGELOG.
 
 `MoveItAutomationUI.sln` builds the production `MoveItAutomationUI.csproj` and `MoveItAutomationUI.Tests/MoveItAutomationUI.Tests.csproj`. The production project excludes the test subtree and its build output. Test-only packages must not appear in the deployed application.
 
-The authoritative workflow is [MAUI Build and Tests](.github/workflows/maui-build.yml). It restores and builds on Windows/.NET 8, runs all xUnit tests, verifies published Task/Host templates and Data exclusions, runs the dependency-free Node suites listed below and renders Host, Task, Script, Date List, Resource Information and Groups & Permissions fixtures in Edge. Test results are uploaded as the MAUI-Test-Results artifact. Edge fixture checks exercise production views/CSS/JavaScript in both themes at suite-specific widths, not a live MOVEit connection.
+The authoritative workflow is [MAUI Build and Tests](.github/workflows/maui-build.yml). Its Visual Studio Debug job and Release build/publish job both seed the reused-folder probes before building. The probes cover separate Tools sources, Core/Contracts/Service generated assembly attributes, generic nested bin/obj output, held-feature source/tests/Razor views, resources and web/integration assets. Verification requires every probe to remain on disk while staying out of the application assembly and packages, and checks MAUI's generated assembly version. Both jobs run xUnit; Release retains the registered Node/Edge and package checks. Debug logs/results are uploaded as MAUI-Debug-Build-Results and Release results as MAUI-Test-Results. Edge fixture checks exercise production views/CSS/JavaScript rather than a live MOVEit connection.
 
 ### Release validation evidence
 
@@ -121,7 +127,7 @@ The [registered Windows workflow](.github/workflows/maui-build.yml) is authorita
 
 ### Clean build requirements
 
-Validate RC3 from a clean source tree. Extract the package to a **new empty source folder** or remove existing `bin` and `obj` directories before building. Stale build output from earlier development packages is not part of the release and should not be reused.
+Validate RC3 from a clean source tree for package completeness and from a reused source folder for project isolation. CI deliberately leaves synthetic Tools sources, duplicate assembly attributes, nested bin/obj files and held-feature source/views/assets in place while Visual Studio rebuilds Debug and the Release job builds/publishes. The isolation check verifies the files still exist, MAUI's own assembly metadata is intact, and the files cannot enter the DLL or package. The held feature stays excluded from master.
 
 A clean command-line validation is:
 
@@ -457,7 +463,7 @@ Verify the counter reads “x of x resource groups”. Edit Permissions must be 
 
 On the installed MOVEit release, capture unfiltered `GET /api/v1/standardscripts/{id}` for Certs Backup, Certs Restore and another Script with choices/defaults. Compare the MAUI description/reference with native Add/Edit Process. Confirm the returned Params entries expose the documented ParamName/ParamDesc/Required/InOut/Type/Default/Choices definition fields. The adapter inspects definitions within Params independently of collection-wrapper names; it must not interpret configured name/value parameters as definitions or hard-code script catalogs. Unit fixtures use the published schema and are synthetic; they do not establish the installed server response shape.
 
-Verify required input rows appear automatically without inserting blank Task/Process JSON, changing the Saved state or triggering Auto Save. Configure must retain existing parameters, show the selected parameter help, prefill optional defaults only in the draft form, reject empty explicitly configured required values without defaults, and preserve secure native values. Traditional configuration is Task-scoped; Advanced configuration is Process-scoped and recognizes inherited Task values. Output parameters must not become input requirements. Global-value resolution is advisory, not a claim that no Global Parameter exists. Check metadata failure/reload, unsupported replies, rapid Script switches and closing/reopening while a response is pending. No response may replace the current guidance or navigate away from an open draft.
+Verify required input rows appear without inserting blank Task/Process JSON, changing the Saved state or triggering Auto Save. Configure/Edit must open the existing stored scope: Process entries on Traditional or Advanced Tasks open the Process parameter editor; Task entries open the Task parameter editor. Advanced inherited Task values must offer an explicit Process override, prefilled only for nonsecure values and added only on Apply. Task Parameters remains Task-scoped. New configuration uses Task scope for Traditional and Process scope for Advanced. Secure values remain suppressed and preserved; an explicit local blank must not fall through to a lower scope. Global fallback reads must use the current MOVEit session, never expose secure values, and distinguish absence from failure. Guidance reports stored values; it does not change MOVEit's execution or parameter persistence rules. Check defaults, required input validation, Output rows, metadata/Global failure and reload, rapid Script switches and closing/reopening with a response pending. No response may replace current guidance, mutate a draft or initiate Auto Save.
 
 ### Modal feedback and PGP Information
 

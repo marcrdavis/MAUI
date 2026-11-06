@@ -1,8 +1,8 @@
 # MAUI — MOVEit Automation User Interface
 
-- **Version:** `0.18.521-RC3`
+- **Version:** `0.18.529-RC3`
 - **Release:** Release Candidate 3 (RC3) — **not the final release**
-- **Build:** `20261101`
+- **Build:** `20261105`
 - **Target framework:** .NET 8
 - **Database schema / configuration version:** `1` / `1`
 

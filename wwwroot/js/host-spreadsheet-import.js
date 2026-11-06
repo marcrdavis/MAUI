@@ -42,6 +42,7 @@
                 : [];
         }
         function updateActionState() {
+            if (!busy) progress.hidden = true;
             if (busy) { action.disabled = true; return; }
             if (analyzed) {
                 const remaining = pendingRows().length;

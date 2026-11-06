@@ -88,6 +88,8 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
 async function until(predicate,label) {for(let i=0;i<150;i++){if(predicate())return;await tick();}throw new Error('Timed out: '+label);}
 async function main(){
     const markup=fs.readFileSync(path.resolve(__dirname,'../../Views/Shared/_NativePortabilityDialogs.cshtml'),'utf8');
+    const css=fs.readFileSync(path.resolve(__dirname,'../../wwwroot/css/site.css'),'utf8');
+    assert.match(css,/\.task-spreadsheet-footer-progress\[hidden\]\s*\{\s*display:\s*none\s*!important;/);
     assert.match(markup,/<input[^>]*type="text"[^>]*maxlength="60"[^>]*data-task-spreadsheet-prefix/);
     get('prefix').value='team-';
     get('file').files=[new File(['TASK_NAME\nTEST'], 'tasks.csv')];
@@ -113,6 +115,7 @@ async function main(){
     await until(()=>imported.length===2 && !get('action').disabled,'first import');
     assert.equal(nativeButtons[0].textContent,'Cancel','unfinished batches keep Cancel');
     assert.deepEqual(imported,[2,3]);
+    assert.equal(get('progress').hidden,true,'progress and its text hide after a finished batch');
     assert.equal(get('grid-body').children[0].querySelector('.task-spreadsheet-row-pill').textContent,'Created');
     assert.equal(get('grid-body').children[1].querySelector('.task-spreadsheet-row-pill').textContent,'Failed');
     assert.match(get('action').textContent,/Next 2/);
@@ -128,8 +131,12 @@ async function main(){
     assert.equal(get('action').textContent,'Import Finished (with failures)');
     assert.equal(nativeButtons[0].textContent,'Close','all attempted rows finish the import even with errors');
     assert.equal(refreshed,3);
+    assert.equal(get('progress').hidden,true,'completed imports hide the entire footer progress control');
     get('page-prev').click();
     assert.equal(nativeButtons[0].textContent,'Close','paging preserves the completed label');
+    assert.equal(get('progress').hidden,true,'paging must not restore completed progress');
+    modeInputs[1].dispatch('change');
+    assert.equal(get('progress').hidden,true,'reselecting spreadsheet mode must not restore completed progress');
     assert.equal(get('grid-body').children[0].querySelector('.task-spreadsheet-row-pill').textContent,'Created');
     assert.equal(get('results').children.length,6);
     assert.match(get('summary').textContent,/Created: 2/);

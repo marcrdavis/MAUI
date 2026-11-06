@@ -1,10 +1,33 @@
 # MAUI Changelog
 
-**Current candidate:** v0.18.521-RC3, build 20261101 — **Release Candidate 3, not the final release**. Bugs, regressions and incomplete behavior may remain; validate the candidate against the target MOVEit environment.
+**Current candidate:** v0.18.529-RC3, build 20261105 — **Release Candidate 3, not the final release**. Bugs, regressions and incomplete behavior may remain; validate the candidate against the target MOVEit environment.
+
+## v0.18.529-RC3 — 2026-11-05
+
+- Validation: [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42122499166) passed for application/test commit `b2b53326d0f47132110f1ecd1da4f6fa5aa60734`: Visual Studio rebuilt both projects in Debug; Release built with zero warnings/errors; all 2,784 xUnit tests passed in each configuration; all browser and package checks passed, including 3,152 Task editor checks. All 20 isolation probes remained on disk and excluded. The Release job passed on retry after a test-browser shutdown failure following successful Host Rename assertions. This result-recording follow-up changes documentation only; no live MOVEit validation is claimed.
+- Correct built-in Script Configure/Edit routing to use an existing Process or Task parameter, including Process entries already stored on Traditional Tasks. Display the stored source and nonsecure value; keep secure values suppressed. Task Parameters continues to list Task-scoped entries only.
+- Correct Advanced guidance so inherited Task values open the Task parameter editor. Provide an explicit Process override action, prefilled from a nonsecure inherited value without adding a parameter until Apply. Preserve local blank overrides, scope, native serialization, secure-value preservation and Undo/Save behavior.
+- Add read-only, session-authorized Global fallback lookup through the shared Global Parameter service. Distinguish missing, suppressed, loading and unverified values; bound reads, discard stale editor responses and retain manual editing when guidance cannot load. No Global edit, automatic scope migration, schema/configuration change or User Management merge.
+- Keep the Advanced Script Description column readable beside the compact Process override action, with an explicit tooltip/accessibility label and width/header regressions at 1920 and 1366 pixels.
+- Extend production-modal browser coverage for Traditional and Advanced scope routing, inherited overrides, secure/blank values, Global lookup failures, literal text rendering and stale replies. Add controller coverage for secure suppression, session expiry and native read failures.
+
+## v0.18.528-RC3 — 2026-11-05
+
+- Validation: [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42072156374) passed for source/workflow commit `37da63d2e34fbc2da88a408963b1177dce1a3e7e`: Visual Studio rebuilt both projects in Debug, Release built with zero warnings/errors, all 2,775 xUnit tests passed in each configuration, and the full Release browser/package suites passed. Isolation checks confirmed all 20 probes remained on disk, were excluded from the DLL/packages, and MAUI's assembly metadata remained intact. This result-recording follow-up changes documentation only.
+- Exclude separate Tools/test trees and nested bin/obj output from application defaults, with a final separate-project source check before compilation. Preserve MAUI's own SDK-generated assembly/version/framework metadata. This addresses CS0579 when a reused source folder contains earlier User Management build output and the downstream CS0006 in the test project.
+- Keep the held User Management implementation, Razor views, tests, integration assets and web assets excluded on master if old files remain locally. No feature implementation or additional project is merged.
+- Add a permanent Windows regression that leaves synthetic source, duplicate assembly attributes, resources and assets in those folders during Visual Studio Debug rebuilds and Release builds/publishing. Verify the probe files remain present, cannot enter either application/package, and do not suppress MAUI's assembly version. Run the existing tests in both configurations and retain the full Release browser/package gate. No runtime import behavior, database schema or configuration version change.
+
+## v0.18.527-RC3 — 2026-11-05
+
+- Validation: [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42062107710) passed for application/test commit `05c44ed2bb5ccaf6104f330752059157cf8f2ae6`: zero build warnings/errors, all 2,775 xUnit tests (including 21 new retry cases), package/publish checks and all registered Node/Edge suites, including both updated import UI regressions. This result-recording follow-up changes documentation only. No live MOVEit testing is claimed.
+- Hide the full Task/Host CSV/XLSX footer progress control, including its text, after each import batch finishes. Keep completion feedback and results visible; paging or returning to spreadsheet mode cannot restore completed progress. Apply the shared hidden-state style to both importers.
+- Opt Task/Host spreadsheet row imports into one silent retry of a MOVEit HTTP request that returns status 500. Recreate the same request and payload once, then surface any second failure through the existing error/result handling. Retry the failed HTTP request rather than replaying the row, so later verification, checkout cleanup, metadata or connection-test failures cannot repeat an earlier successful write. Other status codes, transport failures, ordinary editors and unrelated MOVEit operations keep their existing behavior.
+- Add real REST-client retry/cancellation/payload/readback regressions and completed-progress checks in both import UI suites. Changes are limited to the existing import workflows. Database/configuration versions remain 1; RestartRequired remains false.
 
 ## RC3 release overview
 
-RC3 builds on the RC2 Task/Host/resource editors, permissions, shared Browse and Copy To baseline. Late RC2 added MOVEit Settings and Lockouts; RC3 organizes those controls and refines the existing workflows. Current application identity is **0.18.521-RC3, build 20261101**, with database/configuration versions **1 / 1**.
+RC3 builds on the RC2 Task/Host/resource editors, permissions, shared Browse and Copy To baseline. Late RC2 added MOVEit Settings and Lockouts; RC3 organizes those controls and refines the existing workflows. Current application identity is **0.18.529-RC3, build 20261105**, with database/configuration versions **1 / 1**.
 
 - Editor preferences are in **Configuration > Settings > Editors**; Resource Group folder creation is in **General > Folders**. Task JSON Editor and Copy Between Environments are under Experimental and off by default.
 - MOVEit 2026.0 / native engine 18.0 adds version-gated OneDrive Hosts and S3 AWS Config File/EC2 IMDS authentication. Shared version checks cover controls, REST operations and Copy To destinations. SharePoint App Access and Google OAuth use the supplied Test Host/Browse contracts.
@@ -17,6 +40,21 @@ RC3 builds on the RC2 Task/Host/resource editors, permissions, shared Browse and
 **Read by topic:** [RC3 history](#rc3-version-history) · [Shared implementation](#shared-crud-and-integration-reference) · [RC2 overview](#rc2-release-overview) · [RC2 history](#rc2-version-history) · [RC1 history](#rc1-development-history) · [Validation history](#validation-history).
 
 ## RC3 version history
+
+### 0.18.523 RC3 — Build 20261103
+
+- Treat FTP/FTPS Account (DefAccount) as a replacement-only credential now that MOVEit is confirmed to suppress the stored value. Use the shared masked input and null-preservation rules. Submit nonempty replacements under the captured DefAccount key. Use the native save acknowledgement for the protected field and continue verifying Host identity and other requested settings.
+- Remove the FTP Account plaintext snapshot check introduced in 0.18.522. Add regressions for suppressed readback, casing, blank/omitted preservation and mismatches on other fields during Account replacement.
+
+- [Full Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/41691729867) passed for application/test commit `a3b8fac8bfe8dbae4977967d501d35d9832be023`. The build produced zero warnings/errors. All 2,754 xUnit tests passed with zero skipped, together with package/publish and all Node/Edge suites. FTP Account regressions use simulated native responses.
+
+### 0.18.522 RC3 — Build 20261103
+
+- When FTP/FTPS Account (DefAccount) is submitted and the REST readback is blank, use the existing native Host snapshot to verify the exact saved Account for the same FTP Host ID. A conflicting nonempty REST value or an unconfirmed native value still blocks Save. Include the mismatched field name in controlled readback diagnostics without exposing values. The supplied populated payload is compatible with the existing write shape; the failing live readback has not been captured.
+- Apply numeric/Boolean equivalence only to fields of those kinds in captured Host profiles so literal account names, usernames and permission strings retain their meaning. Verify state-cache settings through their existing dedicated policy so inactive values returned by MOVEit do not cause false mismatches.
+- Add regressions for exact FTP Account confirmation, mismatched or incomplete readbacks, literal Host values and inactive cache fields. Database/configuration versions remain 1 and RestartRequired remains false.
+
+- [Full Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/41678639149) passed for application/test commit `fde0378ba17201889eee2de6957fe1bbd385a1bd`. The build produced zero warnings/errors. All 2,756 xUnit tests passed with zero skipped, together with package/publish and all Node/Edge suites. The FTP cases exercise simulated readback projections and native snapshots. The exact live mismatch remains unconfirmed.
 
 ### 0.18.521 RC3 — Build 20261101
 

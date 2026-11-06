@@ -2144,16 +2144,28 @@ public sealed class MoveItRestClient : IMoveItRestClient
         CancellationToken cancellationToken,
         bool acceptJson = true, TimeSpan? timeout = null)
     {
-        using var request = new HttpRequestMessage(method, BuildUri(state.WebAdminUrl, relativeUrl));
-        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(acceptJson ? "application/json" : "*/*"));
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", state.AccessToken);
-        if (body is not null)
-        {
-            request.Content = new StringContent(body.ToJsonString(JsonOptions), Encoding.UTF8, "application/json");
-        }
+        var json = body?.ToJsonString(JsonOptions);
+        var retry500 = MoveItImportRowRetryScope.IsEnabled;
         var client = CreateClient();
         if (timeout.HasValue) client.Timeout = timeout.Value;
-        return await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        for (var attempt = 0; ; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            using var request = new HttpRequestMessage(method, BuildUri(state.WebAdminUrl, relativeUrl));
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(acceptJson ? "application/json" : "*/*"));
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", state.AccessToken);
+            if (json is not null)
+                request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            if (retry500 && attempt == 0 && response.StatusCode == HttpStatusCode.InternalServerError)
+            {
+                // Only retry this HTTP request, never the whole import row.
+                // A later readback/metadata failure must not repeat an accepted write.
+                response.Dispose();
+                continue;
+            }
+            return response;
+        }
     }
 
     // Proactively renews access tokens just before expiry so normal UI navigation does not see avoidable 401 responses.

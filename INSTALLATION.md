@@ -1,8 +1,8 @@
 # MAUI Installation Guide
 
-- **Version:** `0.18.521-RC3`
+- **Version:** `0.18.529-RC3`
 - **Release:** Release Candidate 3 (pre-release)
-- **Build:** `20261101`
+- **Build:** `20261105`
 - **Database schema:** `1`
 - **Configuration version:** `1`
 

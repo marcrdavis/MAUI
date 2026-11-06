@@ -9,7 +9,16 @@
     <IsTestProject>true</IsTestProject>
     <!-- Keep the automated-test project warning-clean. New compiler warnings fail the test build. -->
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Ignore held-feature tests and nested build debris left by another checkout. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);UserManagement\**;UserManagement/**;**/bin/**;**/obj/**</DefaultItemExcludes>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="UserManagement\**;UserManagement/**" />
+    <Content Remove="UserManagement\**;UserManagement/**" />
+    <None Remove="UserManagement\**;UserManagement/**" />
+    <EmbeddedResource Remove="UserManagement\**;UserManagement/**" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.31" />
