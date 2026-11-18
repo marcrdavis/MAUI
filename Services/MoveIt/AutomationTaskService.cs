@@ -546,11 +546,11 @@ public sealed class AutomationTaskService : IAutomationTaskService
         var originalNextActions = task["NextActions"]?.ToJsonString();
         var actions = GetOrCreateNextActionArray(task);
         var existing = GetIndexedTaskEmailNextActions(actions);
-        var mode = (request.Mode ?? string.Empty).Trim();
-        if (!mode.Equals("upsert", StringComparison.OrdinalIgnoreCase) && !mode.Equals("remove", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Notification action must be Add/Update or Remove.");
+        var mode = (request.Mode ?? string.Empty).Trim().ToLowerInvariant();
+        if (mode is not ("add" or "update" or "remove" or "upsert"))
+            throw new InvalidOperationException("Notification action must be Add, Update, or Remove.");
 
-        if (mode.Equals("remove", StringComparison.OrdinalIgnoreCase))
+        if (mode == "remove")
         {
             List<IndexedTaskEmailAction> matches;
             if (request.ActionIndex.HasValue)
@@ -592,31 +592,28 @@ public sealed class AutomationTaskService : IAutomationTaskService
         if (message.Trim().Length == 0) throw new InvalidOperationException("Message Body is required.");
 
         var targets = new List<JsonObject>();
-        var created = false;
-        if (request.ActionIndex.HasValue)
+        if (mode != "add" && request.ActionIndex.HasValue)
         {
             var selected = existing.FirstOrDefault(item => item.Index == request.ActionIndex.Value);
             if (selected is null)
                 throw new InvalidOperationException("The selected notification no longer exists. Close and reopen Edit Notifications, then try again.");
             targets.Add(selected.Action);
         }
-        else if (request.MatchExactResults)
+        else if (mode == "update" || (mode == "upsert" && request.MatchExactResults))
         {
             targets.AddRange(existing.Where(item => IsExactNotificationResultMatch(item.Action, request)).Select(item => item.Action));
-            if (targets.Count == 0)
-            {
-                var added = new JsonObject();
-                actions.Add(added);
-                targets.Add(added);
-                created = true;
-            }
         }
-        else
+
+        var created = targets.Count == 0;
+        if (created)
         {
+            if (mode == "update")
+                return new TaskNotificationUpdateResult(id, string.IsNullOrWhiteSpace(name) ? id : name, false, "No matching task-level Email notification exists.");
+
+            // Older clients can still submit upsert. Explicit Add always appends.
             var added = new JsonObject();
             actions.Add(added);
             targets.Add(added);
-            created = true;
         }
 
         var preserveRecipientsForUpdate = request.PreserveExistingRecipients && !created;
@@ -729,10 +726,9 @@ public sealed class AutomationTaskService : IAutomationTaskService
                     results.Add(new BulkTaskActionItem(task.Id, task.Name, true, true, enabled ? "Task is already enabled." : "Task is already disabled."));
                     continue;
                 }
-                if (enabled && (task.Scheduled.Equals("Incomplete", StringComparison.OrdinalIgnoreCase) || task.Scheduled.Equals("Unscheduled", StringComparison.OrdinalIgnoreCase)))
+                if (enabled && task.Scheduled.Equals("Incomplete", StringComparison.OrdinalIgnoreCase))
                 {
-                    results.Add(new BulkTaskActionItem(task.Id, task.Name, false, false,
-                        task.Scheduled.Equals("Incomplete", StringComparison.OrdinalIgnoreCase) ? "Task is incomplete and cannot be enabled." : "Task has no schedule and cannot be enabled."));
+                    results.Add(new BulkTaskActionItem(task.Id, task.Name, false, false, "Task is incomplete and cannot be enabled."));
                     continue;
                 }
 

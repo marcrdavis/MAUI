@@ -73,6 +73,7 @@ public sealed partial class ConfigurationController : Controller
     public IActionResult Settings()
     {
         ViewData["IsMoveItAdmin"] = IsMoveItAdmin();
+        ViewData["LocalGroupsServer"] = _sessionService.Get()?.ServerDisplayName ?? "Current Automation Server";
         return View(_settingsService.GetSettings());
     }
 
@@ -693,3 +694,4 @@ public sealed partial class ConfigurationController : Controller
     }
 
 }
+

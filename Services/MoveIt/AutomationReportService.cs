@@ -11,8 +11,10 @@ public interface IAutomationReportService
 {
     // Purpose: Returns task runs.
     Task<ReportBatch<TaskRunReportRecord>> GetTaskRunsAsync(string? taskId, int batchSize, string? cursor, int maxRowsRemaining, CancellationToken cancellationToken = default);
+    Task<ReportBatch<TaskRunReportRecord>> GetTaskRunsAsync(string? taskId, int batchSize, string? cursor, int maxRowsRemaining, bool requireResourceGroups, CancellationToken cancellationToken);
     // Purpose: Returns the Task Run rows for a supported Dashboard drill-down view.
     Task<TaskRunDashboardViewResult> GetTaskRunDashboardViewAsync(string viewKey, CancellationToken cancellationToken = default);
+    Task<TaskRunDashboardViewResult> GetTaskRunDashboardViewAsync(string viewKey, bool requireResourceGroups, CancellationToken cancellationToken);
     // Purpose: Returns file activity.
     Task<ReportBatch<FileActivityReportRecord>> GetFileActivityAsync(string? taskId, string? nominalStart, int batchSize, string? cursor, int maxRowsRemaining, CancellationToken cancellationToken = default);
     // Purpose: Returns the File Activity rows for a supported Dashboard drill-down view.
@@ -80,7 +82,10 @@ public sealed record TaskRunReportRecord(
     string StatusCode,
     DateTimeOffset? LogStamp,
     string RecordType,
-    string QueryType);
+    string QueryType)
+{
+    public string Group { get; init; } = string.Empty;
+}
 
 public sealed record FileActivityReportRecord(
     string RowId,
@@ -144,21 +149,28 @@ public sealed class AutomationReportService : IAutomationReportService
 {
     private readonly IMoveItRestClient _restClient;
     private readonly IMoveItSessionService _sessionService;
+    private readonly ILogger<AutomationReportService>? _logger;
 
     // Purpose: Initializes automation report service with its required dependencies.
-    public AutomationReportService(IMoveItRestClient restClient, IMoveItSessionService sessionService)
+    public AutomationReportService(IMoveItRestClient restClient, IMoveItSessionService sessionService,
+        ILogger<AutomationReportService>? logger = null)
     {
         _restClient = restClient;
         _sessionService = sessionService;
+        _logger = logger;
     }
 
-    // Purpose: Returns task runs.
+    public Task<ReportBatch<TaskRunReportRecord>> GetTaskRunsAsync(
+        string? taskId, int batchSize, string? cursor, int maxRowsRemaining, CancellationToken cancellationToken = default)
+        => GetTaskRunsAsync(taskId, batchSize, cursor, maxRowsRemaining, requireResourceGroups: false, cancellationToken);
+
     public async Task<ReportBatch<TaskRunReportRecord>> GetTaskRunsAsync(
         string? taskId,
         int batchSize,
         string? cursor,
         int maxRowsRemaining,
-        CancellationToken cancellationToken = default)
+        bool requireResourceGroups,
+        CancellationToken cancellationToken)
     {
         var predicate = BuildPredicate("TaskID>0", "TaskID", taskId, numeric: true);
         predicate = AddNumericCursor(predicate, "RunID", cursor);
@@ -168,15 +180,19 @@ public sealed class AutomationReportService : IAutomationReportService
             maxRowsRemaining,
             cancellationToken);
         var records = raw.Items.Select(MapTaskRun).ToArray();
+        await PopulateTaskRunGroupsAsync(records, requireResourceGroups, cancellationToken);
         return new ReportBatch<TaskRunReportRecord>(records, raw.HasMore, records.LastOrDefault()?.RunId ?? string.Empty);
     }
 
     // Uses the same 24-hour Task Run query and local status interpretation as the Dashboard.
     // Status filtering is intentionally performed locally rather than by guessing at an undocumented
     // MOVEit report predicate for Task Run status.
+    public Task<TaskRunDashboardViewResult> GetTaskRunDashboardViewAsync(
+        string viewKey, CancellationToken cancellationToken = default)
+        => GetTaskRunDashboardViewAsync(viewKey, requireResourceGroups: false, cancellationToken);
+
     public async Task<TaskRunDashboardViewResult> GetTaskRunDashboardViewAsync(
-        string viewKey,
-        CancellationToken cancellationToken = default)
+        string viewKey, bool requireResourceGroups, CancellationToken cancellationToken)
     {
         const int dashboardMaximumRows = 10000;
         var key = (viewKey ?? string.Empty).Trim().ToLowerInvariant();
@@ -217,6 +233,7 @@ public sealed class AutomationReportService : IAutomationReportService
                 .Equals(requiredStatus, StringComparison.OrdinalIgnoreCase))
             .Select(MapTaskRun)
             .ToArray();
+        await PopulateTaskRunGroupsAsync(items, requireResourceGroups, cancellationToken);
 
         return new TaskRunDashboardViewResult(
             key,
@@ -521,6 +538,42 @@ public sealed class AutomationReportService : IAutomationReportService
         var items = await fetch(requestCount, cancellationToken);
         var hasMore = canHaveAnotherBatchWithinLimit && items.Count > rowsThisBatch;
         return (items.Take(rowsThisBatch).ToArray(), hasMore);
+    }
+
+    private async Task PopulateTaskRunGroupsAsync(TaskRunReportRecord[] records, bool required, CancellationToken cancellationToken)
+    {
+        if (!records.Any(record => record.TaskId.Length > 0)) return;
+
+        IReadOnlyList<JsonObject> tasks;
+        try
+        {
+            tasks = await _restClient.GetTasksAsync(cancellationToken);
+        }
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested
+            && ex is MoveItApiException or HttpRequestException or OperationCanceledException or System.Text.Json.JsonException)
+        {
+            if (required)
+                throw new InvalidOperationException("Unable to load MOVEit Resource Group assignments required by this Task Run report.", ex);
+
+            // A failed optional inventory read should still leave the run history available.
+            _logger?.LogWarning(ex, "Unable to load Resource Groups for MOVEit Task Run records.");
+            return;
+        }
+
+        var groupsByTask = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var task in tasks)
+        {
+            var id = Text(task, "ID");
+            if (id.Length > 0 && TryGet(task, "Group", out var group))
+                groupsByTask[id] = ResourceGroupLookupService.FormatAssignments(group);
+        }
+
+        for (var index = 0; index < records.Length; index++)
+        {
+            var record = records[index];
+            if (groupsByTask.TryGetValue(record.TaskId, out var group))
+                records[index] = record with { Group = group };
+        }
     }
 
     // Purpose: Enriches Audit rows with friendly target names from visible MOVEit inventories.

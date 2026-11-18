@@ -24,7 +24,7 @@ const html=`<!doctype html><html data-app-base-url="/maui/" data-user-grid-page-
 window.reportApis={};window.MauiOutboundReports={openCreate:api=>reportApis[api.gridKey]=api};
 window.errors=[];window.requests=[];window.fail=false;window.hold=false;window.held=[];
 window.addEventListener('error',e=>errors.push(e.message));window.addEventListener('unhandledrejection',e=>errors.push(String(e.reason)));
-window.docs={Task:{'1':[{path:['NextActions','NextAction','0','DoIfFailure'],value:1}],'2':[{path:['DoIfFailure'],value:0}],'3':[{path:['DoIfFailure'],value:true}]},Host:{'1':[{path:['SSHFTP','Port'],value:22},{path:['SSHFTP','Host'],value:'sftp.example.com'}],'2':[{path:['FTP','Port'],value:990},{path:['FTP','Host'],value:'ftp.example.com'}],'3':[{path:['S3','Bucket'],value:'archive'}]}};
+window.docs={Task:{'1':[{path:['NextActions','NextAction','0','DoIfFailure'],value:1},{path:['NextActions','NextAction','1','DoIfSuccess'],value:1}],'2':[{path:['DoIfFailure'],value:0},{path:['DoIfSuccess'],value:1}],'3':[{path:['DoIfFailure'],value:true}]},Host:{'1':[{path:['SSHFTP','Port'],value:22},{path:['SSHFTP','Host'],value:'sftp.example.com'}],'2':[{path:['FTP','Port'],value:990},{path:['FTP','Host'],value:'ftp.example.com'}],'3':[{path:['S3','Bucket'],value:'archive'}]}};
 window.fetch=async(url,options={})=>{const target=new URL(url,location.href);requests.push(target.pathname+target.search);
  if(target.pathname.endsWith('TaskFilenameSearch'))return{ok:true,status:200,json:async()=>({success:true,items:[{taskId:'2',text:'*.txt'}]})};
  if(!target.pathname.endsWith('ObjectJsonSearch'))throw new Error('Unexpected fetch '+url);
@@ -113,6 +113,10 @@ async function screenshot(name) {
      await evaluate(`window.requestCount=requests.length;type('hosts','json:Host.SSHFTP.Port=22')`);await until(`visible('hosts').join(',')==='1'`,'qualified host paths');
      await evaluate(`type('hosts','JSON:Host contains EXAMPLE.COM')`);await until(`visible('hosts').join(',')==='1,2'`,'case-insensitive contains');
      await evaluate(`type('tasks','JSON:NextActions.NextAction[*].DoIfFailure=1')`);await until(`visible('tasks').join(',')==='1'`,'nested task paths');
+     await evaluate(`type('tasks','JSON: DoIfFailure=1 AND DoIfSuccess=1')`);await until(`g('tasks').querySelector('[data-pager-summary]').textContent==='Showing 1–1 of 1'`,'compound AND');
+     await check(`visible('tasks')`,['1'],'AND matches both comparisons within a task');
+     await evaluate(`type('tasks','JSON: DoIfFailure=1 OR DoIfSuccess=1')`);await until(`visible('tasks').join(',')==='1,2,3'`,'compound OR');
+     await check(`g('tasks').querySelector('[data-filtered-count]').textContent`,'3','OR includes tasks matching either comparison');
      await evaluate(`type('tasks','JSON:DoIfFailure!=1')`);await until(`visible('tasks').join(',')==='2'`,'inequality');
      await evaluate(`type('tasks','JSON:DoIfFailure<=0')`);await until(`visible('tasks').join(',')==='2'`,'numeric strings/flags');
      await evaluate(`type('tasks','JSON:Missing!=1')`);await until(`g('tasks').querySelector('[data-pager-summary]').textContent==='Showing 0–0 of 0'`,'missing fields do not satisfy inequality');await check(`visible('tasks')`,[]);

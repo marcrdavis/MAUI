@@ -36,6 +36,25 @@ const leaf=(path,value)=>({path:Array.isArray(path)?path:[path],value});
  f.type('Alpha');assert.equal(f.requests[4].options.signal.aborted,true);let parsed=0;
  await f.reply(4,[],{status:401,ok:false,json:async()=>{parsed++;return {};}});await f.reply(5,[]);assert.equal(f.expired,0);assert.equal(parsed,0,'obsolete session responses cannot expire a current session');
  const nulls=fixture('tasks',['1']);nulls.type('JSON:Empty');await nulls.tick(300);await nulls.reply(0,[leaf('Empty',null)]);assert.equal(nulls.manager.matches('1'),true,'null element names remain searchable');nulls.type('JSON:Empty=null');await nulls.tick(300);assert.equal(nulls.manager.matches('1'),false,'null placeholders do not satisfy comparisons');
+ const compound=fixture('tasks',['1','2','3']);
+ compound.type('JSON: DoIfFailure=1 AND DoIfSuccess=1');await compound.tick(300);
+ await compound.reply(0,[leaf(['steps','0','DoIfFailure'],1),leaf(['steps','1','DoIfSuccess'],1),leaf('Name','Send and archive OR Active=0')]);
+ await compound.reply(1,[leaf('DoIfFailure',0),leaf('DoIfSuccess',1),leaf('Active',0)]);
+ await compound.reply(2,[leaf('DoIfFailure',1),leaf('DoIfSuccess',0),leaf('Active',0)]);
+ assert.deepEqual(compound.ids.filter(id=>compound.manager.matches(id)),['1'],'both clauses match different leaves of the same task');
+ for(const [query,expected] of [
+  ['DoIfFailure=1 or DoIfSuccess=1',['1','2','3']],
+  ['DoIfFailure=1 OR DoIfSuccess=1 and Active=1',['1','3']],
+  ['Name contains send and archive',['1']],
+  ['Name contains "archive OR Active=0" AND DoIfSuccess=1',['1']],
+  ['Name contains "archive OR Active=0" AND DoIfSuccess=0',[]]
+ ]){
+  compound.type('JSON: '+query);await compound.tick(300);
+  assert.deepEqual(compound.ids.filter(id=>compound.manager.matches(id)),expected,query);
+ }
+ compound.type('JSON: DoIfFailure=1 AND DoIfSuccess=');
+ assert.match(compound.search.validity,/comparison value/,'incomplete comparison gets existing validation feedback');
+ assert.equal(compound.requests.length,3,'compound queries reuse cached task JSON');
  const h=fixture('hosts');h.type('json:Host.SSHFTP.Port>=22');await h.tick(300);await h.reply(0,[leaf(['SSHFTP','Port'],22)]);await h.reply(1,[leaf(['FTP','Port'],21)]);assert.equal(h.manager.matches('1'),true);assert.equal(h.manager.matches('2'),false);
  h.type('JSON:Host contains EXAMPLE.COM');await h.tick(300);assert.equal(h.manager.matches('1'),false);
  h.events['maui:json-search-invalidated']();await h.tick(300);await h.reply(2,[leaf(['SSHFTP','Host'],'sftp.example.com')]);await h.reply(3,[leaf(['FTP','Host'],'other.test')]);assert.equal(h.manager.matches('1'),true);

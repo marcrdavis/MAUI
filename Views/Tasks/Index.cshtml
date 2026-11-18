@@ -380,15 +380,18 @@
             <div class="inline-alert warning-alert task-notification-multi-warning" data-task-notification-multi-warning hidden></div>
 
             <div data-task-notification-config>
+                <fieldset class="task-notification-fieldset">
+                    <legend>Action</legend>
+                    <label><input type="radio" name="taskNotificationMode" value="add" checked /> Add</label>
+                    <label><input type="radio" name="taskNotificationMode" value="update" /> Update</label>
+                    <label><input type="radio" name="taskNotificationMode" value="remove" /> Remove</label>
+                </fieldset>
+
                 <div class="task-notification-existing-row" data-notification-existing-row hidden>
                     <label class="field-block">
                         <span>Notification</span>
-                        <div class="task-notification-loading" data-notification-existing-loading hidden>
-                            <span class="inline-spinner" aria-hidden="true"></span>
-                            <span>Loading Notifications...</span>
-                        </div>
                         <select class="text-input" data-notification-existing>
-                            <option value="">Create New</option>
+                            <option value="">Select Notification</option>
                         </select>
                     </label>
                 </div>
@@ -398,12 +401,6 @@
                     <label><input type="checkbox" data-notify-failure checked /> Failure</label>
                     <label><input type="checkbox" data-notify-no-action /> No Transfer</label>
                     <label><input type="checkbox" data-notify-success /> Success</label>
-                </fieldset>
-
-                <fieldset class="task-notification-fieldset">
-                    <legend>Action</legend>
-                    <label><input type="radio" name="taskNotificationMode" value="upsert" checked /> Add or Update</label>
-                    <label><input type="radio" name="taskNotificationMode" value="remove" /> Remove</label>
                 </fieldset>
 
                 <div class="task-notification-fields" data-task-notification-message-fields>
@@ -419,7 +416,7 @@
                         <span>Recipients</span>
                         <input class="text-input" type="text" data-notification-recipients placeholder="user@example.com; team@example.com" />
                     </label>
-                    <label class="task-notification-preserve-recipients full-span">
+                    <label class="task-notification-preserve-recipients full-span" hidden>
                         <input type="checkbox" data-notification-preserve-recipients />
                         <span>Do not change existing recipients</span>
                     </label>
@@ -467,7 +464,7 @@
         </div>
         <div class="settings-footer new-task-footer">
             <button type="button" class="secondary-button" data-task-notification-cancel>Close</button>
-            <button type="button" class="primary-button" data-task-notification-apply>Add/Update</button>
+            <button type="button" class="primary-button" data-task-notification-apply>Add</button>
         </div>
     </div>
 </dialog>

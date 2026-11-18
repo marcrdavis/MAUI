@@ -1,0 +1,21 @@
+@model ConfigurationSettingsViewModel
+<div class="panel-card configuration-card" data-lg-settings data-search-terms="moveit user management local groups domain security service certificates">
+    <div class="configuration-card-heading"><h3>MOVEit User Management</h3></div>
+    <div class="configuration-setting-row">
+        <div><strong>MOVEit User Management</strong><p>Manage local groups and local/domain user or group membership on the current Automation server under Security. Requires MAUI and MOVEit administrator access and the optional Windows Service running on each managed server. Disabled by default.</p></div>
+        <label class="configuration-switch"><input type="checkbox" checked="@Model.MoveItLocalGroups.Enabled" data-setting="moveItLocalGroupsEnabled" aria-label="MOVEit User Management" /><span></span></label>
+    </div>
+    @foreach (var server in Model.Servers)
+    {
+        var agent = Model.MoveItLocalGroups.Agents.FirstOrDefault(a => a.ServerKey.Equals(server.Key, StringComparison.OrdinalIgnoreCase));
+        <div class="configuration-setting-row configuration-setting-row-top" data-lg-registration data-server-key="@server.Key">
+            <div><strong>@server.DisplayName</strong><p>Register this server's client certificate. Its Windows computer name is reported automatically when the service connects. Leave blank for servers that will not use this feature.</p></div>
+            <div class="local-groups-registration">
+                <label class="field-block"><span>Client Certificate SHA-256</span><input class="text-input" value="@agent?.CertificateSha256" maxlength="95" data-lg-certificate aria-label="@server.DisplayName Client Certificate SHA-256" autocomplete="off" spellcheck="false" /></label>
+            </div>
+        </div>
+    }
+    <div class="configuration-security-note">On the Automation server, set <code>brokerUrl</code> in <code>agentsettings.json</code> to the address below and set <code>certificateSha256</code> to the matching certificate. The address uses this MAUI application's current address, port and application path. Use HTTPS for the service.
+        <code class="local-groups-endpoint" data-lg-broker-url data-lg-agent-path="@Url.Content("~/api/local-groups-agent/")"></code>
+    </div>
+</div>

@@ -35,4 +35,6 @@
         </div>
         <div class="configuration-security-note">SecurityUsers in the MAUI metadata database is the role authority. The first successfully authenticated user becomes Admin; later unseen users are added as User. At least one Admin must remain configured. Removing an automatically enrolled User does not block MOVEit authentication; if they sign in again, MAUI will add them back as User.</div>
     </div>
+    @await Html.PartialAsync("_LocalGroupsPanel", Model)
 </section>
+

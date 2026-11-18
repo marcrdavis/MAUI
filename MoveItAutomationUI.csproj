@@ -8,17 +8,17 @@
     <RootNamespace>MoveItAutomationUI</RootNamespace>
     <AssemblyName>MoveItAutomationUI</AssemblyName>
     <Authors>Marc R. Davis (marcdavis@comcast.net)</Authors>
-    <Version>0.18.529-RC3</Version>
-    <AssemblyVersion>0.18.529.0</AssemblyVersion>
-    <FileVersion>0.18.529.0</FileVersion>
-    <InformationalVersion>0.18.529-RC3+build.20261105</InformationalVersion>
+    <Version>0.18.556-RC3</Version>
+    <AssemblyVersion>0.18.556.0</AssemblyVersion>
+    <FileVersion>0.18.556.0</FileVersion>
+    <InformationalVersion>0.18.556-RC3+build.20261117</InformationalVersion>
 
     <!-- Separate tools/tests and any nested build output are outside the application.
          Keep these exclusions even when those projects are absent from the solution:
          switching branches or unpacking into a reused folder can leave their files behind.
          SDK targets still explicitly add MAUI's own generated assembly metadata. -->
-    <!-- User Management remains on its own branch. Ignore its files in reused folders
-         until its inclusion in master is explicitly approved. -->
+    <!-- Exclude the retired User Management implementation and separately installed service
+         from application compilation and packaging. -->
     <MauiHeldFeatureItems>Features/UserManagement/**;Views/Configuration/_UserManagement*.cshtml;wwwroot/js/user-management.js;wwwroot/css/user-management.css;IntegrationAssets/MOVEitUserManagement/**</MauiHeldFeatureItems>
     <DefaultItemExcludes>$(DefaultItemExcludes);Tools\**;Tools/**;MoveItAutomationUI.Tests\**;MoveItAutomationUI.Tests/**;**/bin/**;**/obj/**;$(MauiHeldFeatureItems)</DefaultItemExcludes>
   </PropertyGroup>
@@ -114,10 +114,19 @@
   <ItemGroup>
     <Content Remove="Data\**\*" />
     <None Remove="Data\**\*" />
+    <Content Include="IntegrationAssets\MOVEitUserManagement\agentsettings.json" />
     <None Include="Data\README.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </None>
+    <None Include="IntegrationAssets\MOVEitUserManagement\Get-ClientCertificates.ps1" />
+    <None Include="IntegrationAssets\MOVEitUserManagement\Install.ps1" />
+    <None Include="IntegrationAssets\MOVEitUserManagement\Invoke-LocalGroup.ps1" />
+    <None Include="IntegrationAssets\MOVEitUserManagement\MauiLocalGroups.Service.exe" />
+    <None Include="IntegrationAssets\MOVEitUserManagement\MauiLocalGroups.Service.exe.config" />
+    <None Include="IntegrationAssets\MOVEitUserManagement\MauiLocalGroups.Service.pdb" />
+    <None Include="IntegrationAssets\MOVEitUserManagement\README.md" />
+    <None Include="IntegrationAssets\MOVEitUserManagement\Uninstall.ps1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -130,13 +139,12 @@
   <!-- Use Windows PowerShell 5.1, available on supported IIS/Visual Studio hosts.
        Read-only checks fail before a mixed build/publish package reaches IIS.
        Separate targets also validate Publish when NoBuild is used. -->
-  <Target Name="MauiVerifyBuildReleasePackage" AfterTargets="Build"
-          Condition="'$(OS)' == 'Windows_NT' and '$(DesignTimeBuild)' != 'true'">
+  <Target Name="MauiVerifyBuildReleasePackage" AfterTargets="Build" Condition="'$(OS)' == 'Windows_NT' and '$(DesignTimeBuild)' != 'true'">
     <Exec Command="powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\Build\Verify-ReleasePackage.ps1&quot; -PackageDirectory &quot;$(TargetDir).&quot; -ExpectedVersion &quot;$(Version)&quot;" />
   </Target>
-  <Target Name="MauiVerifyPublishedReleasePackage" AfterTargets="Publish"
-          Condition="'$(OS)' == 'Windows_NT' and '$(DesignTimeBuild)' != 'true' and '$(IsPublishable)' != 'false'">
+  <Target Name="MauiVerifyPublishedReleasePackage" AfterTargets="Publish" Condition="'$(OS)' == 'Windows_NT' and '$(DesignTimeBuild)' != 'true' and '$(IsPublishable)' != 'false'">
     <Exec Command="powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\Build\Verify-ReleasePackage.ps1&quot; -PackageDirectory &quot;$(PublishDir).&quot; -ExpectedVersion &quot;$(Version)&quot;" />
   </Target>
 </Project>
+
 

@@ -1,583 +1,259 @@
 # MAUI Installation Guide
 
-- **Version:** `0.18.529-RC3`
-- **Release:** Release Candidate 3 (pre-release)
-- **Build:** `20261105`
-- **Database schema:** `1`
-- **Configuration version:** `1`
+**0.18.556-RC3** · Build **20261117** · .NET 8 · Database and configuration schema **1**
 
-> **Release Candidate 3 — not the final release.** This pre-release may contain bugs, regressions or incomplete behavior. Install it in a controlled test environment first, preserve backups, and complete the applicable live acceptance checks before relying on it in production.
+Test this release candidate against a non-production MOVEit environment before deploying it for operators.
 
-This guide covers a new MAUI installation and optional native-editor integration on MOVEit Automation Web Admin. Before production deployment, also review [`SECURITY.md`](SECURITY.md) and complete the release/smoke-test guidance in [`TESTING.md`](TESTING.md).
+[Requirements](#basic-requirements) · [Integration assets](#install-the-moveit-integration-assets) · [Build](#build-with-visual-studio) · [Local testing](#test-within-visual-studio) · [IIS](#deploy-to-iis) · [Initial Setup](#run-initial-setup) · [First sign-in](#sign-in-for-the-first-time) · [Smoke test](#check-basic-functionality) · [Post-setup checklist](#post-setup-checklist) · [Experimental features](#experimental-features) · [Troubleshooting](#troubleshooting)
 
-**The MOVEit Integration components are not required if using only the MAUI Editors.** Skip section 7 for MAUI-only editing and enable the applicable editor preferences under Configuration > Settings > Editors. The MOVEit COM API on the MAUI host remains a separate prerequisite.
+<a id="1-supported-deployment"></a>
+<a id="2-prerequisite-checklist"></a>
+<a id="3-choose-the-maui-metadata-database"></a>
 
-**In this guide:** [1. Supported deployment](#1-supported-deployment) · [2. Prerequisite checklist](#2-prerequisite-checklist) · [4. Build MAUI](#4-build-maui) · [5. Prepare the IIS application](#5-prepare-the-iis-application) · [7. Configure MAUI Integration on MOVEit Web Admin](#7-configure-maui-integration-on-moveit-web-admin) · [8. Run Initial Setup](#8-run-initial-setup) · [10. Protect installation-owned files](#10-protect-installation-owned-files) · [12. Troubleshooting checklist](#12-troubleshooting-checklist)
+## Basic requirements
 
-## 1. Supported deployment
+| You need | What to prepare |
+| --- | --- |
+| MOVEit Automation | A supported 2025.x or 2026.x instance with the API licensed and enabled. Have its Web Admin HTTPS URL and a MOVEit account for the first sign-in. |
+| Windows host for MAUI | Run MAUI on a separate Windows computer from Automation. The MAUI host must reach MOVEit Web Admin over HTTPS. |
+| MOVEit Automation Windows COM API | Install and register the compatible COM API on **each computer running MAUI**, including the Visual Studio workstation and IIS host. Use **18.x or later compatible** for Automation 2026.x, including mixed 2025.x/2026.x environments. |
+| MAUI metadata database | **SQLite** is the simplest setup. It uses `Data\maui.db` by default. If you use **SQL Server**, have the hostname, database and authentication details ready. See [SQL Server requirements](#use-sql-server). |
+| Build or publish package | To build from source, use Visual Studio 2022 or later with the **ASP.NET and web development** workload and **.NET 8 SDK**. If you already have a complete publish package, go to [Deploy to IIS](#deploy-to-iis) after any optional integration setup. |
 
-MAUI RC3 is intended for MOVEit Automation **2025.x** and **2026.x** with the MOVEit **API capability licensed and enabled**. Validate the exact MOVEit build and required workflows in your environment before production use.
+<a id="7-configure-maui-integration-on-moveit-web-admin"></a>
 
-MAUI must be hosted on Windows using IIS and ASP.NET Core/.NET 8.
+## Install the MOVEit Integration Assets
 
-> **Do not install MAUI on the MOVEit Automation server.** Deploy MAUI to a dedicated Windows/IIS server or virtual machine. The MAUI server must be able to reach MOVEit Web Admin and, when used, the SQL Server hosting the MAUI metadata database.
+**The MOVEit Integration components are not required if using only the MAUI Editors.** Skip to [Build with Visual Studio](#build-with-visual-studio) if you will only use MAUI Editors. The local COM API is still required.
 
-The MOVEit Automation Windows COM API must also be installed and registered **on the MAUI IIS server**. MAUI uses the COM API for operations that are not consistently available through REST.
+Install these assets on **MOVEit Web Admin** when MAUI will launch native MOVEit editors.
 
-> **Important — mixed MOVEit versions:** If MAUI connects to both MOVEit Automation 2025.x and 2026.x, install and register the **MOVEit Automation COM API 18.x**, or a later compatible version, on the MAUI server. Older COM API versions cannot connect to MOVEit Automation 2026.x. The newer COM API appears backward compatible with 2025.x at this time; validate connections and required workflows against each environment after upgrading. Restart the MAUI application pool after updating the COM API.
+1. Back up the Web Admin Tomcat ROOT `index.html` and any MAUI integration files already there.
+2. In `IntegrationAssets\MOVEitWebAdmin\maui-integration.js`, set `LAUNCHER_ORIGINS` to the exact MAUI origins allowed to launch this Web Admin. Include a non-default port when used. Omit application paths such as `/MAUI` and use explicit hostnames without wildcards.
 
-## 2. Prerequisite checklist
-
-Before deploying MAUI, prepare the following.
-
-### Windows / IIS host
-
-- A dedicated Windows Server or Windows VM for MAUI.
-- IIS installed and configured for HTTPS.
-- The **.NET 8 ASP.NET Core Hosting Bundle** installed on the IIS server. This provides the .NET runtime and IIS ASP.NET Core Module required to host the application.
-- A dedicated IIS site/application pool for MAUI.
-- The IIS **Application Initialization** role service for unattended startup of MAUI scheduled jobs; see [Keep MAUI running for scheduled jobs](#keep-maui-running-for-scheduled-jobs).
-- An application-pool identity with **Read** access to application files, **Modify** access to the **existing** `appsettings.json` file and **Modify** access to `Data` (including `Data\ConfigurationRecovery`). **Do not** grant Modify or Full Control access to the application root.
-- Network access from the MAUI server to the MOVEit Automation Web Admin URL.
-- Network access to SQL Server when SQL Server is used.
-- A production TLS certificate for the MAUI IIS site.
-
-### MOVEit Automation
-
-- MOVEit Automation 2025.x or 2026.x.
-- MOVEit API functionality licensed/enabled.
-- MAUI evaluates the MOVEit license attributes returned by `/api/v0/info` at sign-in. MAUI uses those attributes to gate Advanced Task creation, custom Script management, PGP operations, and finite Task/Host creation capacity. AS2 and Backup Host attributes are informational only in RC3.
-- MOVEit Web Admin reachable from the MAUI IIS server over HTTPS.
-- MOVEit credentials are **not** required for the Initial Setup connectivity test. Credentials are supplied later at normal MAUI sign-in.
-- The MOVEit Automation Windows COM API installed and registered on the MAUI IIS server. Mixed 2025.x/2026.x environments require COM API 18.x or a later compatible version; see the compatibility notice in [Supported deployment](#1-supported-deployment).
-
-### Build tools when compiling from source
-
-- Visual Studio **2022 or later**.
-- The **ASP.NET and web development** workload.
-- .NET 8 SDK.
-
-The .NET 8 SDK alone can also build/publish from the command line.
-
-The listed MOVEit version families are compatibility targets. Validate the exact server build and licensed workflows using [the RC3 acceptance guide](TESTING.md#rc3-editor-and-crud-acceptance).
-
-## 3. Choose the MAUI metadata database
-
-MAUI stores only MAUI-owned state in this database. MOVEit Automation remains the system of record for Automation objects and execution data.
-
-### Option A - SQLite
-
-SQLite is the default and is appropriate for the supported single-instance RC3 deployment model, evaluation, and testing.
-
-Default location:
-
-```text
-Data\maui.db
-```
-
-Requirements:
-
-- The IIS application-pool identity must have Modify access to the database directory.
-- Relative paths are resolved under the MAUI application content root; absolute filesystem paths are also supported when permissions allow.
-- The path must remain outside `wwwroot`.
-- Persistent SQLite `file:` URI data sources are intentionally rejected in RC3; use a normal filesystem path. `:memory:` is reserved for isolated testing.
-- The database file and its `-wal` / `-shm` files are installation-owned and must not be deleted during application upgrades.
-- Include the database in the site's backup plan. MAUI Backup can create a consistent SQLite snapshot when configured.
-
-RC3 supports one active MAUI application instance/worker regardless of whether SQLite or SQL Server is selected.
-
-### Option B - SQL Server
-
-SQL Server is appropriate for centralized database administration and larger installations. **MAUI RC3 supports one active MAUI application instance/worker.** Do not run multiple active MAUI web instances against the same metadata database; SQL Server does not by itself provide shared session state or distributed System Job ownership.
-
-Prepare an empty MAUI database or an existing valid MAUI database at the schema level expected by the release. Initial Setup refuses to silently adopt an unrelated non-empty database.
-
-Supported authentication modes in Setup:
-
-- Windows Integrated Authentication
-- SQL Server Authentication
-
-The MAUI database principal must be able to:
-
-- connect to the selected database;
-- read and write MAUI application tables;
-- create/alter/drop tables, columns, and indexes required by Initial Setup and future schema migrations.
-
-For Windows Integrated Authentication, SQL Server sees the MAUI IIS application-pool identity; grant that identity appropriate database permissions.
-
-MAUI exposes SQL encryption and **Trust server certificate** options during Setup. Trusting an unvalidated SQL certificate should be limited to environments where that risk is understood and accepted.
-
-SQL Server database backup/restore is administrator-managed. MAUI does not replace normal SQL Server backup procedures. When restoring a MAUI backup, native MOVEit configuration imports are optional and selected individually per backed-up environment. Leave every environment unchecked for MAUI-only restore. MAUI settings and supported metadata are still restored, and a restart is required.
-
-## 4. Build MAUI
-
-Skip this section when deploying prebuilt publish output.
-
-### Visual Studio
-
-1. Open `MoveItAutomationUI.sln` in Visual Studio 2022 or later.
-2. Confirm the .NET 8 SDK and ASP.NET/web workload are installed.
-3. Restore NuGet packages.
-4. Select **Release** configuration.
-5. Build the solution and confirm there are no unresolved build warnings/errors.
-6. Run the `MoveItAutomationUI.Tests` test project and confirm the regression suite passes.
-7. Publish `MoveItAutomationUI` (not the test project) to a Folder target for deployment to IIS.
-
-### Command line
-
-From the source directory, use the same release gate documented in `TESTING.md`:
-
-```powershell
-dotnet clean .\MoveItAutomationUI.sln
-dotnet restore .\MoveItAutomationUI.sln
-dotnet build .\MoveItAutomationUI.sln --configuration Release --no-restore
-dotnet test .\MoveItAutomationUI.sln --configuration Release --no-build
-dotnet publish .\MoveItAutomationUI.csproj --configuration Release --output .\publish
-```
-
-RC3 application identity:
-
-```text
-Version 0.18.521-RC3
-Build   20261101
-```
-
-See [`TESTING.md`](TESTING.md) for automated coverage and the recommended manual RC3 smoke test.
-
-### Run MAUI locally from Visual Studio
-
-MAUI can be run directly from Visual Studio for development and pre-deployment testing; IIS is not required for this workflow. Local MAUI still connects to a real MOVEit Automation environment, so use an appropriate development/test Automation environment when exercising operations that change Automation configuration or execute Tasks.
-
-1. Open `MoveItAutomationUI.sln` in Visual Studio and set `MoveItAutomationUI` as the startup project.
-2. Select the **https** launch profile. The project is currently configured to launch at:
-
-   ```text
-   https://localhost:7184
+   ```javascript
+   const LAUNCHER_ORIGINS = [
+       "https://maui.example.com",
+       "https://maui-qa.example.com:8443"
+   ];
    ```
 
-   The project also provides `http` (`http://localhost:5084`) and IIS Express profiles, but the `https` profile most closely matches the intended production browser behavior.
-3. Press **F5** to run with the debugger or **Ctrl+F5** to run without debugging. If the development HTTPS certificate is not trusted, allow Visual Studio/.NET to trust the local development certificate before continuing.
-4. On a clean source checkout, appsettings.json is the source-tree `{}` file; it is excluded from build/publish output. The browser should open the normal **Initial Setup** workflow. `appsettings.Development.json` supplies development logging only; it does not bypass Initial Setup or provide a separate development MAUI configuration.
-5. Complete Initial Setup using the MOVEit and metadata-database settings intended for the local test instance. SQLite is the simplest choice for isolated local testing unless SQL Server behavior specifically needs to be exercised.
-6. Initial Setup populates the existing `appsettings.json`, reloads the configuration and activates the metadata database in the running process. The browser proceeds directly to Login; **do not stop/restart Visual Studio just to finish Setup**.
-7. Sign in normally and test the required MAUI workflows.
+3. Copy `maui-integration.js`, `maui-native-editor.css` and `automation-mark.svg` from `IntegrationAssets\MOVEitWebAdmin` into the Web Admin `Tomcat\webapps\ROOT` directory. Use the actual Tomcat ROOT for your installation.
+4. Add this entry immediately before `</body>` in the Tomcat ROOT `index.html`. If the entry is already present, keep a single copy.
 
-The development workstation must reach the configured MOVEit Automation Web Admin URL and have the compatible **MOVEit Automation Windows COM API installed and registered before Initial Setup**. Setup checks local COM activation, just as it does on the production IIS host. Some REST-backed pages may still load in an already configured instance when COM becomes unavailable, but that is a partially working installation rather than an alternative deployment mode.
-
-#### Testing native MOVEit editor integration from localhost
-
-This subsection applies only when testing native MOVEit editor launches from MAUI.
-
-The native editor bridge validates the browser origin that launched the MOVEit Web Admin window. To test native-editor integration from the recommended Visual Studio `https` profile, include `https://localhost:7184` in the deployed MOVEit Web Admin copy of `maui-integration.js`:
-
-```javascript
-const LAUNCHER_ORIGINS = [
-    "https://maui-dev.example.com",
-    "https://maui-qa.example.com",
-    "https://maui.example.com",
-    "https://localhost:7184"
-];
-```
-
-Use `http://localhost:5084` instead when intentionally testing with the `http` profile. IIS Express uses its own localhost origin/port from `Properties\launchSettings.json`. Add only the local origins that should be trusted by this MOVEit Web Admin instance. Ordinary MAUI testing that does not launch the native editor does not require a localhost entry.
-
-## 5. Prepare the IIS application
-
-1. Create a dedicated application directory, for example:
-
-   ```text
-   D:\Apps\MAUI
+   ```html
+   <script src="maui-integration.js" type="text/javascript"></script>
    ```
 
-2. Copy the published MAUI files into the application directory. Build/publish excludes appsettings.json. For a NEW installation only, create that file containing `{}` before starting MAUI; never replace an existing configured file.
-3. Create a dedicated IIS application pool for MAUI.
-   - Under **Advanced Settings**, set **Maximum Worker Processes** to **1**. RC3 does not provide distributed session state or System Job ownership across multiple IIS workers.
-4. Configure an IIS site/application that points to the MAUI application directory.
-5. Bind the site to HTTPS using the intended MAUI hostname.
-6. Grant the application-pool identity Read access to the MAUI application root, Modify access to the **existing** `appsettings.json`, and Modify access to `Data` (including `Data\ConfigurationRecovery`). Keep the application root read-only for the app pool.
-7. If SQL Server Integrated Authentication is used, grant the same identity appropriate access to the MAUI SQL database.
-8. Confirm the .NET 8 Hosting Bundle is installed and IIS has been restarted after Hosting Bundle installation if required.
+5. For HA or failover, repeat on each Web Admin node users can reach. Keep the origin list consistent across nodes. After a MOVEit upgrade or repair, check that the script reference and assets are still in place.
 
-Both CopyToOutputDirectory and CopyToPublishDirectory are Never for appsettings.json, so normal build/publish output does not carry installation settings. Publish/package from a clean staging directory; an old file left in a reused staging directory or an existing deployment package can still be deployed by external tooling. Do not clean the live installation to obtain a clean package.
+<a id="4-build-maui"></a>
 
-For a NEW installation only, create appsettings.json containing `{}` and apply its individual Modify ACL. For upgrades, preserve the existing configured file and Data. Initial Setup populates the existing empty JSON object from appsettings.template.json; a missing or zero-byte file is not a valid substitute.
+## Build with Visual Studio
+
+1. Open `MoveItAutomationUI.sln` and set `MoveItAutomationUI` as the startup project.
+2. Restore NuGet packages. Select **Release**, then choose **Build > Build Solution**.
+3. For IIS deployment, right-click the `MoveItAutomationUI` project, choose **Publish**, and publish to a **Folder** using **Release**. Use a clean folder for the publish output.
+
+For command-line builds and the full regression suite, see [Testing](TESTING.md#running-validation).
+
+## Test within Visual Studio
+
+1. Select the **https** launch profile and press **F5** or **Ctrl+F5**. Open `https://localhost:7184` and trust the local ASP.NET Core development certificate if prompted.
+2. On a fresh checkout, complete [Initial Setup](#run-initial-setup) against a development or QA MOVEit server. Choose SQLite for a quick local setup. Initial Setup writes the source-folder `appsettings.json`. Keep it with the local test instance.
+3. Follow [First sign-in](#sign-in-for-the-first-time) and [Check basic functionality](#check-basic-functionality). If testing a native editor, include `https://localhost:7184` in the target Web Admin's `LAUNCHER_ORIGINS` first, then verify that a supported object opens in the native editor window.
+
+<a id="5-prepare-the-iis-application"></a>
+<a id="6-install-the-moveit-automation-com-api-on-the-maui-server"></a>
+
+## Deploy to IIS
+
+Install IIS, then the **.NET 8 ASP.NET Core Hosting Bundle** on the MAUI host. Install and register the MOVEit COM API there too. Initial Setup checks that the running MAUI process can activate the component. [Microsoft IIS deployment instructions](https://learn.microsoft.com/en-us/aspnet/core/tutorials/publish-to-iis)
+
+1. Copy a complete matching publish to a dedicated application directory, such as `D:\Apps\MAUI`. For a **new installation**, create `appsettings.json` containing `{}` if it is absent. Preserve a configured `appsettings.json` and the entire `Data` directory on redeployments.
+2. Create a dedicated IIS application pool and set **Maximum Worker Processes** to **1**. Point a website or **IIS application** at the published directory and assign that pool. On a shared site such as `https://iis.example.com/MAUI/`, add MAUI as an application or use **Convert to Application** on the folder.
+3. Bind the site to HTTPS using a certificate trusted by users and valid for the MAUI hostname. Keep the published `web.config` with the ASP.NET Core handler and `hostingModel="inprocess"`.
+4. Grant the application-pool identity **Read** on the application files and **Modify** on the existing `appsettings.json` and `Data`. If SQLite lives elsewhere, grant **Modify** on its database directory too. Keep write access off the application root. [IIS file permissions](SECURITY.md#restricted-iis-application-pool-permissions)
+5. Start the application pool and open the MAUI URL. A new installation opens **Initial Setup**. If an existing instance opens **Upgrade**, follow the [Upgrade guide](UPGRADE.md).
+
+<a id="8-run-initial-setup"></a>
+
+## Run Initial Setup
+
+1. Enter the initial **MOVEit connection**. For example, use Display Name **Automation QA**, Environment Key **QA**, and Web Admin URL `https://automation-qa.example.com`. Use the same Environment Key for HA nodes that share one Automation configuration and different keys for separate environments.
+2. Click **Test Connection**. Setup tests MOVEit reachability and local COM activation without a MOVEit username or password. Leave certificate validation enabled for normal use.
+3. Select **SQLite** and keep `Data\maui.db` for the simplest setup. If you have a prepared SQL Server database, select **SQL Server** and supply its connection details.
+4. Click **Test Database**, then **Complete Setup** after both tests pass. MAUI initializes its database, saves the settings and opens the sign-in page in the same process.
+
+### Use SQL Server
+
+Use an empty database for a new installation or an existing compatible MAUI database. The MAUI database principal needs to connect, read and write MAUI tables, and apply the schema changes required by Setup and upgrades. With **Windows Integrated Authentication** on IIS, grant access to the effective app-pool identity. **SQL Server Authentication** uses the supplied database account. Keep the SQL certificate verifiable and arrange SQL Server backups separately.
+
+## Sign in for the first time
+
+Select the **Automation server**, enter your MOVEit Automation username and password, and click **Sign In**. The first successful sign-in against a new MAUI database becomes **MAUI Admin**. To complete tasks that also require MOVEit administrator rights, use an account that already has those rights in Automation. Later users' MAUI roles are managed under **Configuration > Settings > Security > MAUI Users**.
+
+## Check basic functionality
+
+| Open | Confirm |
+| --- | --- |
+| **Dashboard** | The page loads, and the overview reflects the Automation server you selected. |
+| **Tasks > All Tasks** | The grid displays the Tasks visible to your MOVEit account. Check one known Task. |
+| **Hosts > All Hosts** | The grid displays the Hosts visible to your MOVEit account. Check one known Host. |
+
+If a page reports a connection error, follow [Troubleshooting](#troubleshooting). For broader acceptance, use the [RC3 smoke test](TESTING.md#manual-rc3-smoke-test).
+
+<a id="9-after-setup---first-steps"></a>
+
+## Post-setup checklist
+
+Open **Configuration > Settings** and complete the items you plan to use.
+
+| Settings | What to do |
+| --- | --- |
+| **MOVEit Connections** | Add any other Automation servers. For scheduled reports, automatic backups, or Host Health Check, configure and test administrator **Data Access Credentials** on an active server in each applicable environment. |
+| **SMTP Configuration** | For outbound mail, set the SMTP connection and From details, then use **Send Test Email**. |
+| **Scheduler > System Jobs** | Review schedules and enable the jobs you need. For example, run **Host Health Check** once after configuring Data Access Credentials. For unattended operation on IIS, [keep MAUI running](#keep-maui-running-for-scheduled-jobs). |
+| **Backup** | Review the backup schedule and retention. Run **Backup Now** and verify the result appears in **Available Backups**. MAUI can snapshot SQLite. Back up SQL Server through your normal database process. [Backup and restore checks](TESTING.md#moveit-whole-configuration-import--backup-restore-regression) |
+| **Editors** | Choose which editors open in MAUI and which open in MOVEit Web Admin, then **Save Configuration** and reload. For MAUI-only editing, enable the relevant MAUI preferences. To use a native editor, install the [integration assets](#install-the-moveit-integration-assets) and test a launch. |
+| **General > Quick Transfer** | Enable it if needed, **Save Configuration**, and reload. In **Transfers > Quick Transfer**, select known test Hosts, run **Preflight**, and transfer a small non-production file. [Quick Transfer checks](TESTING.md#quick-transfer-validation) |
 
 ### Keep MAUI running for scheduled jobs
 
-MAUI's System Job scheduler runs inside the web application. If IIS shuts down the application after inactivity, scheduled jobs cannot run while it is stopped. A browser does not need to remain open when IIS is configured to keep MAUI running.
+On the IIS host, install **Application Initialization**. Set the MAUI app pool **Start Mode** to `AlwaysRunning` and **Idle Time-out (minutes)** to `0`. Set **Preload Enabled** to `True` on the MAUI site or application. Keep **Maximum Worker Processes** at `1`. Verify that a scheduled job runs after a recycle without someone opening MAUI. [Microsoft IIS startup and idle timeout guidance](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/iis/advanced?view=aspnetcore-8.0#application-initialization-module-and-idle-timeout)
 
-MAUI's project explicitly selects **in-process** IIS hosting. Confirm the published `web.config` contains `hostingModel="inprocess"` on its `<aspNetCore>` element. In Server Manager, use **Add Roles and Features > Web Server (IIS) > Web Server > Application Development** to install **Application Initialization**.
+Review the pool recycle schedule around important jobs. MAUI's **Keep Alive Service** helps while the application is running, and IIS startup/preload starts the application after a restart.
 
-In IIS Manager, apply these settings to MAUI:
+## Experimental features
 
-| Location | Setting | Value |
+Enable only the features you want under **Configuration > Settings > Experimental** and **Save Configuration**.
+
+- **Task JSON Editor.** Select Tasks and open **Bulk Actions > JSON Editor**. Review proposed changes before saving. [Task JSON Editor acceptance](TESTING.md#task-json-editor-acceptance)
+- **Copy Between Environments.** Configure administrator Data Access Credentials in both environments. The feature requires two distinct environments and both MAUI and MOVEit administrator access. Use **Copy To** on supported grids. Preserve `Data\EnvironmentCopy` and the Data Protection keys for retained reports and protected recovery files. [Copy To acceptance](TESTING.md#copy-between-environments-acceptance)
+- **MOVEit User Management.** Follow the [service setup below](#13-optional-moveit-user-management) before enabling it. Each managed Automation server needs the optional Windows service.
+
+<a id="13-optional-moveit-user-management"></a>
+
+### Optional MOVEit User Management
+
+The feature defaults **Off**. Enable it only for Automation servers whose Windows local groups you want to manage from MAUI. The **MAUI Local Groups Service** runs on each managed Automation server and polls MAUI directly over HTTPS using TLS 1.2. Allow outbound access from the Automation server to the MAUI address and port. The service needs no inbound listener on the Automation server. The MAUI web application and its service endpoint use the same IIS application and single worker. MAUI reads the client certificate from the TLS connection, so connect without a TLS-terminating proxy.
+
+Get the Local Groups Service 1.0.6 files from `IntegrationAssets\MOVEitUserManagement` in the repository. Copy them to a folder on the Automation server where Administrators and SYSTEM control write access. Keep `MauiLocalGroups.Service.exe`, `MauiLocalGroups.Service.exe.config`, `agentsettings.json` and the PowerShell scripts together. The service requires .NET Framework 4.8 or later. Use elevated Windows PowerShell 5.1 for the setup commands.
+
+#### 1. Configure the IIS endpoint
+
+Configure HTTPS for MAUI and finish MAUI Initial Setup or Upgrade before checking the endpoint. For a root IIS application, the endpoint is `https://maui.example.com/api/local-groups-agent/`. If MAUI is an IIS application under a shared site at `/MAUI`, use `https://iis.example.com/MAUI/api/local-groups-agent/`.
+
+At the effective IIS configuration path for `api/local-groups-agent`, including its `poll` and `result` routes, set **SSL Settings > Require SSL** and **Client certificates > Accept**. Under **Authentication**, enable **Anonymous Authentication** and disable **Windows Authentication** for this path only. IIS then passes requests to MAUI, which authenticates the service POSTs using the TLS client certificate. A browser GET returns only endpoint and protocol information. [IIS SSL settings](https://learn.microsoft.com/en-us/iis/configuration/system.webServer/security/access) · [IIS authentication settings](https://learn.microsoft.com/en-us/iis/configuration/system.webserver/security/authentication/)
+
+When these IIS sections are delegated, add the following `<location>` as a child of the existing `<configuration>` in the **published MAUI application's** `web.config`. The path is relative to that file, so omit the IIS application alias here. Retain the published `<location path="." inheritInChildApplications="false">` block with its `aspNetCore` handler and hosting settings.
+
+```xml
+<location path="api/local-groups-agent">
+  <system.webServer>
+    <security>
+      <access sslFlags="Ssl,SslNegotiateCert" />
+      <authentication>
+        <anonymousAuthentication enabled="true" />
+        <windowsAuthentication enabled="false" />
+      </authentication>
+    </security>
+  </system.webServer>
+</location>
+```
+
+If IIS returns **500.19** with **0x80070021**, one of the sections is locked. Have the IIS administrator apply the equivalent settings in `applicationHost.config` at the full configuration path, such as `Your IIS Site/MAUI/api/local-groups-agent` or `Your IIS Site/api/local-groups-agent` for a root deployment. Use one configuration source for the override. Keep the agent URL as a route inside MAUI. If it returns **404.0**, inspect the effective handler mapping for the endpoint and confirm `aspNetCore` / `AspNetCoreModuleV2` is present. If IIS selects `StaticFile`, correct the application/override scope or handler configuration. The published `inheritInChildApplications="false"` limits inheritance into separate child applications. [IIS 500.19 guidance](https://learn.microsoft.com/en-us/troubleshoot/developer/webapps/iis/site-behavior-performance/http-error-500-19-webpage) · [ASP.NET Core IIS configuration](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/iis/web-config)
+
+Have the IIS administrator verify that the existing HTTPS binding requests an optional client certificate at the initial TLS handshake. This avoids relying on renegotiation for the service's POST requests. Use `netsh http show sslcert` to inspect the binding and check **Client Certificate Negotiation** (`clientcertnegotiation`). On a shared HTTPS binding, this setting applies at the binding level. Keep client certificates optional at IIS and preserve the authentication settings for ordinary MAUI pages. If the override lives in `web.config`, carry it forward with each publish. [HTTP.sys binding options](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/netsh-http) · [TLS negotiation in ASP.NET Core](https://learn.microsoft.com/en-us/aspnet/core/security/authentication/certauth#client-certificates)
+
+#### 2. Check HTTPS and client certificate requirements
+
+Use the certificate already bound to the MAUI IIS HTTPS site and, if it meets the requirements below, the Automation server's existing domain-issued computer certificate. A computer certificate with both Client Authentication and Server Authentication EKUs can be used by the Local Groups Service. This setup can use existing certificates on both hosts.
+
+| TLS role | Certificate to use | Requirements |
 | --- | --- | --- |
-| Application Pools > MAUI pool > Advanced Settings > General | Start Mode | `AlwaysRunning` |
-| Application Pools > MAUI pool > Advanced Settings > Process Model | Idle Time-out (minutes) | `0` |
-| Sites > MAUI site/application > Advanced Settings | Preload Enabled | `True` |
+| MAUI HTTPS server | The certificate already bound to the IIS HTTPS site | The Automation server must trust its chain. The certificate must cover the DNS name or IP used in `brokerUrl`. |
+| Local Groups Service client | A certificate in **Local Computer > Personal** (`Cert:\LocalMachine\My`) on the Automation server | Use a distinct, currently valid certificate for each managed Automation server. It must include the **Client Authentication** EKU (`1.3.6.1.5.5.7.3.2`) and have a private key readable by the service account, **LocalSystem** by default. IIS and MAUI must trust its chain. |
 
-`AlwaysRunning` alone does not prevent idle shutdown. Application Initialization and preload start MAUI when its pool starts or recycles. Keep **Maximum Worker Processes** at **1**.
+If IIS already trusts the issuing CA chain, leave the IIS certificate stores as they are. The service presents the public client certificate during TLS, and its private key stays on the Automation server. Enter that client certificate's **SHA-256** fingerprint in both `agentsettings.json` and the matching MAUI registration. The fingerprint identifies the enrolled certificate. Certificate trust comes from the CA chain.
 
-If the published configuration uses `hostingModel="outofprocess"`, idle-timeout guidance differs: use an external keep-alive request and verify unattended operation rather than relying on the pool settings alone. See Microsoft's [Application Initialization and idle-timeout guidance](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/iis/advanced?view=aspnetcore-8.0#application-initialization-module-and-idle-timeout).
+If the IIS host cannot validate the chain, ask the web team to establish trust or use a certificate from a CA the IIS host already trusts. Use the Local Computer **Trusted Root Certification Authorities** store for approved roots and **Intermediate Certification Authorities** for intermediate CAs as needed. Allow both hosts to reach the applicable certificate-chain and revocation endpoints. MAUI performs online revocation checking on the client chain. In `certlm.msc` on the Automation server, use **Personal > Certificates > All Tasks > Manage Private Keys** to check the service account's Read access. [Windows certificate stores](https://learn.microsoft.com/en-us/windows-server/identity/ad-cs/inspect-certificates-manage-certificate-stores) · [IIS client-certificate trust](https://learn.microsoft.com/en-us/troubleshoot/developer/webapps/iis/site-behavior-performance/http-403-forbidden-access-website)
 
-MAUI also provides **Configuration > Settings > Advanced > Keep Alive Service**, enabled by default with a **Ping Interval** of **5 minutes** (allowed range **1–20**). Save Configuration applies changes immediately. The worker periodically requests a private, lightweight MAUI endpoint without signing in, extending a user session, or calling MOVEit or the metadata database. It uses the observed local server binding and preserves the IIS application path, including `/MAUI`; HTTPS certificate validation remains enabled.
+For a **self-signed lab certificate**, export only the public `.cer` and explicitly trust it on the host that validates it. Verify its SHA-256 fingerprint before import. On the IIS host, run `certlm.msc`, then import the public client certificate using **Trusted Root Certification Authorities > Certificates > All Tasks > Import**. If the MAUI HTTPS server certificate is also self-signed, import its public certificate into the same store on the Automation server. Keep the private keys on their respective hosts. The SHA-256 value in MAUI enrolls the certificate for that Automation server. IIS and MAUI still verify certificate trust.
 
-Keep Alive works only while MAUI is already running and after a normal request has established its local address. It cannot start a stopped/cold application pool, survive a process/server shutdown, or replace IIS startup and preload. Choose an interval shorter than any configured IIS idle timeout. IIS in-process hosting and the settings above remain the recommended deployment; keep-alive connection/certificate failures appear in MAUI logs without repeated toasts.
+#### 3. Enable MAUI and install the service
 
-After applying the settings:
+1. On the Automation server, run `.\Get-ClientCertificates.ps1` from the copied service folder. Select the certificate with Client Authentication and copy its 64-character **SHA256** value. The Windows **Thumbprint** column is a separate value.
+2. Sign in to MAUI using the intended MOVEit connection and an account with both **MAUI Admin** and **MOVEit administrator** access. Open **Configuration > Settings > Experimental > MOVEit User Management**, enter the fingerprint for that server, turn on the feature and **Save Configuration**. Leave unused servers blank.
+3. In the same card, copy the broker endpoint. Use the HTTPS address reachable from the Automation server, including the port and IIS application path where applicable. Edit `agentsettings.json` beside the service executable and enter the same SHA-256 value.
 
-1. Configure a harmless System Job to run after the previous idle-timeout period.
-2. Close MAUI browser tabs and recycle the MAUI application pool once.
-3. Leave MAUI unopened until after the scheduled time, then check the job's recorded run time and output. Confirm it ran at the scheduled time, before opening MAUI again.
+   ```json
+   {
+     "brokerUrl": "https://iis.example.com/MAUI/api/local-groups-agent/",
+     "certificateSha256": "REPLACE_WITH_THE_64_CHARACTER_SHA256",
+     "ignoreServerCertificateErrors": false
+   }
+   ```
 
-Review the pool's **Recycling** schedule separately. Idle Time-out `0` does not disable scheduled recycling, and recycling, deployment, or a server restart can interrupt work. Plan maintenance around important jobs; retain appropriate IIS health protections. See Microsoft's [application-pool recycling settings](https://learn.microsoft.com/en-us/iis/configuration/system.applicationhost/applicationpools/add/recycling/periodicrestart/).
+4. In elevated Windows PowerShell, change to the copied service folder. Run the local check, register the service and start it.
 
-A separate Windows Service for the scheduler could provide independence from IIS in a future release. That deployment option is not currently implemented; these instructions configure the existing web-hosted scheduler.
+   ```powershell
+   .\MauiLocalGroups.Service.exe --check-config
+   if ($LASTEXITCODE -ne 0) { throw 'Correct the service configuration before installing.' }
+   .\Install.ps1
+   Start-Service MauiLocalGroups
+   Get-Service MauiLocalGroups
+   ```
 
-### IIS application path deployment (DEV / QA)
+`Install.ps1` registers the EXE from the current folder with Manual startup. For startup at boot, run `Set-Service MauiLocalGroups -StartupType Automatic`. The service reports its Windows computer name automatically. Keep `ignoreServerCertificateErrors` set to `false` in production. The lab-only bypass affects validation of the MAUI HTTPS server certificate on the Automation server. The service client certificate still needs to be trusted and enrolled.
 
-MAUI supports either a dedicated IIS website at `https://maui.company.com/` or an **IIS application** under a shared website such as `https://iisserver.company.com/MAUI/`.
+#### 4. Verify connectivity
 
-1. In IIS Manager, use **Convert to Application** on the `MAUI` folder (or use **Add Application**). Point its physical path at MAUI's published ASP.NET Core files; assign the intended app pool. A plain virtual directory alone is not a substitute for an ASP.NET Core application.
-2. Visit `https://iisserver.company.com/MAUI/`. MAUI's first-run redirect should lead to `/MAUI/Setup`, followed by `/MAUI/Account/Login` once configuration has been completed.
-3. Test `/MAUI/Upgrade` during a pending upgrade, Dashboard **View all Hosts/Tasks**, static assets, and session-expiration routing. Cookies and standard Razor/action-generated links are scoped to the current application path.
-4. A dedicated root website continues to use `/Setup`, `/Account/Login`, and other root-relative routes. No `/MAUI` path should be hardcoded in configuration or application source.
-
-The application prefix is taken from ASP.NET Core's `HttpRequest.PathBase` supplied by IIS integration. If a reverse proxy strips the prefix before passing the request to ASP.NET Core, configure that proxy and the app's forwarded path-base handling separately; this package does not infer a missing prefix from arbitrary request headers. Avoid running two conflicting MAUI instances with shared installation state.
-
-## 6. Install the MOVEit Automation COM API on the MAUI server
-
-MAUI requires `MICentralAPICOM.MICentralAPI` for COM-backed Automation operations.
-
-For mixed 2025.x/2026.x environments, use COM API **18.x or a later compatible version**; older COM API versions cannot connect to Automation 2026.x. See the compatibility notice in [Supported deployment](#1-supported-deployment).
-
-Install/register the MOVEit Automation Windows COM API on the **MAUI IIS server**, not merely on the MOVEit Automation server. After installation:
-
-1. Confirm the COM component is registered on the MAUI server.
-2. Confirm the IIS application-pool identity can instantiate/use the component under your Windows security policy.
-3. Restart the MAUI application pool after installing or updating the COM components.
-
-A missing or inaccessible COM API may allow REST-backed areas of MAUI to work while COM-backed operations fail. Initial Setup tests the registered `MICentralAPICOM.MICentralAPI` ProgID by instantiating and releasing the COM object locally. This does **not** log in to MOVEit and requires no MOVEit username/password; it verifies installation/registration, process compatibility, and COM activation under the MAUI process identity.
-
-## 7. Configure MAUI Integration on MOVEit Web Admin
-
-**The MOVEit Integration components are not required if using only the MAUI Editors.** This section applies when MAUI launches native MOVEit Web Admin editors, including native routes selected by editor preferences or unsupported MAUI editor types. For those launches, install the browser bridge, native-editor styling and logo on each MOVEit Web Admin/Tomcat node users may reach. These assets do not replace the locally registered COM API.
-
-The MAUI source/release contains:
-
-```text
-IntegrationAssets\MOVEitWebAdmin\maui-integration.js
-IntegrationAssets\MOVEitWebAdmin\maui-native-editor.css
-IntegrationAssets\MOVEitWebAdmin\automation-mark.svg
-```
-
-### 7.1 Back up the native Web Admin files
-
-Before modifying MOVEit Web Admin, back up the existing Tomcat ROOT `index.html` and any prior MAUI integration assets according to your change-management procedures.
-
-### 7.2 Configure trusted MAUI launcher origins
-
-Open the release copy of:
-
-```text
-maui-integration.js
-```
-
-Before copying the integration script to MOVEit Web Admin, configure `LAUNCHER_ORIGINS` with every MAUI browser origin that is allowed to launch this MOVEit Web Admin instance. This supports environments where development, QA, and production MAUI applications share one Automation/Web Admin server while keeping the browser trust boundary explicit.
-
-Example:
-
-```javascript
-const LAUNCHER_ORIGINS = [
-    "https://maui-dev.example.com",
-    "https://maui-qa.example.com",
-    "https://maui.example.com"
-];
-```
-
-A non-default port is part of the origin and must be included:
-
-```javascript
-const LAUNCHER_ORIGINS = [
-    "https://maui-dev.example.com:8443",
-    "https://maui-qa.example.com:8443",
-    "https://maui.example.com:8443"
-];
-```
-
-Origins are exact scheme/host/port trust entries. Wildcards such as `https://*.example.com` are not supported, and the integration never uses `"*"` as a `postMessage` target origin. Keep the list limited to MAUI applications that are intentionally trusted to perform the native-editor login handoff.
-
-For each popup launch, MOVEit initially sends only non-sensitive readiness messages against the configured exact origins. The first valid message received from the actual `window.opener`, with the matching per-launch ID, binds that popup session to one exact MAUI origin. Login acknowledgements, editor state, Task-ID rebind, and Undo Last Change messages then remain pinned to that origin for the life of the popup/editor session.
-
-### 7.3 Copy the integration assets
-
-Copy all three files to the MOVEit Web Admin Tomcat ROOT directory:
-
-```text
-maui-integration.js
-maui-native-editor.css
-automation-mark.svg
-```
-
-The usual target is the MOVEit Web Admin `Tomcat\webapps\ROOT` directory. Use the actual Tomcat ROOT location for your MOVEit installation.
-
-When native-editor integration is used, deploy all three files together for a new installation and keep them consistent with the current package during upgrades. Whenever `maui-integration.js` is replaced, configure `LAUNCHER_ORIGINS` for all trusted MAUI environments before copying it to Tomcat. `MAUI_INTEGRATION_ASSET_REVISION` in `maui-integration.js` controls browser cache-busting for the dependent CSS/logo and is intentionally independent of the MAUI application version when later application releases do not change the Web Admin integration assets.
-
-### 7.4 Update `index.html`
-
-Edit the MOVEit Web Admin Tomcat ROOT `index.html` and add the following immediately before the closing `</body>` tag:
-
-```html
-<script src="maui-integration.js" type="text/javascript"></script>
-```
-
-Save the file and verify the script remains present after any MOVEit Automation/Web Admin upgrade or repair operation. Vendor upgrades may replace `index.html`; reapply the MAUI script reference if necessary.
-
-### 7.5 HA/failover environments
-
-If users can reach more than one MOVEit Web Admin/Tomcat node, deploy the same MAUI integration assets and `index.html` change to **every applicable node**. Keep the `LAUNCHER_ORIGINS` allow-list consistent across those nodes.
-
-### 7.6 Validate native-editor launch
-
-After MAUI and MOVEit Web Admin changes are complete:
-
-1. Sign in to MAUI.
-2. Open a supported object from MAUI into the native editor.
-3. Confirm the native page loads in the MAUI-launched window.
-4. Confirm MAUI native-editor styling loads.
-5. Confirm the MAUI working overlay behaves correctly during login/navigation/refresh.
-6. From a Task ellipsis menu, run **Preflight Check** and confirm the **Task Preflight Checks** modal advances through all stages and reports only read-only checks.
-
-7. For a Task, Host, Script, or Date List, make a successful native change and confirm **Undo Last Change** appears in the native header. Test one undo and confirm the editor reloads with the prior saved state.
-   - For a Task, move between **Task Details**, **Settings**, and any other Task-detail child routes used by the native editor. Make a saved change and confirm **Undo Last Change** remains tied to the active Task.
-   - When validating MOVEit's **Convert to Advanced Task** workflow, confirm the same popup establishes a fresh baseline for the newly created Advanced Task, then make a later saved change (including from **Settings**) and confirm **Undo Last Change** appears. The conversion itself is not an Undo target.
-   - If an Undo cannot be completed safely, confirm the editor remains usable and the unavailable Undo is not repeatedly offered.
-8. Test native-editor launch from **each configured MAUI origin** (for example development, QA, and production), including a successful saved change and **Undo Last Change**. If MOVEit Web Admin is HA/load-balanced, also validate the integration on each Web Admin node users may reach.
-
-SSO is not currently supported by MAUI. Native integration should be tested with the same credential-based login workflow used by the application.
-
-## 8. Run Initial Setup
-
-Start the IIS site and browse to the MAUI URL. With the administrator-created, unconfigured `{}` appsettings.json, MAUI routes to the application-relative `/Setup`.
-
-### MOVEit connection
-
-Enter:
-
-- Display Name
-- Environment Key
-- MOVEit Web Admin URL
-- invalid-certificate option only when intentionally required for a test/non-production environment
-
-MAUI generates the internal server key. Additional HA/failover nodes can be added later in **Configuration > Settings > MOVEit Connections** using the same Environment Key.
-
-### Database
-
-Choose SQLite or SQL Server and enter the applicable connection information.
-
-Use **Test** for both MOVEit and the database. **Complete Setup** remains unavailable until both tests pass. MAUI repeats validation when Setup is saved; the browser Test buttons are not treated as proof that the final submitted values are valid.
-
-Setup then:
-
-1. provisions the MAUI metadata database to schema version `1`;
-2. seeds initial MAUI data where applicable;
-3. populates the existing `appsettings.json` from the release template;
-4. records configuration version `1`;
-5. reloads the live configuration, activates the selected metadata database and runtime options, and checks Upgrade state;
-6. opens normal application routes only after successful activation, then takes the browser to Login.
-
-**An IIS application-pool recycle is not required after Initial Setup.** If in-process activation fails after saving, the application remains Setup-gated; retry Complete Setup and consult MAUI's server log for the underlying exception.
-
-The first successfully authenticated user in a new MAUI database becomes a MAUI Admin.
-
-## 9. After Setup - First Steps
-
-After Initial Setup, sign in immediately as the first MAUI Admin account; no IIS recycle is needed. Complete these items before relying on unattended/background functions.
-
-### 9.1 Configure Data Access Credentials
-
-Go to **Configuration > Settings > MOVEit Connections**. For each MOVEit environment that will use unattended functions, configure and test **Data Access Credentials** on at least one active server/node.
-
-Use a MOVEit Administrator account intended for unattended MAUI operations. These credentials are used by scheduled Reports, Host Health Check, and automatic Backup. Passwords are protected with Windows DPAPI LocalMachine scope and are not returned to the browser.
-
-For HA/failover environments, configure credentials on the server entries you expect MAUI to use and test them before enabling unattended jobs.
-
-### 9.2 Configure Backup
-
-Go to **Configuration > Settings > Backup**.
-
-1. Review the backup destination under `Data\Backups`.
-2. Choose the desired automatic backup frequency.
-3. Review **Backup Retention** (1-30 days; default 30 days).
-4. Enable **Automatic Backup of MAUI and MOVEit Configuration Data**.
-5. Run **Backup Now** once and verify that a backup is created successfully.
-6. Confirm the new backup appears in **Available Backups**. The inventory refreshes whenever the Backup panel is opened and can also be refreshed manually.
-
-SQLite metadata is included using a live database backup. SQL Server metadata is **not** backed up by MAUI; configure normal SQL Server database backups separately. MOVEit configuration and `appsettings.json` are still included where applicable.
-
-When restoring a backup, select the individual MOVEit environments to restore. Each environment starts unchecked; leave them all unchecked for a MAUI-only restore. Test restores on a non-production instance before relying on backups.
-
-The visible **Backup Cleanup** System Job is enabled by default and runs daily at 1:00 AM using the MAUI application server's local time. Administrators can adjust its enabled state or daily schedule under **Configuration > Settings > Scheduler > System Jobs**. Cleanup removes recognized MAUI-created backup folders that meet the configured retention age and skips unrecognized folders conservatively.
-
-### 9.3 Configure SMTP if outbound email is desired
-
-Go to **Configuration > Settings > SMTP Configuration** when scheduled/outbound Reports or other email delivery will be used. Configure the SMTP host, port/security mode, optional authentication, From address/name, and then use **Send Test Email** to validate delivery.
-
-SMTP is optional if outbound email is not required.
-
-### 9.4 Enable the Host Health Check System Job
-
-Go to **Configuration > Settings > Scheduler > System Jobs**. Enable **Host Health Check**, choose/confirm its schedule, and use **Run Now** for an initial validation.
-
-Host Health Check requires working Data Access Credentials for each MOVEit environment being checked. It uses the same timeout/cleanup policy as Test Host and Preflight: at least five minutes for diagnostics, extended by native connection/data/retry settings up to 30 minutes. Checkout release has an independent deadline; cancelling the request does not cancel release. MAUI attempts supported Host connection tests and records unsupported patterns as **Unknown** rather than treating them as failures.
-
-### 9.5 Validate Quick Transfer
-
-Quick Transfer has no separate server configuration, but it exercises several MOVEit contracts at once. Validate it in a non-production environment before relying on it operationally:
-
-1. Open **Transfers > Quick Transfer** and select known Source/Destination Hosts. Confirm the MOVEit **(Default) Local File System** Host is not offered. Use **Browse** for a verified Host/type combination; if the saved Host uses an authentication/proxy/blind-download pattern that the native browse service has not verified, expect MAUI to reject browsing rather than fabricate a request.
-2. Run **Preflight** and confirm the generated Task passes the expected Task/Host/resource checks without starting a transfer.
-3. Transfer a small test file and confirm status reaches the expected MOVEit Task Run result. Verify Source **Delete Source File After Successful Transfer** is off by default and Destination **Overwrite Existing File** is on by default before exercising those options deliberately.
-4. While a non-production transfer is running, confirm **Transfer** changes to **Cancel** and cancellation reports **Cancelled** only after MOVEit confirms the stop.
-5. With **Delete temporary task after successful transfer** enabled, confirm a successfully monitored temporary `ADHOC_*` Task is removed. Uncheck it and confirm the generated Task remains. Failed, cancelled and no-transfer Tasks must remain available for troubleshooting. The redundant Create Traditional Task option is no longer present.
-6. Confirm the email recipients textbox is visible inside **Send Transfer Confirmation Email**, disabled while unchecked or SMTP is unavailable, and enabled when confirmation is available and selected. Check recipient validation and delivery after a successful transfer.
-6. If PGP is licensed and required, test both Encrypt and Decrypt. For Encrypt, verify expired keys are not selectable and the selected PGP key is preserved in the generated Task. If PGP is not licensed, confirm Encrypt/Decrypt are disabled with the license tooltip.
-
-Quick Transfer requires permission to use the selected MOVEit Hosts/resources and capacity for one Traditional Task. Manual folder/path entry does not make an otherwise unsupported Host type valid; for root-based profiles, an unselected root means the saved Host default root is used. Quick Transfer status tokens are process-local in RC3; finish active transfers before deployment. A submitted MOVEit run can continue independently, but its original MAUI monitor token does not survive restart. Background cleanup can recover eligible successful temporary Tasks using administrator Data Access credentials; failed, cancelled, ambiguous or unverifiable Tasks remain for review. See [Quick Transfer recovery](CHANGELOG.md#operational-safeguards-and-historical-fixes).
-
-### Additional optional setup
-
-| Settings | Operator action |
+| Check | What it verifies |
 | --- | --- |
-| Editors | Choose MAUI/native preferences, Save Configuration and reload. Tasks default on; the other five preferences default off. Existing installation choices are preserved. |
-| General > Application Behavior | Configure naming defaults, optional edit-duration checkout and Task Failure Alerts. Close/reopen editors after changing checkout mode. |
-| SSH/KEX Algorithms | Load supported choices, choose ordered defaults and Save Configuration. Existing Hosts retain their selections; new SFTP Hosts/Reset use these defaults. |
-| Metadata, Tags, Grid Defaults/Definitions | Define organization fields, shared Tags and display defaults. Tags itself is protected from structural metadata edits. |
-| General > Script Templates / Notification Templates | Manage environment-scoped templates as a MAUI Admin. Use Load Template in Script Templates to select .txt/.ps1 files (up to 2 MiB), review the prefilled name/source, then Add Template. For notifications, use Load Template to select .txt/.htm/.html (up to 2 MB), review the detected format, enter a Subject and click Add Template. Edit / Rename and Delete save immediately without Save Configuration. Saving shared templates from editable modals requires either administrator role. |
+| Open the broker base URL from the Automation server | HTTP 200 with static endpoint information and no Windows credentials prompt confirms HTTPS reachability and routing. A browser GET alone cannot verify service authentication. |
+| Run `MauiLocalGroups.Service.exe --check-config` | Checks the local configuration and certificate selection under the account running the command. It does not contact MAUI. |
+| Open **Configuration > Settings > Security > MOVEit User Management** | The group list below **MAUI Users** loads automatically for the current Automation server. Successful load confirms the running service can authenticate, poll and return results. Use **Reload Groups** after any connectivity changes. |
 
-Editor preferences are under **Configuration > Settings > Editors**, immediately after General. MOVEit Settings requires both administrator roles; Groups & Permissions requires MOVEit administrator status. Validate permissions, save/readback, checkout recovery, retained credentials and read-only viewing before enabling editors for operators; use the [acceptance matrix](TESTING.md#rc3-editor-and-crud-acceptance).
+If the card cannot load groups, check `%ProgramData%\MAUI\LocalGroups\service-*.jsonl` on the Automation server and the IIS request log, including the status and substatus. The service logs a connection error after three consecutive failures and logs when communication is restored. The Windows **Application** event log can help with service startup failures.
 
-**General > Folders**, immediately before System Message, creates root Task folders from Resource Group names as a MOVEit-administrator-only action. It runs independently of Save Configuration. **Task JSON Editor** and **Copy Between Environments** are under Experimental, as described below.
+| Symptom | Check |
+| --- | --- |
+| Windows credentials prompt | Confirm Anonymous is enabled and Windows Authentication is disabled at the effective agent path, including `poll` and `result`. |
+| TLS error, IIS 403.7 or IIS 403.16 | Check the HTTPS binding, client certificate negotiation, LocalSystem's private-key access, the Client Authentication EKU and both directions of certificate trust. A hostname mismatch refers to the server certificate and the address in `brokerUrl`. |
+| MAUI HTTP 401 on an agent POST | Check that the feature is enabled, that MAUI received the client certificate from IIS, and that the SHA-256 fingerprint matches the registration for the intended connection. Check validity, EKU, chain and revocation if the fingerprint matches. |
 
-The edit-duration option defaults off and applies to editable Task/Host/Script/Date List editors. Host/Task Auto Save remains independent and per user. Preserve checkout journals and Data Protection keys across deployment. [Security](SECURITY.md#shared-host-and-task-mutation-safety) documents the lifecycle; [Testing](TESTING.md#object-permissions-and-read-only-acceptance) covers administrator/non-admin and read-only validation.
+For a console diagnostic, stop the installed service, then run `.\MauiLocalGroups.Service.exe --console` in elevated PowerShell. This uses your interactive account. Stop the console process and restart the installed service to confirm connectivity under LocalSystem.
 
-### Version-specific MOVEit features
+For local development, the Visual Studio **https** project profile uses Kestrel and requests optional client certificates automatically. For an Automation VM, add an HTTPS address assigned to the MAUI development host to your local copy of `Properties\launchSettings.json`. Use that reachable address in `brokerUrl` and a trusted certificate covering it. In a VM, `localhost` resolves to the VM itself. IIS Express uses its own HTTPS and certificate settings.
 
-Sign in again after upgrading MOVEit to refresh its server information. OneDrive Hosts and S3 AWS Config File / EC2 IMDS authentication require **Automation 2026.0+ / native engine 18.0+**. Older/unrecognized versions retain existing controls; the same rules protect REST writes and Copy To destinations. OneDrive Task-step/Quick Transfer composition is not enabled by the Host profile. SharePoint App/Certificate and Google HMAC/OAuth remain separate existing authentication modes. See [MOVEit 2026/cloud acceptance](TESTING.md#moveit-2026-host-acceptance).
+#### 5. Maintain and operate the service
 
-### Host import templates
+- **Update.** Use `sc.exe qc MauiLocalGroups` to locate `BINARY_PATH_NAME`. Stop the service, replace the packaged EXE and EXE configuration in that folder, retain the installed `agentsettings.json`, then restart and verify **Reload Groups**.
+- **Renew a client certificate.** Install the replacement with its private key on the Automation server. Update the SHA-256 registration in MAUI and `agentsettings.json`, restart the service, and verify connectivity before retiring the old certificate.
+- **Disable or uninstall.** Turn off the feature and save to hide the Security card and reject service POSTs. On the Automation server, stop `MauiLocalGroups` and run `.\Uninstall.ps1` elevated. The script deregisters the service. Files, settings, certificates, logs and group memberships remain on the server.
 
-Use the packaged CSV/XLSX files under `Templates/HostImport`, outside `wwwroot`, through the authenticated Host import workflow. New UNC Share Hosts require a unique Resource UNC. Spreadsheet creation/updates and native cloning retain their existing COM paths; captured New Host REST creation is a separate operation.
+For a functional check, use a disposable custom group. Default Windows groups are protected. MAUI disables deletion while a group has members or MOVEit Resource Group assignments. In **Add Users or Groups**, use `.\name` for local matches or `DOMAIN\prefix` to search by account prefix within a domain. After an uncertain write, reload and inspect the group before trying another change. Preserve `Data\LocalGroupsBroker` with the rest of the MAUI application data. See [live acceptance checks](TESTING.md#optional-moveit-user-management-acceptance).
 
-### CSV / Excel Task import template
+<a id="10-protect-installation-owned-files"></a>
+<a id="11-upgrading-maui"></a>
 
-The packaged Task import workbook is `Templates\TaskImport\MAUI_ImportTasksTemplate.xlsx`. It is included in the build/publish output and is located outside `wwwroot` (it is not a public HTTP endpoint). Copy and populate this workbook when preparing Task imports through **Tasks > Actions > Import Tasks > CSV / Excel**; only the first worksheet is used. The template does not require write permissions for the MAUI IIS application pool.
+## Protect data and deploy updates
 
-### Experimental features
+Back up and preserve the live `appsettings.json` and the entire `Data` directory, including the default SQLite database, backups, Data Protection keys and runtime recovery files. Preserve any database stored outside `Data` separately. Keep these files outside `wwwroot`. Avoid deployment options that delete the destination before copying a release.
 
-#### Experimental Task JSON Editor
+Deploy the binaries, `appsettings.template.json` and `upgrade.json` from one matching publish. If you customized the deployed `web.config` for User Management, carry forward the path-specific settings. See the [Upgrade guide](UPGRADE.md) for verification, upgrade and rollback. On Windows, MAUI's Data Protection keys under `Data\DataProtection-Keys` use machine-level DPAPI. [Security guidance](SECURITY.md#restricted-iis-application-pool-permissions)
 
-Task JSON Editor defaults off under Configuration > Settings > Experimental. Enable it, Save Configuration and reload Tasks to expose Bulk Actions > JSON Editor. It uses the signed-in MOVEit account and existing Task Edit rights, not Data Access credentials. Keep the compatible COM API installed for revision checks, native Undo and overnight Schedule preservation. Save requires the explicit corruption warning and Proceed confirmation. Each affected Task is captured through the usual undo process before its update; a failed capture prevents that Task's write. Validate the [Task JSON Editor acceptance scenarios](TESTING.md#task-json-editor-acceptance) before enabling it for operators.
+<a id="12-troubleshooting-checklist"></a>
 
-#### Experimental environment copy
+## Troubleshooting
 
-Copy Between Environments defaults off and requires both MOVEit administrator status and MAUI Admin access. Configure administrator Data Access credentials for both environments before enabling it. Keep `Data/EnvironmentCopy` writable and restrict access to retained reports/protected recovery definitions; preserve Data Protection keys. Enable it through Configuration > Settings > Experimental and Save Configuration; reload MAUI to expose Copy To in supported row and bulk menus. Copy recovery retention is 1–90 days, default 30. See [Copy acceptance](TESTING.md#copy-between-environments-acceptance) before live use.
-
-### Post-install validation
-
-After completing the first steps, validate:
-
-- Dashboard and inventory retrieval;
-- Task/Host/Resource launches using the configured MAUI editor preferences; include native editor launch only if native integration is used;
-- Tasks/Hosts `JSON:` searches, Task/Host Rename and the applicable [native import reuse checks](TESTING.md#native-import-dependency-reuse-acceptance);
-- Task Run, File Activity, and Audit Records;
-- Run Task Now and other permitted operations;
-- a Quick Transfer Preflight and small non-production transfer using representative Hosts;
-- a successful manual backup;
-- a scheduled System Job that runs without browser traffic, using the [IIS scheduler configuration](#keep-maui-running-for-scheduled-jobs);
-- Report delivery if SMTP is configured;
-- Host Health testing for supported Host types; and
-- access/roles for additional MAUI users.
-
-## 10. Protect installation-owned files
-
-The following must survive application upgrades:
-
-```text
-appsettings.json
-Data\
-```
-
-`Data` includes the default SQLite database and runtime backups. A deployment that wipes the destination directory before copying new files can destroy production configuration/data even though those files are excluded from normal publish output.
-
-Recommended operational practice:
-
-1. Keep MAUI application files and persistent data on protected storage.
-2. Restrict filesystem ACLs to the IIS identity and administrators who require access.
-3. Back up `appsettings.json` and the MAUI metadata database before an upgrade.
-4. Never use **Delete existing files**, **Remove additional files at destination**, or equivalent destructive deployment options against an existing installation unless persistent files have been explicitly relocated and protected.
-
-`appsettings.json` can contain sensitive configuration such as database connection strings. Treat it as a secret-bearing server configuration file.
-
-### ASP.NET Core Data Protection keys
-
-On Windows IIS, MAUI stores encrypted ASP.NET Core Data Protection keys at `<installation>/Data/DataProtection-Keys`, using machine-level DPAPI. The application pool needs **Modify** permission on the existing `Data` folder so MAUI can create and write this directory; no IIS app-pool profile setting changes are needed. MAUI intentionally fails startup instead of silently falling back to transient or plaintext keys when this location is inaccessible.
-
-Preserve the `Data/DataProtection-Keys` directory along with the installed `appsettings.json` and other installation-owned `Data` contents when deploying an upgrade. Do **not** publish developer-machine keys or overwrite the deployed key ring. Local-machine DPAPI keys are not portable to another Windows server; design a shared key repository and cross-machine encryption strategy before deploying MAUI on multiple nodes. If changing from a previous default key store, open a fresh sign-in form after deployment; existing protected cookies may require reauthentication.
-
-### Recovery files and continuous retention
-
-Preserve `Data/ObjectEditLeases` (including `ShortLived`), `Data/RunAsOfRecovery` and `Data/DataProtection-Keys` during deployment. Failed checkout requests retain internal cleanup details in Configuration > Logs. Retry opening the object to obtain the current MOVEit checkout response; only a MOVEit administrator can confirm Override Checkout when needed. MAUI does not force checkout or release an unverified acquisition in the background. Run As Of recovery never starts a Task again and needs the original account's still-valid cleanup tokens; otherwise inspect the Task and its original Undo snapshot. Copy To recovery/report retention is enforced periodically while MAUI runs. Release 0.18.521 RC3 does not force an additional post-upgrade restart. MAUI still requests a restart when startup-sensitive configuration changes require one.
-
-## 11. Upgrading MAUI
-
-See [`UPGRADE.md`](UPGRADE.md) for the full upgrade framework. The normal operator procedure is:
-
-1. Read the new release notes and compatibility requirements.
-2. Back up `appsettings.json` and the MAUI metadata database.
-3. Stop the MAUI application pool, or let Web Deploy take the application offline.
-4. Copy one complete matching publish **without deleting** installation-owned files. Preserve exactly live appsettings.json and Data; replace release JSON with the binaries, then run the [destination package verifier](UPGRADE.md#release-package-contract). Do not use a broad appsettings*.json exclusion.
-5. Start the application pool, or finish Web Deploy's offline cycle.
-6. If MAUI reports an upgrade is pending, authenticate as a MAUI Admin and complete `/Upgrade`.
-7. MAUI completes version-only, schema-only, and reload-safe configuration upgrades without restarting. If startup-sensitive configuration changed or the release manifest requires a restart, select **Restart MAUI** after completion; MAUI waits for the replacement process and returns to Login; no IIS application-pool access is required for the MAUI administrator.
-8. Sign in again and validate normal login and core workflows.
-9. If native editor integration is used, compare the deployed MOVEit Web Admin assets with the current package. If `maui-integration.js` must be replaced, configure `LAUNCHER_ORIGINS` with every trusted MAUI browser origin **before** deploying it to each applicable Web Admin/Tomcat node, then re-verify the `index.html` script reference. MAUI-only editor use can skip this step.
-
-Application releases may change while database schema/configuration versions remain unchanged. RC3 remains at database schema **1** and configuration version **1**.
-
-## 12. Troubleshooting checklist
-
-### Release package mismatch (IIS 500.30)
-
-A log such as `appsettings.template.json Ui.Version is '0.18.484-RC3', but upgrade.json TargetVersion is '0.18.486-RC3'` proves that the deployed release files do not match. It does not identify whether the stale file came from the publish output, a deployment exclusion, an interrupted copy or another deployment step. This specific exception occurs in release-contract validation before normal startup; it is not a Keep Alive worker failure.
-
-1. Stop the MAUI application pool, or let Web Deploy take the application offline. Use one method; do not copy release files into a running process.
-2. Publish the intended release to a staging folder. The Windows build/publish verifier must pass.
-3. Copy the complete publish output, always replacing `MoveItAutomationUI.dll`, `appsettings.template.json` and `upgrade.json` together. Preserve the existing live `appsettings.json` and the complete Data directory. Do not enable delete-all/clean-destination deployment.
-4. Run the shipped `Build\Verify-ReleasePackage.ps1` against the IIS physical directory as shown in the [release package contract](UPGRADE.md#release-package-contract). Correct any mismatch by copying matching release files, not by changing version strings.
-5. Start the application pool (or finish Web Deploy's offline cycle), then complete MAUI's authenticated upgrade if requested.
-
-### General startup checks
-
-Validate layers independently:
-
-1. IIS site/app-pool health and filesystem permissions.
-2. .NET 8 Hosting Bundle installation.
-3. MOVEit Web Admin HTTPS connectivity from the MAUI server.
-4. MOVEit API license/capability and user authentication.
-5. MAUI metadata database connectivity and write/DDL permissions.
-6. MOVEit Windows COM API registration/access on the MAUI IIS server.
-7. For native editor launches, `LAUNCHER_ORIGINS`, integration assets and the Tomcat `index.html` change.
-8. For native editor launches, browser cache/hard refresh after integration-asset changes.
-9. Confirm the application pool still has **Maximum Worker Processes = 1**.
-10. If authentication appears stale after an application recycle, sign in again; normal protected requests require a live server-side MOVEit session.
-11. MAUI application logs under **Configuration > Logs** after login.
-12. For a **MOVEit Unreachable** grid banner, check DNS and Web Admin HTTPS connectivity from the MAUI host. After restoring access, use Refresh Now to confirm a live read; cached rows alone cannot clear it. Two consecutive grid timeouts trigger the banner, while HTTP/authentication/certificate errors remain separate. See [connection feedback](README.md#moveit-connection-feedback).
-
-### Factory Reset
-
-Administrators can open **Configuration → Settings → Advanced → Factory Reset** and type `RESET` to confirm permanent removal of locally stored MAUI data. The host schedules shutdown and purges `Data` contents on the subsequent startup (the parent directory is preserved). `appsettings.json` is cleared to `{}`. An external SQL Server metadata database is not dropped or modified; SQLite files outside `Data` are not removed. Keep the reset-pending marker and the Data Protection keys installation-owned; do not ship them with deployments. IIS `StopApplication()` shuts down the ASP.NET Core application, not necessarily its application pool. Test only on a disposable installation.
-
-### Verify modal feedback and notification logs
-
-After deploying RC3, check Import Tasks and Import Hosts: their spreadsheet preview should show a header and five rows, with remaining rows available by scrolling. Configured import batch/page limits are unchanged. Test a slow/unreachable Host in Test Host and Task Preflight; errors should appear in the modal footer and remain in the diagnostic result rows. Trigger a harmless page notice and confirm its entry in Configuration > Logs with the expected severity, user, environment and page. Page-origin notices during an open modal are labelled Page update. Logging failures must not cause another notice or block the original action.
+| Symptom | Check |
+| --- | --- |
+| IIS fails to start MAUI | Check the app pool, the .NET 8 Hosting Bundle, the published `web.config` and the app-pool file permissions. Inspect Windows Application logs for the startup error. |
+| IIS 500.30 with mismatched release versions | Redeploy a complete matching publish while preserving live `appsettings.json` and `Data`. Run the [release package verifier](UPGRADE.md#release-package-contract). |
+| **Test Connection** fails | From the machine running MAUI, verify the Web Admin URL and TLS trust, the licensed MOVEit API and local COM registration. On IIS, verify the app-pool identity can activate `MICentralAPICOM.MICentralAPI`. |
+| **Test Database** fails | Check Modify access on the SQLite directory, or SQL Server connectivity and the database permissions for the account MAUI is using. |
+| Sign-in or grid access fails | Verify the selected Automation server, MOVEit account and permissions. For **MOVEit Unreachable**, check DNS and HTTPS from the MAUI host, then use **Refresh Now** to confirm a live read. Review **Configuration > Logs** after signing in. |
+| Native editor launch fails | Check the exact MAUI origin, the script reference and assets on the Web Admin node, then refresh the browser cache and launch again. |
+| User Management agent cannot connect | See [Verify connectivity](#4-verify-connectivity) for IIS authentication, certificate and service log checks. |

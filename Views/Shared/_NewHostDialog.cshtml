@@ -20,19 +20,21 @@
                 <span>Auto Format Name</span>
             </label>
 
-            <label class="field-block full-span" data-new-host-unc-field>
-                <span>Resource UNC</span>
-                <input class="text-input" type="text" autocomplete="off" spellcheck="false" required
-                       placeholder="\\server\share" aria-describedby="new-host-unc-help" data-new-host-unc />
-                <span class="field-help" id="new-host-unc-help">Enter a unique UNC path for this host.</span>
-            </label>
-
             <fieldset class="new-task-type-fieldset">
                 <legend>Host Type</legend>
-                <label class="new-task-type-card">
-                    <input type="radio" name="newHostType" value="Share" checked />
-                    <span class="new-task-type-copy"><strong>UNC Share</strong><span>Windows network share accessed by UNC path.</span></span>
-                </label>
+                <div class="new-task-type-card new-host-unc-card">
+                    <input type="radio" id="new-host-type-share" name="newHostType" value="Share" checked />
+                    <label class="new-task-type-copy new-host-unc-option" for="new-host-type-share">
+                        <strong>UNC Share</strong>
+                        <span>Windows network share accessed by UNC path.</span>
+                    </label>
+                    <label class="field-block" data-new-host-unc-field>
+                        <span>Resource UNC</span>
+                        <input class="text-input" type="text" autocomplete="off" spellcheck="false" required
+                               placeholder="\\server\share" aria-describedby="new-host-unc-help" data-new-host-unc />
+                        <span class="field-help" id="new-host-unc-help">Enter a unique UNC path for this host.</span>
+                    </label>
+                </div>
                 <label class="new-task-type-card">
                     <input type="radio" name="newHostType" value="siLock" />
                     <span class="new-task-type-copy"><strong>MOVEit Transfer</strong><span>MOVEit Transfer server connection.</span></span>

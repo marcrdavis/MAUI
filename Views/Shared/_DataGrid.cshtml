@@ -18,6 +18,7 @@
     var pageSizesJson = JsonSerializer.Serialize(Model.PageSizeOptions.Where(size => size > 0).Distinct().ToArray());
     var searchColumnsJson = JsonSerializer.Serialize(Model.SearchColumns);
     var isReportGrid = Model.GridId is "taskruns" or "fileactivity" or "audit";
+    var appendRecordsBatches = isReportGrid && ViewData["RecordsAppendBatches"] is true;
     var hasRowDetails = isReportGrid || Model.GridId == "upcomingruns";
     var hasRowInfoActions = isReportGrid || Model.GridId is "reports" or "upcomingruns" || Model.Rows.Any(row => !string.IsNullOrWhiteSpace(row.InfoActionUrl));
     var totalCount = Model.TotalCountOverride ?? Model.Rows.Count;
@@ -59,16 +60,34 @@
             @if (isReportGrid)
             {
                 <div class="grid-count report-batch-navigation" aria-live="polite">
-                    <button type="button" class="grid-count-link" data-report-fetch-previous hidden>Fetch Previous @Model.Rows.Count</button>
-                    <span class="report-batch-range" data-report-batch-range>Rows <strong data-report-range-start>@(displayedCount > 0 ? 1 : 0)</strong> to <strong data-report-range-end>@displayedCount</strong> of <strong data-report-total-count>@totalCount</strong> <span>@Model.EntityName.ToLowerInvariant()</span></span>
-                    @if (!string.IsNullOrWhiteSpace(Model.CountActionText))
+                    @if (appendRecordsBatches)
                     {
-                        <button type="button" class="grid-count-link" data-grid-count-action>@Model.CountActionText</button>
+                        <span class="report-batch-range" data-report-batch-range hidden>
+                            <strong data-report-range-end>@displayedCount</strong> loaded <span aria-hidden="true">·</span> Limit <strong data-report-total-count>@totalCount</strong>
+                        </span>
+                        <div class="report-fetch-group" data-report-fetch-group role="group" aria-label="Fetch records" hidden>
+                            <span class="report-fetch-label" aria-hidden="true">Fetch</span>
+                            <button type="button" class="grid-count-link icon-text-button" data-report-fetch-next title="Fetch next batch" aria-label="Fetch next batch">
+                                <span class="icon"><partial name="_Icon" model="@("chevron")" /></span>
+                                <span>Next <span data-report-fetch-next-count></span></span>
+                            </button>
+                            <button type="button" class="grid-count-link icon-text-button" data-report-fetch-all title="Fetch all remaining rows" aria-label="Fetch all remaining rows">
+                                <span class="icon"><partial name="_Icon" model="@("layers")" /></span>
+                                <span>All</span>
+                            </button>
+                        </div>
+                        <span class="report-batch-range" data-report-loaded-count hidden>
+                            <strong data-filtered-count>@displayedCount</strong><span>of</span><strong data-total-count>@totalCount</strong><span>@Model.EntityName.ToLowerInvariant()</span>
+                        </span>
                     }
-                    <span class="report-grid-count-internal" aria-hidden="true">
-                        <strong data-filtered-count>@displayedCount</strong>
-                        <strong data-total-count>@totalCount</strong>
-                    </span>
+                    else
+                    {
+                        <span class="report-batch-range" data-report-batch-range>Rows <strong data-report-range-start>@(displayedCount > 0 ? 1 : 0)</strong> to <strong data-report-range-end>@displayedCount</strong> of <strong data-report-total-count>@totalCount</strong> <span>@Model.EntityName.ToLowerInvariant()</span></span>
+                        <span class="report-grid-count-internal" aria-hidden="true">
+                            <strong data-filtered-count>@displayedCount</strong>
+                            <strong data-total-count>@totalCount</strong>
+                        </span>
+                    }
                 </div>
             }
             else
@@ -534,7 +553,13 @@
             </div>
         </div>
         <div class="grid-pager">
-            <div><span data-pager-summary>Showing 1–@Model.Rows.Count of @Model.Rows.Count</span></div>
+            <div>
+                <span data-pager-summary>Showing 1–@Model.Rows.Count of @Model.Rows.Count</span>
+                @if (appendRecordsBatches)
+                {
+                    <span data-report-fetch-progress role="status" hidden></span>
+                }
+            </div>
             <div class="pager-controls">
                 <label>Rows <select data-page-size></select></label>
                 <button type="button" class="pager-button" data-page-prev aria-label="Previous page">‹</button>

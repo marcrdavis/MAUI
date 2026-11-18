@@ -122,7 +122,8 @@ function environment(scope = 'environment-a', storage = new Map()) {
     // Run every production page JSON adapter through the shared lifecycle. The previous
     // presence-only checks could miss an adapter dropping the handled-error marker.
     function productionFunction(source, name) {
-        const start = source.indexOf(`async function ${name}(`);
+        const asyncStart = source.indexOf(`async function ${name}(`);
+        const start = asyncStart >= 0 ? asyncStart : source.indexOf(`function ${name}(`);
         assert.ok(start >= 0, name);
         return source.slice(start, source.indexOf('\n    }', start) + 6);
     }
@@ -173,7 +174,7 @@ function environment(scope = 'environment-a', storage = new Map()) {
                 errorBanner: { hidden: false, textContent: 'Earlier timeout' },
                 closeTaskRowActionMenu() {}, closeReportRowActionMenu() {}, closeActionMenu() {},
                 setRefreshBusy() {}, clearTaskRefreshTimer() {}, clearRefreshTimer() {},
-                scheduleTaskGridRefresh() {}, scheduleRefresh() {}, updateBatchUi() {}, setLastRefresh() {},
+                scheduleTaskGridRefresh() {}, scheduleRefresh() {}, showFetchProgress() {}, showBatch: () => renders++,
                 buildTaskGridRequestUrl: () => new URL('https://maui.test/Tasks/RefreshGrid'),
                 buildBatchUrl: () => '/MAUI/Records/TaskRunBatch',
                 applyTaskGridPayload: () => renders++, applyUpcomingRunsPayload: () => renders++,
@@ -181,14 +182,18 @@ function environment(scope = 'environment-a', storage = new Map()) {
                 console: { warn() {} }
             });
             const functionName = name === 'tasks' ? 'refreshTaskGrid' : name === 'records' ? 'loadBatch' : 'refreshUpcomingRuns';
+            if (name === 'records') {
+                vm.runInNewContext(productionFunction(source, 'runBatchOperation'), page.context);
+            }
             vm.runInNewContext(productionFunction(source, functionName), page.context);
-            const call = () => name === 'records' ? page.context.loadBatch('', 0, true)
+            const call = () => name === 'records' ? page.context.loadBatch('', 0)
                 : page.context[functionName](true);
             page.queue.push(response('unreachable', 503)); await call();
             check(page.banner.hidden, false); check(toasts, 0); check(renders, 0);
             if (name === 'upcoming-runs') check(page.context.errorBanner.hidden, true);
             page.queue.push(response('unreachable', 503)); await call(); check(toasts, 0);
             page.queue.push(response('live')); await call(); check(page.banner.hidden, true);
+            if (name === 'records') check(renders, 1);
         }
     }
     const layout = read('Views/Shared/_Layout.cshtml');

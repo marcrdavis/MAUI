@@ -1141,7 +1141,6 @@
     const notificationMessageFields = notificationDialog?.querySelector('[data-task-notification-message-fields]');
     const notificationResultsFieldset = notificationDialog?.querySelector('[data-notification-results-fieldset]');
     const notificationExistingRow = notificationDialog?.querySelector('[data-notification-existing-row]');
-    const notificationExistingLoading = notificationDialog?.querySelector('[data-notification-existing-loading]');
     const notificationExistingSelect = notificationDialog?.querySelector('[data-notification-existing]');
     const notificationFailure = notificationDialog?.querySelector('[data-notify-failure]');
     const notificationNoAction = notificationDialog?.querySelector('[data-notify-no-action]');
@@ -1188,7 +1187,7 @@
     const notificationSummary = notificationDialog?.querySelector('[data-notification-summary]');
     const notificationResults = notificationDialog?.querySelector('[data-notification-results]');
     const notificationModeInputs = Array.from(notificationDialog?.querySelectorAll('input[name="taskNotificationMode"]') || []);
-    const notificationRemoveMode = notificationModeInputs.find(input => input.value === 'remove');
+    const notificationModeLabels = { add: 'Add', update: 'Update', remove: 'Remove' };
     const notificationMacroSelects = Array.from(notificationDialog?.querySelectorAll('.task-notification-macro') || []);
     const notificationResultInputs = [notificationFailure, notificationNoAction, notificationSuccess].filter(Boolean);
     const notificationVisualHtmlControls = Array.from(notificationDialog?.querySelectorAll('[data-notification-command], [data-notification-link]') || []);
@@ -1196,6 +1195,7 @@
     let notificationTargets = [];
     let notificationInitialSkipped = [];
     let notificationExisting = [];
+    let notificationSetupRequest = null;
     let notificationTemplates = [];
     let notificationSelectedTemplateId = '';
     let notificationSingleTask = false;
@@ -1231,12 +1231,7 @@
     }
     notificationMacroSelects.forEach(buildNotificationMacroOptions);
 
-    function selectedNotificationMode() { return notificationModeInputs.find(input => input.checked)?.value || 'upsert'; }
-    function setNotificationExistingLoading(loading) {
-        const isLoading = Boolean(loading);
-        if (notificationExistingLoading) notificationExistingLoading.hidden = !isLoading;
-        if (notificationExistingSelect) notificationExistingSelect.hidden = isLoading;
-    }
+    function selectedNotificationMode() { return notificationModeInputs.find(input => input.checked)?.value || 'add'; }
     function selectedExistingNotificationIndex() {
         if (!notificationSingleTask) return null;
         const raw = String(notificationExistingSelect?.value || '').trim();
@@ -1245,22 +1240,27 @@
         return Number.isInteger(value) && value >= 0 ? value : null;
     }
     function updateNotificationModeUi() {
-        const hasExistingSelection = selectedExistingNotificationIndex() !== null;
-        if (notificationRemoveMode) notificationRemoveMode.disabled = notificationSingleTask && !hasExistingSelection;
-        if (notificationSingleTask && !hasExistingSelection && selectedNotificationMode() === 'remove') {
-            const upsert = notificationModeInputs.find(input => input.value === 'upsert');
-            if (upsert) upsert.checked = true;
-        }
-        const remove = selectedNotificationMode() === 'remove';
+        const mode = selectedNotificationMode();
+        const remove = mode === 'remove';
+        const update = mode === 'update';
+        const preserveRecipients = update && Boolean(notificationPreserveRecipients?.checked);
+        const loading = Boolean(notificationSetupRequest);
+        const needsExisting = notificationSingleTask && mode !== 'add';
+        const hasExisting = notificationExisting.length > 0;
+        notificationModeInputs.forEach(input => {
+            input.disabled = notificationSingleTask && !loading && !hasExisting && input.value !== 'add' && input.value !== mode;
+        });
+        if (notificationExistingRow) notificationExistingRow.hidden = !needsExisting;
+        if (notificationExistingSelect) notificationExistingSelect.disabled = !hasExisting;
         const disableResults = remove && notificationSingleTask;
         notificationResultInputs.forEach(input => input.disabled = disableResults);
-        [notificationFormat, notificationHost, notificationRecipients, notificationSubject, notificationTextEditor, notificationHtmlSource]
+        [notificationFormat, notificationHost, notificationSubject, notificationTextEditor, notificationHtmlSource]
             .filter(Boolean)
             .forEach(control => control.disabled = remove);
+        if (notificationRecipients) notificationRecipients.disabled = remove || preserveRecipients;
         if (notificationPreserveRecipients) {
-            const createNew = notificationSingleTask && !hasExistingSelection;
-            if (createNew) notificationPreserveRecipients.checked = false;
-            notificationPreserveRecipients.disabled = remove || createNew;
+            notificationPreserveRecipients.closest('label').hidden = !update;
+            notificationPreserveRecipients.disabled = !update;
         }
         notificationMacroSelects.forEach(control => control.disabled = remove);
         notificationVisualHtmlControls.forEach(control => control.disabled = remove || notificationHtmlSourceMode);
@@ -1271,7 +1271,10 @@
         }
         notificationResultsFieldset?.classList.toggle('is-disabled', disableResults);
         notificationMessageFields?.classList.toggle('is-disabled', remove);
-        if (notificationApply) notificationApply.textContent = remove ? 'Remove' : 'Add/Update';
+        if (notificationApply) {
+            notificationApply.textContent = notificationModeLabels[mode];
+            notificationApply.disabled = loading || !notificationTargets.length || (needsExisting && !hasExisting);
+        }
         if (notificationTemplateButton) notificationTemplateButton.disabled = remove;
         if (notificationTemplateSave) notificationTemplateSave.disabled = remove || !canSaveTemplates;
         if (remove && notificationTemplateMenu) notificationTemplateMenu.hidden = true;
@@ -1577,11 +1580,14 @@
         return labels.length ? labels.join(' + ') : 'No result selected';
     }
 
-    function populateExistingNotifications(items) {
+    function populateExistingNotifications(items, status = '') {
         notificationExisting = Array.isArray(items) ? items.slice() : [];
         if (!notificationExistingSelect) return;
         notificationExistingSelect.replaceChildren();
-        const createNew = document.createElement('option'); createNew.value = ''; createNew.textContent = 'Create New'; notificationExistingSelect.appendChild(createNew);
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = status || (notificationExisting.length ? 'Select Notification' : 'No existing notifications');
+        notificationExistingSelect.appendChild(placeholder);
         notificationExisting.forEach((item, ordinal) => {
             const option = document.createElement('option');
             option.value = String(item.actionIndex);
@@ -1614,14 +1620,15 @@
     }
 
     function resetNotificationDialog() {
-        notificationTargets = []; notificationInitialSkipped = []; notificationExisting = []; notificationTemplates = []; notificationSelectedTemplateId = ''; notificationSingleTask = false; notificationBusy = false; notificationTemplateSaving = false; notificationDefaultHostId = ''; notificationHtmlSourceMode = false; notificationHtmlRange = null;
+        notificationSetupRequest?.abort();
+        notificationSetupRequest = null;
+        notificationTargets = []; notificationInitialSkipped = []; notificationTemplates = []; notificationSelectedTemplateId = ''; notificationSingleTask = false; notificationBusy = false; notificationTemplateSaving = false; notificationDefaultHostId = ''; notificationHtmlSourceMode = false; notificationHtmlRange = null;
         if (notificationError) { notificationError.hidden = true; notificationError.textContent = ''; }
         if (notificationWarning) { notificationWarning.hidden = true; notificationWarning.textContent = ''; }
         if (notificationMultiWarning) { notificationMultiWarning.hidden = true; notificationMultiWarning.textContent = ''; }
         setDefaultNotificationResults();
-        notificationModeInputs.forEach(input => { input.checked = input.value === 'upsert'; input.disabled = false; });
-        if (notificationExistingRow) notificationExistingRow.hidden = true;
-        setNotificationExistingLoading(false);
+        notificationModeInputs.forEach(input => { input.checked = input.value === 'add'; });
+        notificationHost?.replaceChildren();
         populateExistingNotifications([]);
         populateNotificationTemplates([]);
         if (notificationTemplateMenu) notificationTemplateMenu.hidden = true;
@@ -1631,23 +1638,27 @@
         pendingNotificationBulkApply = null;
         clearNotificationMessageFields();
         if (notificationConfig) notificationConfig.hidden = false; resetNotificationProgress();
-        if (notificationApply) { notificationApply.hidden = false; notificationApply.disabled = false; notificationApply.textContent = 'Add/Update'; }
+        if (notificationApply) notificationApply.hidden = false;
         if (notificationCancel) { notificationCancel.disabled = false; notificationCancel.textContent = 'Close'; } if (notificationClose) notificationClose.disabled = false;
         updateNotificationModeUi();
     }
 
     async function openTaskNotifications(ids) {
-        const selectedIds = normalizeSelectedTaskIds(ids); if (!selectedIds.length || notificationBusy) return;
+        const selectedIds = normalizeSelectedTaskIds(ids);
+        if (!selectedIds.length || notificationBusy || !notificationDialog || notificationDialog.open) return;
         resetNotificationDialog();
+        const request = new AbortController();
+        notificationSetupRequest = request;
         notificationSingleTask = selectedIds.length === 1;
+        if (notificationSingleTask) populateExistingNotifications([], 'Loading notifications…');
         updateNotificationModeUi();
         if (notificationSubtitle) notificationSubtitle.textContent = notificationSingleTask ? 'Manage task-level email notifications for this Traditional Task.' : `Apply one task-level email notification configuration to ${selectedIds.length} selected Tasks.`;
-        if (notificationExistingRow) notificationExistingRow.hidden = !notificationSingleTask;
-        setNotificationExistingLoading(notificationSingleTask);
-        notificationDialog?.showModal();
-        if (notificationApply) notificationApply.disabled = true;
+        notificationDialog.showModal();
         try {
-            const setup = await fetchJson(endpoint('notificationSetupUrl'), { method: 'POST', body: JSON.stringify({ taskIds: selectedIds }) });
+            const setup = await fetchJson(endpoint('notificationSetupUrl'), {
+                method: 'POST', body: JSON.stringify({ taskIds: selectedIds }), signal: request.signal
+            });
+            if (notificationSetupRequest !== request || !notificationDialog.open) return;
             notificationTargets = Array.isArray(setup?.eligible) ? setup.eligible : []; notificationInitialSkipped = Array.isArray(setup?.skipped) ? setup.skipped : [];
             const smtpHosts = Array.isArray(setup?.smtpHosts) ? setup.smtpHosts : [];
             notificationDefaultHostId = smtpHosts.length === 1 ? String(smtpHosts[0]?.id || '') : '';
@@ -1658,33 +1669,27 @@
                 if (notificationDefaultHostId) notificationHost.value = notificationDefaultHostId;
             }
             populateNotificationTemplates(setup?.templates || []);
+            if (notificationSingleTask) populateExistingNotifications(setup?.existing?.notifications);
             if (!notificationTargets.length) {
-                setNotificationExistingLoading(false);
-                if (notificationExistingRow) notificationExistingRow.hidden = true;
                 if (notificationError) { notificationError.textContent = notificationInitialSkipped[0]?.reason || 'No selected Traditional Tasks can be updated.'; notificationError.hidden = false; }
                 return;
             }
 
-            if (notificationSingleTask) {
-                populateExistingNotifications(Array.isArray(setup?.existing?.notifications) ? setup.existing.notifications : []);
-                setNotificationExistingLoading(false);
-                setDefaultNotificationResults();
-                clearNotificationMessageFields();
-            } else {
-                if (notificationExistingRow) notificationExistingRow.hidden = true;
-                if (notificationMultiWarning) {
-                    notificationMultiWarning.textContent = `This operation will affect ${notificationTargets.length} Task${notificationTargets.length === 1 ? '' : 's'}. Each Task will be evaluated independently. Matching notification types will be added, updated, or removed across the selected Tasks according to each Task's current notification configuration and the operation selected.`;
-                    notificationMultiWarning.hidden = false;
-                }
+            if (!notificationSingleTask && notificationMultiWarning) {
+                notificationMultiWarning.textContent = `This operation will affect ${notificationTargets.length} Task${notificationTargets.length === 1 ? '' : 's'}. Each Task will be evaluated independently. Add creates a notification on each Task. Update and Remove apply only to notifications that match the selected results.`;
+                notificationMultiWarning.hidden = false;
             }
             if (notificationInitialSkipped.length && notificationWarning) { notificationWarning.textContent = `${notificationInitialSkipped.length} selected Task(s) are not Traditional or are unavailable and will be skipped.`; notificationWarning.hidden = false; }
-            if (!smtpHosts.length && notificationWarning) { notificationWarning.textContent = 'No SMTP Hosts are currently available in MOVEit. Add/Update requires an SMTP Host.'; notificationWarning.hidden = false; }
-            updateNotificationModeUi();
-            if (notificationApply) notificationApply.disabled = false;
+            if (!smtpHosts.length && notificationWarning) { notificationWarning.textContent = 'No SMTP Hosts are currently available in MOVEit. Adding or updating a notification requires an SMTP Host.'; notificationWarning.hidden = false; }
         } catch (error) {
-            setNotificationExistingLoading(false);
-            if (notificationExistingRow) notificationExistingRow.hidden = true;
+            if (notificationSetupRequest !== request || !notificationDialog.open) return;
+            if (notificationSingleTask) populateExistingNotifications([], 'Unable to load notifications');
             if (notificationError) { notificationError.textContent = error?.message || 'Unable to load notification settings.'; notificationError.hidden = false; }
+        } finally {
+            if (notificationSetupRequest === request) {
+                notificationSetupRequest = null;
+                if (notificationDialog.open) updateNotificationModeUi();
+            }
         }
     }
 
@@ -1693,15 +1698,14 @@
         const isHtml = notificationFormat?.value !== 'text';
         return {
             mode,
-            actionIndex: selectedExistingNotificationIndex(),
-            matchExactResults: !notificationSingleTask,
+            actionIndex: mode === 'add' ? null : selectedExistingNotificationIndex(),
             doIfFailure: selected.failure,
             doIfNoAction: selected.noAction,
             doIfSuccess: selected.success,
             isHtml,
             hostId: String(notificationHost?.value || ''),
             addressTo: String(notificationRecipients?.value || ''),
-            preserveExistingRecipients: Boolean(notificationPreserveRecipients?.checked),
+            preserveExistingRecipients: mode === 'update' && Boolean(notificationPreserveRecipients?.checked),
             subject: String(notificationSubject?.value || ''),
             message: isHtml ? currentNotificationHtml() : String(notificationTextEditor?.value || '')
         };
@@ -1813,14 +1817,14 @@
     async function executeTaskNotifications(mode, payloadBase) {
         notificationBusy=true; if (notificationError) notificationError.hidden=true; resetNotificationProgress(); if (notificationConfig) notificationConfig.hidden=true; if (notificationProgress) notificationProgress.hidden=false; if (notificationApply) notificationApply.hidden=true; if (notificationCancel) notificationCancel.disabled=true; if (notificationClose) notificationClose.disabled=true;
         const results=[]; let succeeded=0, skipped=notificationInitialSkipped.length, failed=0; notificationInitialSkipped.forEach(item => results.push({name:item.name||item.id, status:'Skipped', message:item.reason||'Not eligible'}));
-        const total=notificationTargets.length + notificationInitialSkipped.length; if (notificationProgressTitle) notificationProgressTitle.textContent = mode === 'remove' ? 'Removing Notifications' : 'Updating Notifications';
+        const total=notificationTargets.length + notificationInitialSkipped.length; if (notificationProgressTitle) notificationProgressTitle.textContent = { add: 'Adding Notifications', update: 'Updating Notifications', remove: 'Removing Notifications' }[mode];
         for (let i=0; i<notificationTargets.length; i++) {
             const target=notificationTargets[i]; const processedBefore=notificationInitialSkipped.length+i; if (notificationProgressCount) notificationProgressCount.textContent=`${processedBefore} of ${total} tasks processed`; if (notificationProgressBar) notificationProgressBar.value=Math.round((processedBefore/total)*100); if (notificationCurrent) notificationCurrent.textContent=`Processing: ${target.name || target.id}`;
             try { const data=await fetchJson(endpoint('updateNotificationUrl'), {method:'POST', body:JSON.stringify({...payloadBase, taskId:target.id})}); if (data?.skipped) { skipped++; results.push({name:target.name,status:'Skipped',message:data?.message||'No change'}); } else { succeeded++; results.push({name:target.name,status:data?.warning ? 'Warning' : 'Updated',message:[data?.message,data?.warning].filter(Boolean).join(' ')}); setTaskUndoAvailable(target.id,true); } }
             catch(error) { failed++; results.push({name:target.name,status:'Failed',message:error?.message||'Update failed'}); }
         }
         if (notificationProgressCount) notificationProgressCount.textContent=`${total} of ${total} tasks processed`; if (notificationProgressBar) notificationProgressBar.value=100; if (notificationCurrent) notificationCurrent.textContent='Complete';
-        if (notificationSummary) notificationSummary.textContent=`${succeeded} updated · ${skipped} skipped · ${failed} failed`;
+        if (notificationSummary) notificationSummary.textContent=`${succeeded} ${{ add: 'added', update: 'updated', remove: 'removed' }[mode]} · ${skipped} skipped · ${failed} failed`;
         if (notificationResults) { notificationResults.replaceChildren(); results.filter(item=>item.status!=='Updated').forEach(item=>{ const row=document.createElement('div'); row.className='task-notification-result-row'; row.textContent=`${item.status}: ${item.name}${item.message ? ` — ${item.message}` : ''}`; notificationResults.appendChild(row); }); }
         notificationBusy=false; if (notificationCancel) { notificationCancel.disabled=false; notificationCancel.textContent='Close'; } if (notificationClose) notificationClose.disabled=false; await refreshTaskGrid(true);
     }
@@ -1841,21 +1845,29 @@
     async function applyTaskNotifications() {
         if (notificationBusy || !notificationTargets.length) return;
         const mode = selectedNotificationMode(); const payloadBase = currentNotificationPayload(mode);
-        if (mode === 'remove' && notificationSingleTask && payloadBase.actionIndex === null) { if (notificationError) { notificationError.textContent='Select an existing notification to remove.'; notificationError.hidden=false; } return; }
-        if (!(mode === 'remove' && payloadBase.actionIndex !== null) && !payloadBase.doIfFailure && !payloadBase.doIfNoAction && !payloadBase.doIfSuccess) { if (notificationError) { notificationError.textContent='Select at least one Task result.'; notificationError.hidden=false; } return; }
-        const preservingSingleExistingRecipients = mode === 'upsert' && notificationSingleTask && payloadBase.actionIndex !== null && payloadBase.preserveExistingRecipients;
-        const recipientsRequired = mode === 'upsert' && !preservingSingleExistingRecipients;
-        if (mode === 'upsert' && (!payloadBase.hostId || (recipientsRequired && !payloadBase.addressTo.trim()) || !payloadBase.subject.trim() || !payloadBase.message.trim())) {
-            if (notificationError) {
-                notificationError.textContent = !payloadBase.addressTo.trim() && recipientsRequired
-                    ? (notificationSingleTask ? 'Recipients are required when creating a notification.' : 'Recipients are required because bulk Add/Update may need to create a notification.')
-                    : 'SMTP Host, Subject, and Message Body are required for Add/Update.';
-                notificationError.hidden=false;
-            }
+        const remove = mode === 'remove';
+        if (notificationSingleTask && mode !== 'add' && payloadBase.actionIndex === null) {
+            if (notificationError) { notificationError.textContent = `Select an existing notification to ${mode}.`; notificationError.hidden = false; }
             return;
         }
+        if (!(remove && payloadBase.actionIndex !== null) && !payloadBase.doIfFailure && !payloadBase.doIfNoAction && !payloadBase.doIfSuccess) {
+            if (notificationError) { notificationError.textContent = 'Select at least one Task result.'; notificationError.hidden = false; }
+            return;
+        }
+        if (!remove) {
+            const hasRecipients = payloadBase.addressTo.split(/[,;]/).some(value => value.trim());
+            const validationMessage = !payloadBase.preserveExistingRecipients && !hasRecipients
+                ? 'Enter at least one recipient.'
+                : !payloadBase.hostId || !payloadBase.subject.trim() || !payloadBase.message.trim()
+                    ? 'SMTP Host, Subject, and Message Body are required.'
+                    : '';
+            if (validationMessage) {
+                if (notificationError) { notificationError.textContent = validationMessage; notificationError.hidden = false; }
+                return;
+            }
+        }
         if (!notificationSingleTask) {
-            const verb = mode === 'remove' ? 'Remove matching notification types from' : 'Add or update matching notification types on';
+            const verb = { add: 'Add a notification to', update: 'Update matching notifications on', remove: 'Remove matching notifications from' }[mode];
             pendingNotificationBulkApply = { mode, payloadBase };
             if (notificationConfirmMessage) notificationConfirmMessage.textContent = `${verb} ${notificationTargets.length} Task${notificationTargets.length === 1 ? '' : 's'}. Each Task will be evaluated independently according to its current notification configuration.`;
             notificationConfirmDialog?.showModal();
@@ -1864,12 +1876,21 @@
         await executeTaskNotifications(mode, payloadBase);
     }
 
-    notificationModeInputs.forEach(input => input.addEventListener('change', updateNotificationModeUi));
+    notificationModeInputs.forEach(input => input.addEventListener('change', () => {
+        if (notificationError && notificationTargets.length) notificationError.hidden = true;
+        if (input.value === 'add' && selectedExistingNotificationIndex() !== null) {
+            notificationExistingSelect.value = '';
+            clearUnavailableNotificationHostWarning();
+            setDefaultNotificationResults();
+            clearNotificationMessageFields();
+        }
+        updateNotificationModeUi();
+    }));
+    notificationPreserveRecipients?.addEventListener('change', updateNotificationModeUi);
     notificationExistingSelect?.addEventListener('change', () => {
         clearUnavailableNotificationHostWarning();
         const actionIndex = selectedExistingNotificationIndex();
         if (actionIndex === null) {
-            notificationModeInputs.forEach(input => input.checked = input.value === 'upsert');
             setDefaultNotificationResults();
             clearNotificationMessageFields();
             updateNotificationModeUi();
@@ -1877,6 +1898,7 @@
         }
         const item = notificationExisting.find(notification => Number(notification?.actionIndex) === actionIndex);
         if (!item) return;
+        if (notificationPreserveRecipients) notificationPreserveRecipients.checked = false;
         applyNotificationValues(item, true);
         if (notificationHost && item.hostId && notificationHost.value !== String(item.hostId)) {
             notificationHost.value='';
@@ -1945,7 +1967,7 @@
     notificationApply?.addEventListener('click', applyTaskNotifications);
     [notificationCancel, notificationClose].forEach(button => button?.addEventListener('click', () => { if (!notificationBusy) notificationDialog?.close(); }));
     notificationDialog?.addEventListener('cancel', event => { if (notificationBusy) event.preventDefault(); });
-    notificationDialog?.addEventListener('close', resetNotificationDialog);
+    notificationDialog?.addEventListener('close', () => { if (!notificationDialog.open) resetNotificationDialog(); });
 
     // Purpose: Format a bulk-action result message for the MAUI status surface.
     function formatBulkResult(action, data) {

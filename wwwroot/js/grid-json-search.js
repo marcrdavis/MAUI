@@ -31,7 +31,7 @@
             function renderStatus() {
                 if (active() && summary && state !== 'ready') summary.textContent = message;
             }
-            async function load(ids, predicate, current) {
+            async function load(ids, matchesDocument, current) {
                 timer = 0;
                 const request = new AbortController(); controller = request;
                 const obsolete = () => disposed || current !== generation || request.signal.aborted;
@@ -63,7 +63,7 @@
                                 remember(id, leaves); values = { values: leaves };
                             }
                             if (obsolete()) return;
-                            if (values.values.some(leaf => predicate(leaf, leaf.value))) found.add(id);
+                            if (matchesDocument(values.values)) found.add(id);
                             completed++; message = `Searching JSON (${completed} of ${total})…`; renderStatus();
                         }
                     }
@@ -90,16 +90,21 @@
                 const key = JSON.stringify([query, ids]);
                 if (key === signature && !(state === 'ready' && Date.now() >= expiresAt)) return;
                 cancel(); signature = key; matches.clear(); completed = 0; total = ids.length;
-                let predicate;
+                let matchesDocument;
                 try {
                     if (!query) throw new Error('Enter a JSON element or value after JSON:.');
-                    predicate = model.compileTreeSearch(query, root); search.setCustomValidity('');
+                    if (root === 'Task') matchesDocument = model.compileTaskSearch(query);
+                    else {
+                        const matchesLeaf = model.compileTreeSearch(query, root);
+                        matchesDocument = leaves => leaves.some(leaf => matchesLeaf(leaf, leaf.value));
+                    }
+                    search.setCustomValidity('');
                 } catch (error) {
                     state = 'invalid'; message = error.message; search.setCustomValidity(message); renderStatus(); return;
                 }
                 state = 'loading'; message = `Searching JSON (0 of ${total})…`; renderStatus();
                 const current = generation;
-                timer = setTimeout(() => { void load(ids, predicate, current); }, 300);
+                timer = setTimeout(() => { void load(ids, matchesDocument, current); }, 300);
             }
             function invalidate() {
                 cancel(); clearCache(); signature = ''; state = ''; matches.clear(); ensure(); changed();

@@ -32,6 +32,7 @@ public sealed class ConfigurationSettingsValidator : IConfigurationSettingsValid
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(currentSettings);
         ValidateAndNormalizeRequest(request);
+        request.MoveItLocalGroups?.NormalizeAndValidate(request.Servers.Select(server => server.Key));
         ValidateAndNormalizeSmtp(request);
         if (request.SshAlgorithms?.Encryption is not null) request.SshAlgorithms.Encryption = HostSshAlgorithms.NormalizeSelection(request.SshAlgorithms.Encryption);
         if (request.SshAlgorithms?.KeyExchange is not null) request.SshAlgorithms.KeyExchange = HostSshAlgorithms.NormalizeSelection(request.SshAlgorithms.KeyExchange);
@@ -231,3 +232,4 @@ public sealed class ConfigurationSettingsValidator : IConfigurationSettingsValid
         .Distinct(StringComparer.OrdinalIgnoreCase)
         .ToList();
 }
+

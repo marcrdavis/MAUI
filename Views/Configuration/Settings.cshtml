@@ -8,6 +8,8 @@
     var isMoveItAdmin = ViewData["IsMoveItAdmin"] is true;
 }
 
+<link rel="stylesheet" href="~/css/configuration-local-groups.css" asp-append-version="true" />
+
 <div class="page-heading configuration-heading">
     <div>
         <h1>Settings</h1>
@@ -325,6 +327,8 @@
                 <strong>Experimental Features</strong>
                 <p>Experimental features may be incomplete, unstable, change without notice, or be removed. They are not recommended for production use.</p>
             </div>
+
+            @await Html.PartialAsync("_LocalGroupsSettings", Model)
 
             <div class="panel-card configuration-card" data-search-terms="task json editor raw values bulk find replace">
                 <div class="configuration-card-heading"><h3>Task JSON Editor</h3></div>
@@ -1297,9 +1301,11 @@
     <script src="~/js/shared/notification-message.js" asp-append-version="true"></script>
     <script src="~/js/configuration-notification-templates.js" asp-append-version="true"></script>
     <script src="~/js/configuration-ssh-algorithms.js" asp-append-version="true"></script>
+    <script src="~/js/configuration-local-groups.js" asp-append-version="true"></script>
     <script src="~/js/configuration.js" asp-append-version="true"></script>
     <script src="~/js/configuration-application-restart.js" asp-append-version="true"></script>
     <script src="~/js/configuration-factory-reset.js" asp-append-version="true"></script>
     <script src="~/js/smtp-settings.js" asp-append-version="true"></script>
 }
+
 

@@ -496,19 +496,20 @@
             const normalizedId = String(taskId || '').trim();
             if (!normalizedId || loadingShell) return false;
 
-            await checkout?.close();
-            reset();
-            activeTaskId = normalizedId;
-            activeTaskName = String(taskName || normalizedId).trim();
-            title.textContent = activeTaskName;
-            description.textContent = 'Loading task…';
-            // Apply known type geometry before the loading dialog's first visible frame.
-            // Callers without a type wait for the authoritative shell before showing it.
-            const hintedType = ({traditional:'Traditional',advanced:'Advanced',cos:'Advanced',synchronization:'Synchronization',sync:'Synchronization',sy:'Synchronization'})[String(taskType || '').trim().toLowerCase()];
-            if (hintedType) { activeTaskType = hintedType; configureTaskKind({}); dialog.showModal(); }
+            // Reserve the opening before awaiting the previous editor's checkout cleanup.
+            // A second open during that wait could otherwise replace the clone's ID or lease.
             loadingShell = true;
-
+            const hintedType = ({traditional:'Traditional',advanced:'Advanced',cos:'Advanced',synchronization:'Synchronization',sync:'Synchronization',sy:'Synchronization'})[String(taskType || '').trim().toLowerCase()];
             try {
+                await checkout?.close();
+                reset();
+                activeTaskId = normalizedId;
+                activeTaskName = String(taskName || normalizedId).trim();
+                title.textContent = activeTaskName;
+                description.textContent = 'Loading task…';
+                // Apply known type geometry before the first visible frame.
+                if (hintedType) { activeTaskType = hintedType; configureTaskKind({}); dialog.showModal(); }
+
                 const baseUrl = endpoint('traditionalTaskEditorShellUrl');
                 if (!baseUrl) throw new Error('The Traditional Task Editor endpoint is not configured.');
                 const url = new URL(baseUrl, window.location.href);
@@ -2630,6 +2631,7 @@
         function addNextAction(type) {
             closeAddNextActionMenu();
             const normalizedType = String(type || '').toLowerCase() === 'task' ? 'Task' : 'Email';
+            const defaultSmtpHost = normalizedType === 'Email' && smtpHosts.length === 1 ? smtpHosts[0] : null;
             const key = `local-next-action:${++temporaryNextActionSequence}`;
             const action = normalizeNextAction({
                 index: nextActions.length,
@@ -2641,7 +2643,8 @@
                 doIfFailure: false,
                 doIfNoAction: false,
                 isHtml: normalizedType === 'Email',
-                hostId: '', hostName: '', addressTo: '', subject: '', message: '', taskId: '', taskName: '', parameters: []
+                hostId: defaultSmtpHost?.id, hostName: defaultSmtpHost?.name,
+                addressTo: '', subject: '', message: '', taskId: '', taskName: '', parameters: []
             });
             action.key = key;
             nextActions.push(action);

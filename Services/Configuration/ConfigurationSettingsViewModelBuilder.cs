@@ -109,6 +109,7 @@ public sealed class ConfigurationSettingsViewModelBuilder : IConfigurationSettin
 
         return new ConfigurationSettingsViewModel
         {
+            MoveItLocalGroups = MoveItAutomationUI.Features.LocalGroups.LocalGroupsSettings.From(configuration),
             Version = ui.Version,
             SshEncryption = sshAlgorithms.Encryption.Value,
             SshKeyExchange = sshAlgorithms.KeyExchange.Value,
@@ -439,9 +440,12 @@ public sealed class ConfigurationSettingsViewModelBuilder : IConfigurationSettin
                 var metadataColumns = definition is not null
                     ? definition.Fields.Where(field => !string.IsNullOrWhiteSpace(field.Name)).Select(field => $"Metadata_{field.Name.Trim()}")
                     : Enumerable.Empty<string>();
-                var systemColumns = pair.Key.Equals("hosts", StringComparison.OrdinalIgnoreCase)
-                    ? new[] { "Health", "LastHealthCheck", "TestResults" }
-                    : Array.Empty<string>();
+                var systemColumns = pair.Key switch
+                {
+                    "hosts" => new[] { "Health", "LastHealthCheck", "TestResults" },
+                    "taskruns" => new[] { "Group" },
+                    _ => Array.Empty<string>()
+                };
                 IEnumerable<string> metadataAuditColumns = hasMetadataDefinition
                     ? MetadataGridSupport.AuditColumnKeys
                     : Array.Empty<string>();
@@ -539,3 +543,4 @@ public sealed class ConfigurationSettingsViewModelBuilder : IConfigurationSettin
             ?? throw new InvalidOperationException($"Configuration property '{configurationPath ?? propertyName}' exists but is not a JSON object.");
     }
 }
+

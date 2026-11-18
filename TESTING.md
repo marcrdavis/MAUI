@@ -1,8 +1,8 @@
 # MAUI Testing Guide
 
-- **Version:** `0.18.529-RC3`
+- **Version:** `0.18.556-RC3`
 - **Release:** Release Candidate 3 (pre-release)
-- **Build:** `20261105`
+- **Build:** `20261117`
 - **Database schema / configuration version:** `1` / `1`
 
 > **Release Candidate 3 — not the final release.** Bugs and regressions may remain. Passing CI validates the covered contracts and fixtures; it does not certify the candidate as bug-free or replace testing against your MOVEit environment.
@@ -14,6 +14,98 @@ The development regression suite runs outside IIS. Automated tests use fixtures,
 ## Running validation
 
 ### Current validation
+
+Use [Windows CI for master](https://github.com/marcrdavis/MAUI-RC2/actions/workflows/maui-build.yml?query=branch%3Amaster) and select the run for the release commit being tested.
+
+### v0.18.549 validation
+
+Source commit `bc3dadc60cad2a07079fc4a97e767327bb347233` for **0.18.549-RC3, build 20261116** passed [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/43929802580) for Debug and Release. The 14 Records checks cover Fetch Next, Fetch All, refresh, scoped requests, and the Run Report modal.
+
+### v0.18.544 validation
+
+The [Environment Copy security fix](https://github.com/marcrdavis/MAUI-RC2/commit/6679fc9fb3b9b6965be05e032cc5b37bea02acfe) passed [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/43234065994) for Debug and Release, including xUnit and Edge checks. The journal regressions cover invalid operation IDs, existing report and recovery filenames, and ownership checks.
+
+Source commit `17e5d9a6d6511cbd6575b4e7797724e53fc7f939` for **0.18.544-RC3, build 20261110** passed [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42842122352/attempts/2). Debug and Release each passed **2,849 xUnit tests**, and the **3,167 Task Editor Edge checks** passed. The notification fixture delays setup to check the Add layout, the inline dropdown state, and isolation after reopening the modal. The Release job passed on rerun after an Edge cleanup failure in the first attempt.
+
+### v0.18.543 validation
+
+Source commit `0a2d43438630d0d406688e3d9b193ddd05401c48` for **0.18.543-RC3, build 20261109** passed [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42745867999). Debug and Release each passed **2,849 xUnit tests**. Release built with zero warnings or errors. The notification checks cover Add, Update, Remove, and preserving recipients. The **3,167 Task Editor Edge checks** include saving the clone with its own checkout and revision while another editor open is attempted.
+
+### v0.18.542 validation
+
+Source commit `fdb44db059dd38d8479af459632173b31bc001c7` for **0.18.542-RC3, build 20261109** passed [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42725672798). Debug and Release each passed **2,842 xUnit tests**. Release built with zero warnings or errors. The **3,160 Task Editor** and **334 Groups and Permissions** Edge checks passed. They cover the default SMTP Host and its saved value in all three task editors, the empty selection with zero or multiple hosts, and the two-row description in Edit Resource Group.
+
+### v0.18.541 validation
+
+Source commit `35df5c8d921f7cb80d072624dc46e0ceba9d02dc` for **0.18.541-RC3, build 20261109** passed [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42693995023). Debug and Release each passed **2,842 xUnit tests**. Release built with zero warnings or errors. The **43 Grid JSON Edge checks** and package validation passed. The Tasks grid JSON search checks cover AND, OR, precedence, quoted values and matching multiple fields of one task.
+
+### v0.18.540 validation
+
+Source commit `5d4f82c5439732cf8423252ee6aad26341c8d014` for **0.18.540-RC3, build 20261108** passed [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42557815305). Debug and Release each passed **2,842 xUnit tests**. Release built with zero warnings or errors. The task state regression covers enabling unscheduled tasks from a single selection and a mixed bulk selection, the refreshed grid state, and the incomplete-task guard. The Edge and release package checks also passed.
+
+### v0.18.539 validation
+
+Source commit `b3df5bccd8b3c5affc5d889cc629ab0c1ddb4526` for **0.18.539-RC3, build 20261107** passed [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42387138915). Debug and Release each passed **2,840 xUnit tests**. Release built with zero warnings or errors. The **195 User Management browser checks**, **3,152 Task Editor checks**, project isolation, and release package validation passed. The User Management checks cover automatic recovery, retry exhaustion, manual reload, and the card loading state. Broker tests cover abandoned inventory reads and late replies.
+
+### v0.18.538 validation
+
+Source commit `989b4a7a7890af5d2baa773ce7c728a59c15be2d` for **0.18.538-RC3, build 20261107** passed [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42379531694). Debug and Release each passed **2,838 xUnit tests**. Release built with zero warnings or errors. The **184 User Management browser checks**, **3,152 Task Editor checks**, project isolation, and release package validation passed. The User Management fixture held requests open to verify that Find leaves the selected group visible and that the footer reports progress through membership verification.
+
+### v0.18.537 validation
+
+Source commit `998275de46b918a75a409a404f3e87b604cd7607` for **0.18.537-RC3, build 20261107** passed [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42377567736). Debug and Release each passed **2,838 xUnit tests**. Release built with zero warnings or errors. The **171 User Management browser checks**, **3,152 Task Editor checks**, project isolation, and release package validation passed. The User Management checks covered cancellation, successful additions, partial failure and retry, and the 14-group and 10-member scroll limits. The modal and both tables were also reviewed in the browser screenshots.
+
+### v0.18.536 validation
+
+Source commit `9a55fd4029de8bc2b9c17da7f95374493f68d999` for **0.18.536-RC3, build 20261107** passed [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42344509526). Debug and Release each passed **2,838 xUnit tests**. Release built with zero warnings or errors. The **153 User Management browser checks**, **3,152 Task Editor checks**, package checks, and **20 isolation probes** passed. Reviewed the divider and button spacing with results in light mode and the bordered empty row in narrow dark mode.
+
+### v0.18.535 validation
+
+Application and test commit `79963fbb8ad15ff50347a3b01d26dba8fc279954` for **0.18.535-RC3, build 20261107** passed [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42342659600). Visual Studio rebuilt both projects in Debug. Release built with zero warnings or errors. Both configurations passed all **2,838 xUnit tests** with zero failures or skips. The **153 User Management browser checks**, **3,152 Task editor checks**, package checks, and **20 isolation probes** passed.
+
+The User Management fixture covered local partial search, scoped domain prefix search, exact SID lookup, persistent Find results, checked additions, a failure after a completed add, and removal cancellation and retry in the MAUI modal. Reviewed the results table, modal, and narrow dark screenshots. The separately packaged 1.0.5 service passed static source and archive checks. Run its included Windows tests to validate native accounts, live directory queries, and TLS recovery on the target host.
+
+### v0.18.534 validation
+
+Application and test commit `25d0dee3955a389311ad6bc505538dd7be2e065a` for **0.18.534-RC3, build 20261106** passed [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42338502154). Visual Studio rebuilt both projects in Debug. Release built with zero warnings or errors. All **2,838 xUnit tests** passed in each configuration with zero failures or skips. The **129 User Management browser checks**, **3,152 Task editor checks**, package checks, and **20 isolation probes** passed.
+
+Coverage verifies that MAUI forwards local users and groups and supplies upgrade guidance when the service returns the domain-only error. Native membership failures retain their message and outcome flag. The rendered Experimental card shows the broker URL without the removed note. Use the separately deployed 1.0.4 service to verify membership on the Automation server.
+
+### v0.18.533 validation
+
+Application and test commit `414fedce0eea4d6229ba29e1a499f467403c898f` for **0.18.533-RC3, build 20261106** passed [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42336446446) on `feature/moveit-user-management-standalone-ui`. Visual Studio rebuilt both projects in Debug. Release built with zero warnings or errors. All **2,833 xUnit tests** passed in each configuration with zero failures or skips. The **129 User Management browser checks**, **3,152 Task editor checks**, and existing browser and package suite passed. All **20 isolation probes** remained on disk and were excluded from the assembly and package. MAUI's assembly metadata passed verification.
+
+The browser fixture exercised first-open loading, Reload Groups, protected group exclusion, the centered spinner, local account selection, both deletion restrictions, and recovery after connection errors. It also verified uncertain write handling and rejection of stale settings responses. Reviewed the desktop loading and narrow dark screenshots. The separate Windows Service 1.0.4 package passed static and archive checks. Its Windows build and live SAM, directory, and MOVEit operations require the tests included with the service package.
+
+### v0.18.532 validation
+
+Application/test commit `40cb4c992301c385434aebbc0dadfd9f200f131a` for **0.18.532-RC3, build 20261106** passed [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42327516053) on `feature/moveit-user-management-standalone-ui`. Visual Studio rebuilt both projects in Debug; Release built with **zero warnings/errors**. All **2,833 xUnit tests in each configuration** passed with none failed/skipped, together with **98 User Management browser checks**, **3,152 Task editor checks** and the existing browser/package suite. All **20 isolation probes** remained present and excluded; MAUI assembly metadata remained intact. Reviewed the updated Settings screenshot.
+
+The new regressions start a real TLS 1.2 Kestrel listener using the production HTTPS configuration and verify that it requests and receives the offered client certificate. Root and `/MAUI` routes return static base information without browser login, while missing/untrusted certificates and browser cookies cannot authorize poll/result actions. Browser cookie login still works. Fixture-only certificate pins do not modify OS trust stores or production validation; the production handler rejects the fixture's enrolled but untrusted certificate.
+
+These checks exercise actual local TLS negotiation, not the separately built Windows Service, live PKI/revocation infrastructure, IIS/IIS Express configuration, LocalSystem permissions or native Windows/domain/MOVEit operations. Complete the optional-feature acceptance below in the target environment. This result-recording follow-up changes documentation only.
+
+### v0.18.531 validation
+
+Application/test commit `a796c727a62ce3ad51fc2e85122b4e9d1dc74d07` for **0.18.531-RC3, build 20261106** passed [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42324592947) on `feature/moveit-user-management-standalone-ui`. Visual Studio rebuilt both projects in Debug; Release built with zero warnings/errors. All **2,831 xUnit tests in each configuration** passed with none failed/skipped, plus **98 User Management browser checks**, **3,152 Task editor checks** and the complete existing browser/package suite. All **20 isolation probes** remained on disk and excluded; MAUI's assembly metadata remained intact.
+
+New coverage verifies certificate-only settings, automatic computer-name discovery scoped to the certificate/connection, wrong-computer rejection for outstanding commands/results, root/virtual application endpoint addresses using the current origin/port, removed controls and unchanged inline management/error handling. The final screenshots were reviewed. This result-recording follow-up changes documentation only.
+
+The separate Windows Service source package requires only broker URL and certificate SHA-256. Static source/lexical/XML/JSON/package checks passed; the included Windows settings test was updated. No separate service compilation, SCM operation, Windows group/AD mutation or live IIS/client-certificate exchange was run here; complete its Windows build/native acceptance separately.
+
+### v0.18.530 validation
+
+Application/test commit `f8ff304182d2277bb73f0fddeddf90bc45263b64` for **0.18.530-RC3, build 20261106** on `feature/moveit-user-management-ui` passed [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42312563950). Visual Studio rebuilt both projects in Debug. Release built with **zero warnings/errors**. All **2,824 xUnit tests in each configuration** passed with none failed/skipped, together with the complete browser/package suites: **90 inline Local Groups UI checks**, **3,152 Task editor checks**, and all 20 isolation probes retained and excluded.
+
+The new response regressions simulate a successful native write followed by truncated JSON, an HTML success response or a null acknowledgement. Verify that entered values remain, another write is blocked, refresh reads the saved value and the original write is never resent. Failed directory reads remain retryable. Live Windows Service, IIS/mTLS, directory and MOVEit acceptance remains separate; see the optional-feature acceptance below. This result-recording follow-up changes documentation only.
+
+### Previous feature validation
+
+Application/test/workflow commit `c5651196359375e837bbd974780968c4c14bfbb2` for **0.18.530-RC3, build 20261106** on `feature/moveit-user-management-ui` passed [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42290821945). Visual Studio rebuilt both projects in Debug. Release built with **zero warnings/errors**. All **2,824 xUnit tests in each configuration** passed with none failed/skipped, together with the complete browser/package suites: **67 inline Local Groups UI checks**, **3,152 Task editor checks**, and the existing editor, import, rename, settings, permissions, package/publish and isolation regressions. All **20 isolation probes** remained present and excluded; MAUI's generated assembly metadata remained intact.
+
+The final Local Groups screenshots were reviewed in light/dark themes at desktop and narrow widths. The optional feature uses the separately delivered Windows Service protocol; this solution does not include or rebuild that service. These fixtures do not validate a live Windows group write, domain directory, IIS/mTLS deployment or MOVEit server. Complete the optional-feature acceptance steps below. This result-recording follow-up changes documentation only; other branch CI is not evidence for this implementation.
+
+### Previous master validation
 
 Application/test commit `b2b53326d0f47132110f1ecd1da4f6fa5aa60734` for **0.18.529-RC3, build 20261105** passed [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42122499166). Visual Studio rebuilt both solution projects in Debug. Release built with zero warnings/errors. All **2,784 xUnit tests in each configuration** passed with none failed/skipped, along with the full browser and package/publish suites. The Task editor suite passed **3,152 checks**, including Traditional/Advanced parameter scope routing, inherited overrides, secure/blank values, Global reads and the narrow Advanced Description column.
 
@@ -65,6 +157,7 @@ Use Node.js 22, matching the workflow. These source/runtime checks use Node and 
 
 ```powershell
 node MoveItAutomationUI.Tests/Browser/grid-date-filters-smoke.cjs
+node --test MoveItAutomationUI.Tests/Browser/records-batches.cjs
 node MoveItAutomationUI.Tests/Browser/moveit-grid-connection-smoke.cjs
 node MoveItAutomationUI.Tests/Browser/object-access-smoke.cjs
 node MoveItAutomationUI.Tests/Browser/task-json-model-smoke.cjs
@@ -127,7 +220,7 @@ The [registered Windows workflow](.github/workflows/maui-build.yml) is authorita
 
 ### Clean build requirements
 
-Validate RC3 from a clean source tree for package completeness and from a reused source folder for project isolation. CI deliberately leaves synthetic Tools sources, duplicate assembly attributes, nested bin/obj files and held-feature source/views/assets in place while Visual Studio rebuilds Debug and the Release job builds/publishes. The isolation check verifies the files still exist, MAUI's own assembly metadata is intact, and the files cannot enter the DLL or package. The held feature stays excluded from master.
+Validate RC3 from a clean source tree for package completeness and from a reused source folder for project isolation. CI deliberately leaves synthetic Tools sources, duplicate assembly attributes, nested bin/obj files and held-feature source/views/assets in place while Visual Studio rebuilds Debug and the Release job builds/publishes. The isolation check verifies the files still exist, MAUI's own assembly metadata is intact, and the files cannot enter the DLL or package. The retired User Management implementation stays excluded from the application package.
 
 A clean command-line validation is:
 
@@ -635,6 +728,19 @@ Backup Restore lists one unchecked-by-default option for each MOVEit environment
 
 ## Configuration and operations
 
+### Optional MOVEit User Management acceptance
+
+Install the Local Groups Service from `IntegrationAssets\MOVEitUserManagement` and follow the [installation guide](INSTALLATION.md#13-optional-moveit-user-management) for live IIS, machine certificate, domain-directory and MOVEit checks. The automated fixtures do not make native Windows group changes.
+
+- After completing Setup/Upgrade, verify the IIS agent path accepts client certificates, enables Anonymous Authentication, disables Windows Authentication and retains the ASP.NET Core handler. Confirm ordinary MAUI pages retain their configured authentication.
+- From the Automation server, browse the agent base URL without a MAUI login and expect HTTP 200 with static endpoint information and no Windows credentials prompt. Verify the installed service can load groups in Security. Confirm MAUI returns HTTP 401 without a Login redirect when a poll/result POST reaches the application without an enrolled, valid client certificate. IIS or TLS can reject an invalid certificate earlier.
+- Run the Visual Studio HTTPS project profile with a reachable VM listener. Kestrel must negotiate the service certificate at the initial TLS handshake while browser login still works without one. Use a server certificate covering the actual address, trusted by the Automation VM; use its reachable address rather than localhost in service settings. After the agent connects, open Security and confirm its automatic group load succeeds. Reload Groups should refresh on demand; only connection errors should appear. The fixture TLS handshake does not replace this PKI, LocalSystem or native Windows acceptance.
+- Verify the toggle defaults Off, unsaved changes do not expose the Security card, and omitted settings preserve enrolled certificates. Only the toggle and per-server certificate are editable. Verify the informational endpoint uses the current origin, port and application path, and the connected computer is reported automatically. Confirm the card appears below MAUI Users and that adding or removing members uses the corresponding modal.
+- Require a live MAUI Admin and MOVEit administrator before queueing and again before dispatch. Reject missing/untrusted/wrong-purpose client certificates, browser cookies in place of agent authentication, invalid reported computer names and changed connection bindings. Verify that a different computer cannot receive or finish an outstanding command and that re-enrollment does not inherit another connection's reported name.
+- Exercise custom-group create/description/member/delete operations, local and domain account resolution, retained unrelated members, literal account names, duplicate names and stale versions. Verify protected groups are hidden and their SIDs remain blocked even after renaming. Delete must be disabled for any members or MOVEit Resource Group assignments; reject direct attempts to delete nonempty groups and fail closed on ambiguous or unverifiable Resource Group references.
+- Simulate lost command/result delivery and a MAUI recycle. Reuse the same issued ID; reconcile recovered commands only after expiry, accept identical duplicate results and do not persist membership snapshots or credentials in broker receipts. Retention must remove expired files during continuous operation.
+- Verify uncertain/malformed write acknowledgements block another write until refresh, preserve entered fields, and distinguish an acknowledged write from a failed follow-up read. Settings changes must discard stale responses. Inspect light/dark and narrow-window artifacts from `local-groups-browser.cjs`, including the centered right-panel spinner while a read is pending.
+
 ### Keep Alive and MOVEit Settings acceptance
 
 - Confirm Configuration navigation and the modal use **MOVEit Settings**, while the editor switch reads **Use MAUI Settings Editor**. Existing `Editors:UseMauiSystemSettingsEditor` preferences and native/MAUI routing must remain effective.
@@ -855,6 +961,7 @@ The browser-side legacy HTML-fragment detector remains part of manual UI smoke t
 - Invalid/incomplete weekly schedules are rejected.
 - Daily next-run calculation and exhausted one-time schedules.
 - MOVEit time-zone name normalization.
+- Task Run reports using Resource Group filters fail if the group inventory cannot be loaded for a batch. Tests cover a later-batch failure, dashboard presets, successful empty results, and reports without a group filter.
 
 #### Quick Transfer contracts
 
@@ -881,3 +988,5 @@ When a defect is fixed, add a regression test when the failure can be reproduced
 ### Test project namespace support
 
 The test project imports `Xunit` globally through its project file, matching the standard xUnit template. Individual test files therefore use `[Fact]`, `[Theory]`, `[InlineData]`, and `Assert` without per-file `using Xunit;` declarations.
+
+

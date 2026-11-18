@@ -11,6 +11,8 @@
     var headingTitle = string.IsNullOrWhiteSpace(contextName) ? Model.Title : $"{Model.Title} / {contextName}";
     ViewData["Title"] = headingTitle;
     ViewData["GridDeferInitialLoad"] = true;
+    var appendBatches = string.IsNullOrWhiteSpace(Model.ReportPreset);
+    ViewData["RecordsAppendBatches"] = appendBatches;
     ViewData["GridToolbarRightPrefixPartial"] = "_ReportRefreshControls";
     ViewData["ReportLastRefreshUtc"] = Model.LastRefreshUtc;
 }
@@ -43,11 +45,6 @@
      data-batch-size="@Model.BatchSize"
      data-ui-refresh-seconds="@Model.UiRefreshIntervalSeconds"
      data-maximum-entries="@Model.MaximumEntries"
-     data-current-offset="@Model.CurrentOffset"
-     data-current-cursor="@Model.CurrentCursor"
-     data-next-cursor="@Model.NextCursor"
-     data-has-more="@Model.HasMore.ToString().ToLowerInvariant()"
-     data-next-count="@Model.NextCount"
      data-task-id="@Model.TaskId"
      data-task-name="@Model.TaskName"
      data-run-id="@Model.RunId"
@@ -75,5 +72,9 @@
 
 @section Scripts {
 <script src="~/js/task-information.js" asp-append-version="true"></script>
+@if (appendBatches)
+{
+    <script src="~/js/records-batches.js" asp-append-version="true"></script>
+}
 <script src="~/js/records.js" asp-append-version="true"></script>
 }

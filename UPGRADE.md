@@ -1,8 +1,8 @@
 # MAUI Upgrade Guide
 
-- **Target release:** `0.18.521-RC3`
+- **Target release:** `0.18.556-RC3`
 - **Release:** Release Candidate 3 (pre-release)
-- **Build:** `20261101`
+- **Build:** `20261117`
 - **Database schema:** `1`
 - **Configuration version:** `1`
 
@@ -16,7 +16,7 @@ MAUI upgrades are driven by the cumulative `upgrade.json` manifest included with
 
 | Item | Current package |
 | --- | --- |
-| Application / build | `0.18.521-RC3` / `20261101` |
+| Application / build | `0.18.556-RC3` / `20261117` |
 | Minimum directly supported application version | `0.16.77-integration` |
 | Database schema / configuration version | `1` / `1` |
 | Manifest RestartRequired | `false`; startup-sensitive changes can still require restart. |
@@ -113,6 +113,10 @@ Copy Between Environments is an opt-in experimental feature. It does not require
 #### Task JSON Editor opt-in
 
 The Task JSON Editor is off by default under Configuration > Settings > Experimental. Save Configuration and reload Tasks after enabling it; the new JSON Editor bulk action does not change the normal MAUI/native editor preference. Existing installations acquire the missing setting definition from the release template when Settings are saved. There is no schema migration or required extra restart. Keep COM support for native revision/Undo/Schedule operations and complete the [acceptance checks](TESTING.md#task-json-editor-acceptance) before use.
+
+#### MOVEit User Management
+
+If enabled, preserve the per-server certificate registrations in `appsettings.json` and the broker data under `Data\LocalGroupsBroker`. If the agent path is configured in the deployed `web.config`, merge that path-specific override into the new publish. Verify the effective IIS authentication, client-certificate and ASP.NET Core handler settings after deployment. Open **Security > MOVEit User Management** and select **Reload Groups** to verify the service can still connect. Update the service on the Automation server using `IntegrationAssets\MOVEitUserManagement` and retain its configured `agentsettings.json`. See [service installation and maintenance](INSTALLATION.md#13-optional-moveit-user-management).
 
 ### MOVEit connection feedback
 

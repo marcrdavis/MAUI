@@ -1,8 +1,8 @@
 # MAUI Security Policy and Engineering Notes
 
-- **Version:** `0.18.521-RC3`
+- **Version:** `0.18.556-RC3`
 - **Release:** Release Candidate 3 (pre-release)
-- **Build:** `20261101`
+- **Build:** `20261117`
 
 > **Release Candidate 3 — not the final release.** This pre-release may contain defects, including security defects. The controls described here document implemented behavior, not a guarantee of security or production readiness.
 
@@ -12,7 +12,7 @@ MAUI is an administrative UI for MOVEit Automation. Security-sensitive behavior 
 
 ## Supported versions
 
-Security fixes are applied to the current supported MAUI release line. The current RC3 candidate is `0.18.521-RC3` build `20261101`. Older prerelease/candidate builds should be upgraded before security evaluation or deployment.
+Security fixes are applied to the current supported MAUI release line. Older prerelease/candidate builds should be upgraded before security evaluation or deployment.
 
 ## Reporting a vulnerability
 
@@ -170,6 +170,10 @@ Only a case-insensitive `JSON:` prefix activates element/value search. Shared Ta
 Copy Between Environments defaults off. Its modal/menu and server endpoints require both MOVEit administrator status and MAUI Admin authorization; Data Access credentials do not grant callers additional MAUI access. Both environment accounts are required and must authenticate as MOVEit administrators. Connections use isolated background sessions and do not replace or clear the browser login.
 
 Plans and protected native/key payloads remain server-side. Comparisons mask structured secrets, including secure Task Parameter values; Script source is displayed as code and is never interpreted. Reports contain identities, mappings and outcomes, not configuration/private-key payloads. Optional recovery XML is protected using the application's Data Protection keys, gated separately and downloadable only through the initiating dual administrator's operation. Recovery download is deliberate and is not automatic rollback. Retention defaults to 30 days; abandoned in-memory plans expire after 30 minutes or are discarded when closed. Interrupted operations are not automatically replayed, and unconfirmed checkout ownership requires inspection rather than a forced takeover. Live progress snapshots expose only phase/object identities after the report-owner check; write-ahead IDs and outcomes retain their durable journal. Status retries are read-only and stop on denied/missing access. Worker/finalization cleanup clears retained protected plan data even if journal I/O fails. Expired reports cannot be downloaded; expired journal/recovery files are pruned periodically while MAUI runs and at application startup. Copy is not a transaction across objects or environments: completed writes remain after Stop or a later failure. New Resource Groups copy names and membership placement, not source User Group permission grants.
+
+### Optional MOVEit User Management
+
+Group management requires both MAUI Admin and live MOVEit administrator access. The Windows Service polls MAUI directly over HTTPS. The IIS Anonymous Authentication exception applies only to `api/local-groups-agent` and its child routes. The base GET returns static endpoint information. For poll and result POSTs, MAUI requires an enabled registration, a matching SHA-256 fingerprint and a valid client certificate from the TLS connection. MAUI checks validity dates, explicit Client Authentication EKU, chain trust and revocation. Browser cookies and forwarded certificate headers cannot authorize agent requests. Keep the private key on the Automation server and restrict its access to the service account and authorized administrators. See the [IIS and certificate requirements](INSTALLATION.md#13-optional-moveit-user-management).
 
 ### MOVEit connection feedback
 

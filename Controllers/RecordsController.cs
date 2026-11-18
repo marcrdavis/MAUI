@@ -142,7 +142,11 @@ public sealed class RecordsController : Controller
     // Purpose: Returns one Task Run record batch for client-side paging or refresh.
     [HttpGet]
     [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-    public async Task<IActionResult> TaskRunBatch(string? taskId = null, string? taskName = null, string? dashboardView = null, string? cursor = null, int offset = 0, CancellationToken cancellationToken = default)
+    public Task<IActionResult> TaskRunBatch(string? taskId = null, string? taskName = null, string? dashboardView = null, string? cursor = null, int offset = 0, CancellationToken cancellationToken = default)
+        => LoadTaskRunBatchAsync(taskId, dashboardView, cursor, offset, requireResourceGroups: false, cancellationToken);
+
+    internal async Task<IActionResult> LoadTaskRunBatchAsync(
+        string? taskId, string? dashboardView, string? cursor, int offset, bool requireResourceGroups, CancellationToken cancellationToken)
     {
         var behavior = NormalizeBehavior(_reportBehavior.TaskRun, ReportBehaviorOptions.TaskRunDefaultBatchSize);
         var normalizedDashboardView = NormalizeTaskRunDashboardView(dashboardView);
@@ -150,7 +154,7 @@ public sealed class RecordsController : Controller
         {
             try
             {
-                var preset = await _reportService.GetTaskRunDashboardViewAsync(normalizedDashboardView, cancellationToken);
+                var preset = await _reportService.GetTaskRunDashboardViewAsync(normalizedDashboardView, requireResourceGroups, cancellationToken);
                 var rows = BuildTaskRunGrid(preset.Items, preset.Items.Count, false, preset.MaximumRows).Rows;
                 return Json(new
                 {
@@ -179,7 +183,7 @@ public sealed class RecordsController : Controller
             cursor,
             async remaining =>
             {
-                var batch = await _reportService.GetTaskRunsAsync(taskId, behavior.BatchSize, cursor, remaining, cancellationToken);
+                var batch = await _reportService.GetTaskRunsAsync(taskId, behavior.BatchSize, cursor, remaining, requireResourceGroups, cancellationToken);
                 return (BuildTaskRunGrid(batch.Items, BuildTotalCount(offset, batch.Items.Count, batch.HasMore), batch.HasMore, behavior.BatchSize).Rows, batch.HasMore && !string.IsNullOrWhiteSpace(batch.NextCursor), batch.NextCursor);
             });
     }
@@ -360,6 +364,7 @@ public sealed class RecordsController : Controller
             new() { Key="Status", Label="Status", Type="status", DefaultWidth=150 }, new() { Key="FilesSent", Label="Files Sent", Type="number", DefaultWidth=120 }, new() { Key="TotalBytesSent", Label="Total Bytes Sent", Type="number" }, new() { Key="StartedBy", Label="Started By" },
             new() { Key="TaskID", Label="Task ID" }, new() { Key="EndTime", Label="End Time", Type="datetime" }, new() { Key="ScheduledTime", Label="Scheduled Time", Type="datetime" }, new() { Key="RunID", Label="Run ID", Type="number" },
             new() { Key="Node", Label="Node", Type="number" }, new() { Key="NominalStart", Label="Nominal Start" }, new() { Key="StatusCode", Label="Status Code", Type="number" }, new() { Key="StatusMessage", Label="Status Message" }, new() { Key="LogStamp", Label="Log Time", Type="datetime" },
+            new() { Key="Group", Label="Resource Group" },
             new() { Key="RecordType", Label="Record Type" }, new() { Key="QueryType", Label="Query Type" }
         };
         var rows = records.Select(record => new GridRow
@@ -369,7 +374,8 @@ public sealed class RecordsController : Controller
             {
                 ["StartTime"]=FormatDate(record.StartTime), ["TaskName"]=record.TaskName, ["Duration"]=FormatDuration(record.DurationSeconds), ["Status"]=record.Status, ["FilesSent"]=record.FilesSent?.ToString(CultureInfo.InvariantCulture)??string.Empty,
                 ["TotalBytesSent"]=FormatByteSize(record.TotalBytesSent), ["StartedBy"]=record.StartedBy, ["TaskID"]=record.TaskId, ["EndTime"]=FormatDate(record.EndTime), ["ScheduledTime"]=FormatDate(record.ScheduledTime), ["RunID"]=record.RunId,
-                ["Node"]=record.Node, ["NominalStart"]=record.NominalStart, ["StatusCode"]=record.StatusCode, ["StatusMessage"]=record.StatusMessage, ["LogStamp"]=FormatDate(record.LogStamp), ["RecordType"]=record.RecordType, ["QueryType"]=record.QueryType
+                ["Node"]=record.Node, ["NominalStart"]=record.NominalStart, ["StatusCode"]=record.StatusCode, ["StatusMessage"]=record.StatusMessage, ["LogStamp"]=FormatDate(record.LogStamp), ["RecordType"]=record.RecordType, ["QueryType"]=record.QueryType,
+                ["Group"]=record.Group
             },
             RawValues = new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -470,6 +476,18 @@ public sealed class RecordsController : Controller
             AvailableColumns = columns.Select(column => column.Key).ToList(),
             SearchColumns = fallbackSearchColumns.ToList()
         };
+        if (gridId == "taskruns" && !options.AvailableColumns.Contains("Group", StringComparer.OrdinalIgnoreCase))
+        {
+            options = new GridOptions
+            {
+                DefaultColumns = options.DefaultColumns,
+                AvailableColumns = options.AvailableColumns.Append("Group").ToList(),
+                SearchColumns = options.SearchColumns,
+                AddActions = options.AddActions,
+                BulkActions = options.BulkActions
+            };
+        }
+
         return new GridViewModel
         {
             GridId = gridId,

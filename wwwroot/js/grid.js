@@ -885,10 +885,11 @@
             }
         }
 
+        const renderedRowsByModel = new WeakMap();
+
         // Replaces the underlying row collection while preserving search/filter/sort/page/layout state.
-        // Refreshed row markup is delegated to the shared row renderer so all grid types use one path.
-        // Purpose: Replace the row dataset while preserving compatible grid state.
-        function replaceRows(rowModels) {
+        // Unchanged Task Run models can reuse their existing rows on an append or refresh.
+        function replaceRows(rowModels, reuseRows = false) {
             const incoming = Array.isArray(rowModels) ? rowModels : [];
             const savedScrollTop = tableScroll?.scrollTop ?? 0;
             const savedScrollLeft = tableScroll?.scrollLeft ?? 0;
@@ -898,7 +899,14 @@
                 || gridId === 'reports' || gridId === 'upcomingruns';
             selectionHeader?.classList.toggle('has-row-info', hasDedicatedRowActions || incoming.some(model => Boolean(model?.infoActionUrl)));
             const fragment = document.createDocumentFragment();
-            incoming.forEach(model => fragment.appendChild(rowRenderer.buildRowFromModel(model)));
+            incoming.forEach(model => {
+                let row = reuseRows ? renderedRowsByModel.get(model) : null;
+                if (!row) {
+                    row = rowRenderer.buildRowFromModel(model);
+                    if (reuseRows) renderedRowsByModel.set(model, row);
+                }
+                fragment.appendChild(row);
+            });
             body.replaceChildren(fragment);
 
             rows = Array.from(body.querySelectorAll('tr'));
@@ -1487,7 +1495,7 @@
         });
         actionManager.wire();
         window.addEventListener('resize', () => { sizeGridToViewport(); layout.synchronizeTableWidth(); });
-        grid.addEventListener('maui:grid-replace-rows', event => replaceRows(event.detail?.rows));
+        grid.addEventListener('maui:grid-replace-rows', event => replaceRows(event.detail?.rows, event.detail?.reuseRows === true));
         grid.addEventListener('maui:grid-remove-rows', event => removeRows(event.detail?.rowIds));
         grid.addEventListener('maui:grid-initial-data-ready', () => {
             initialDataReady = true;

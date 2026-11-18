@@ -48,7 +48,7 @@ public sealed class OutboundReportDataSource : IOutboundReportDataSource
         var state = Deserialize<ReportGridViewState>(report.ViewStateJson, "report view state");
         OutboundReportSourcePolicy.EnsureScheduledSearchSupported(report.GridKey, state.SearchText);
         var context = Deserialize<ReportSourceContext>(report.SourceContextJson, "report source context");
-        var rows = await LoadSourceRowsAsync(report.GridKey, context, cancellationToken);
+        var rows = await LoadSourceRowsAsync(report.GridKey, context, state, cancellationToken);
         return ApplyViewState(state, rows);
     }
 
@@ -60,13 +60,16 @@ public sealed class OutboundReportDataSource : IOutboundReportDataSource
         return new OutboundReportData(columns, snapshot.Rows ?? new List<ReportGridSnapshotRow>());
     }
 
-    private async Task<IReadOnlyList<ReportGridSnapshotRow>> LoadSourceRowsAsync(string gridKey, ReportSourceContext source, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<ReportGridSnapshotRow>> LoadSourceRowsAsync(
+        string gridKey, ReportSourceContext source, ReportGridViewState state, CancellationToken cancellationToken)
     {
         gridKey = (gridKey ?? string.Empty).Trim().ToLowerInvariant();
         if (gridKey == "taskruns")
         {
+            var requireResourceGroups = UsesTaskRunGroupFilter(state);
             return await LoadAllReportBatchesAsync(
-                (cursor, offset) => WithController<RecordsController>("Records", controller => controller.TaskRunBatch(Query(source, "taskId"), Query(source, "taskName"), Query(source, "dashboardView"), cursor, offset, cancellationToken)),
+                (cursor, offset) => WithController<RecordsController>("Records", controller => controller.LoadTaskRunBatchAsync(
+                    Query(source, "taskId"), Query(source, "dashboardView"), cursor, offset, requireResourceGroups, cancellationToken)),
                 cancellationToken);
         }
         if (gridKey == "fileactivity")
@@ -95,6 +98,19 @@ public sealed class OutboundReportDataSource : IOutboundReportDataSource
             _ => throw new InvalidOperationException($"Grid '{gridKey}' does not support scheduled report generation.")
         };
         return ExtractRows(result);
+    }
+
+    private static bool UsesTaskRunGroupFilter(ReportGridViewState state)
+    {
+        static bool IsGroup(string key) => string.Equals(key, "Group", StringComparison.OrdinalIgnoreCase);
+        static bool HasGroupFilter(IReadOnlyDictionary<string, string>? filters)
+            => filters?.Any(filter => IsGroup(filter.Key) && !string.IsNullOrWhiteSpace(filter.Value)) == true;
+
+        if (HasGroupFilter(state.Filters) || HasGroupFilter(state.ScopeFilters)) return true;
+        if (string.IsNullOrWhiteSpace(state.SearchText)) return false;
+        return state.SearchColumns is { Count: > 0 } searchColumns
+            ? searchColumns.Any(IsGroup)
+            : state.Columns?.Any(column => IsGroup(column.Key)) == true;
     }
 
     private async Task<IReadOnlyList<ReportGridSnapshotRow>> LoadAllReportBatchesAsync(

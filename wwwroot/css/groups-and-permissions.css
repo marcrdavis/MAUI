@@ -44,6 +44,7 @@ body.grid-fixed-page .permissions-table .column-filter-row th { top:69px; }
 .permissions-row-actions button.task-row-danger-action:disabled { color:var(--danger); }
 .resource-group-editor { width:min(1000px,calc(100vw - 56px)); }
 .resource-group-editor .script-editor-card { height:min(780px,calc(100dvh - 56px)); }
+.resource-group-editor.is-editing [data-group-description] { min-height:0; }
 .resource-group-editor [hidden], .resource-group-picker [hidden] { display:none !important; }
 .resource-group-fields { display:flex; flex-direction:column; gap:16px; min-height:0; flex:1; }
 .resource-group-members { border:1px solid var(--border); border-radius:10px; background:var(--surface); display:flex; flex-direction:column; min-height:220px; flex:1; overflow:hidden; }

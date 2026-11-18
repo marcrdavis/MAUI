@@ -1,6 +1,7 @@
 /* Shared read-only JSON matching for the Task JSON Editor and Tasks/Hosts grids. */
 (() => {
     'use strict';
+    const comparisonPattern = /^(.+?)(?:\s+(contains)\s+|\s*(<=|>=|!=|=|<|>)\s*)(.*)$/i;
     function pathPattern(find) {
         const pattern=find.split('*').map(part=>part.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('.*');
         return new RegExp('^'+pattern+'$','i');
@@ -11,7 +12,7 @@
     function compileTreeSearch(input, root = 'Task') {
         const query=input.trim(), plain=query.toLowerCase();
         if(!query)return ()=>true;
-        const expression=query.match(/^(.+?)(?:\s+(contains)\s+|\s*(<=|>=|!=|=|<|>)\s*)(.*)$/i);
+        const expression=query.match(comparisonPattern);
         if(!expression){
             if(/^[<>=!]/.test(query)||/\scontains\s*$/i.test(query))throw new Error('Enter an element and value, for example DoIfFailure=1.');
             return (leaf,value)=>leaf.pathText.toLowerCase().includes(plain)||value!==null&&String(value).toLowerCase().includes(plain);
@@ -38,6 +39,25 @@
             return operator==='<'?actualNumber<expectedNumber:operator==='<='?actualNumber<=expectedNumber:operator==='>'?actualNumber>expectedNumber:actualNumber>=expectedNumber;
         };
     }
+    function compileTaskSearch(input) {
+        const query = input.trim();
+        // Skip quoted strings and treat a join as syntax only between comparisons.
+        const joins = [...query.matchAll(/"(?:[^"\\]|\\[\s\S])*"|\s+(AND|OR)(?=\s)/gi)].filter(match => match[1]);
+        const alternatives = [[]];
+        let start = 0;
+        for (const [index, join] of joins.entries()) {
+            const after = join.index + join[0].length;
+            const next = query.slice(after, joins[index + 1]?.index).trim();
+            const clause = query.slice(start, join.index).trim();
+            if (!comparisonPattern.test(next) || !comparisonPattern.test(clause)) continue;
+            alternatives.at(-1).push(compileTreeSearch(clause));
+            if (join[1].toUpperCase() === 'OR') alternatives.push([]);
+            start = after;
+        }
+        alternatives.at(-1).push(compileTreeSearch(query.slice(start)));
+        // Each AND clause can match a different leaf of the same task.
+        return leaves => alternatives.some(group => group.every(matchesLeaf => leaves.some(leaf => matchesLeaf(leaf, leaf.value))));
+    }
     const pathText = (path, root = 'Task') => root + path.map(part => /^\d+$/.test(part) ? '[' + part + ']' : /^[A-Za-z_$][\w$]*$/.test(part) ? '.' + part : '[' + JSON.stringify(part) + ']').join('');
-    window.MauiJsonSearch = { pathPattern, compileTreeSearch, pathText };
+    window.MauiJsonSearch = { pathPattern, compileTreeSearch, compileTaskSearch, pathText };
 })();

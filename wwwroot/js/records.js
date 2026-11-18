@@ -18,7 +18,14 @@
     const refreshClock = document.querySelector('[data-report-refresh-clock]');
     const refreshToggle = document.querySelector('[data-report-refresh-toggle]');
     const refreshNow = document.querySelector('[data-report-refresh-now]');
-    const previousBatchAction = grid.querySelector('[data-report-fetch-previous]');
+    const fetchGroup = grid.querySelector('[data-report-fetch-group]');
+    const fetchNextAction = grid.querySelector('[data-report-fetch-next]');
+    const fetchNextCount = fetchNextAction?.querySelector('[data-report-fetch-next-count]');
+    const fetchAllAction = grid.querySelector('[data-report-fetch-all]');
+    const batchRange = grid.querySelector('[data-report-batch-range]');
+    const loadedCount = grid.querySelector('[data-report-loaded-count]');
+    const progress = grid.querySelector('[data-report-fetch-progress]');
+    const pagerSummary = grid.querySelector('[data-pager-summary]');
     const rangeStart = grid.querySelector('[data-report-range-start]');
     const rangeEnd = grid.querySelector('[data-report-range-end]');
     const reportTotalCount = grid.querySelector('[data-report-total-count]');
@@ -47,16 +54,19 @@
     const uiRefreshSeconds = Math.max(0, Number(config.dataset.uiRefreshSeconds || 0));
     const maximumEntries = Math.max(batchSize, Number(config.dataset.maximumEntries || 10000));
 
-    let currentOffset = Math.max(0, Number(config.dataset.currentOffset || 0));
-    let currentCursor = String(config.dataset.currentCursor || '');
-    let nextCursor = String(config.dataset.nextCursor || '');
-    let hasMore = String(config.dataset.hasMore || '').toLowerCase() === 'true';
-    let nextCount = Math.max(0, Number(config.dataset.nextCount || batchSize));
+    let canFetchOlder = false;
     let refreshPaused = false;
     let refreshInFlight = false;
     let refreshTimer = 0;
-    let batchHistory = [{ cursor: currentCursor, offset: currentOffset }];
-    let batchHistoryIndex = 0;
+
+    const recordBatches = fetchNextAction ? window.MauiRecordsBatches.create({
+        requestBatch: (cursor, offset) => fetchJson(buildBatchUrl(cursor, offset), { method: 'GET' }),
+        cursorKey: grid.dataset.grid === 'taskruns' ? 'RunID' : 'LogID',
+        batchSize,
+        maximumEntries,
+        onUpdate: payload => showBatch(payload, true),
+        onProgress: showFetchProgress
+    }) : null;
 
     // Purpose: Builds the URL for one controller endpoint.
     function endpoint(name) {
@@ -126,50 +136,29 @@
         if (refreshControl && value) refreshControl.dataset.lastRefreshUtc = value;
     }
 
-    // Purpose: Returns the current report batch action for the requested direction.
-    function countAction() {
-        return grid.querySelector('[data-grid-count-action]');
-    }
-
-    // Purpose: Updates batch ui.
-    function updateBatchUi(payload) {
-        currentOffset = Math.max(0, Number(payload?.offset ?? currentOffset));
-        currentCursor = String(payload?.currentCursor ?? currentCursor);
-        nextCursor = String(payload?.nextCursor ?? '');
-        hasMore = Boolean(payload?.hasMore);
-        nextCount = Math.max(0, Number(payload?.nextCount || 0));
-        const totalCount = Math.max(0, Number(payload?.totalCount ?? maximumEntries));
-        const end = Math.max(currentOffset, Number(payload?.end ?? currentOffset));
-        const currentRowCount = Math.max(0, end - currentOffset);
-        const start = currentRowCount > 0 ? currentOffset + 1 : 0;
+    function updateBatchUi({ offset = 0, end = 0, totalCount = 0, hasMore, nextCursor, nextCount = 0 } = {}) {
+        const rowCount = end - offset;
+        const start = rowCount > 0 ? offset + 1 : 0;
         grid.dataset.totalCountOverride = String(totalCount);
-        grid.dataset.displayedCountOverride = String(currentRowCount);
+        grid.dataset.displayedCountOverride = String(rowCount);
 
         if (rangeStart) rangeStart.textContent = String(start);
-        if (rangeEnd) rangeEnd.textContent = String(end);
-        if (reportTotalCount) reportTotalCount.textContent = String(totalCount);
+        if (rangeEnd) rangeEnd.textContent = recordBatches ? rowCount.toLocaleString() : String(end);
+        if (reportTotalCount) reportTotalCount.textContent = recordBatches ? totalCount.toLocaleString() : String(totalCount);
 
-        if (previousBatchAction) {
-            const previousCount = Math.min(batchSize, currentOffset);
-            previousBatchAction.textContent = `Fetch Previous ${previousCount}`;
-            previousBatchAction.hidden = batchHistoryIndex <= 0 || previousCount <= 0;
-            previousBatchAction.disabled = false;
-        }
-
-        let action = countAction();
-        if (hasMore && nextCount > 0) {
-            if (!action) {
-                action = document.createElement('button');
-                action.type = 'button';
-                action.className = 'grid-count-link';
-                action.dataset.gridCountAction = '';
-                grid.querySelector('.report-batch-navigation, .grid-count')?.appendChild(action);
-            }
-            action.textContent = `Fetch Next ${nextCount}`;
-            action.hidden = false;
-            action.disabled = false;
-        } else if (action) {
-            action.hidden = true;
+        if (!recordBatches) return;
+        canFetchOlder = Boolean(hasMore && nextCursor && nextCount > 0);
+        fetchGroup.hidden = !canFetchOlder;
+        const countLabel = canFetchOlder ? nextCount.toLocaleString() : '';
+        const nextLabel = canFetchOlder ? `Fetch next ${countLabel} ${nextCount === 1 ? 'row' : 'rows'}` : 'Fetch next batch';
+        fetchNextCount.textContent = countLabel;
+        fetchNextAction.title = nextLabel;
+        fetchNextAction.setAttribute('aria-label', nextLabel);
+        batchRange.hidden = !canFetchOlder;
+        loadedCount.hidden = canFetchOlder;
+        if (!canFetchOlder) {
+            delete grid.dataset.totalCountOverride;
+            delete grid.dataset.displayedCountOverride;
         }
     }
 
@@ -189,7 +178,7 @@
                 scheduleRefresh(750);
                 return;
             }
-            loadBatch(currentCursor, currentOffset, false);
+            refreshRecords(false);
         }, Math.max(250, delayMs));
     }
 
@@ -199,9 +188,8 @@
         refreshClock?.classList.toggle('is-refreshing', value);
         refreshClock?.setAttribute('aria-busy', value ? 'true' : 'false');
         if (refreshNow) refreshNow.disabled = value;
-        const action = countAction();
-        if (action) action.disabled = value;
-        if (previousBatchAction) previousBatchAction.disabled = value;
+        if (fetchNextAction) fetchNextAction.disabled = value;
+        if (fetchAllAction) fetchAllAction.disabled = value;
     }
 
     // Purpose: Updates refresh controls to match the current paused/running state.
@@ -218,73 +206,62 @@
         refreshClock?.classList.toggle('is-paused', refreshPaused);
     }
 
-    // Purpose: Loads one report batch and updates paging/grid state.
-    async function loadBatch(cursor, offset, manual) {
+    function showFetchProgress(count) {
+        if (!progress || !pagerSummary) return;
+        const loading = count !== null;
+        progress.textContent = loading
+            ? `Loading ${count.toLocaleString()} rows (up to ${maximumEntries.toLocaleString()})…`
+            : '';
+        progress.hidden = !loading;
+        pagerSummary.hidden = loading;
+    }
+
+    function showBatch(payload, reuseRows = false) {
+        closeReportRowActionMenu();
+        // Set the counts before replacing rows so the grid uses the current result range.
+        updateBatchUi(payload);
+        grid.dispatchEvent(new CustomEvent('maui:grid-replace-rows', {
+            detail: { rows: Array.isArray(payload?.rows) ? payload.rows : [], reuseRows }
+        }));
+        setLastRefresh(payload?.refreshedUtc || new Date().toISOString());
+    }
+
+    async function runBatchOperation(operation, failureMessage = 'Report refresh failed') {
         if (refreshInFlight || !batchUrl) return false;
-        let succeeded = false;
         setRefreshBusy(true);
         clearRefreshTimer();
         try {
-            const payload = await fetchJson(buildBatchUrl(cursor, offset), { method: 'GET' });
-            closeReportRowActionMenu();
-            // Update total override before row replacement so the shared grid renders the report-wide count.
-            updateBatchUi(payload);
-            grid.dispatchEvent(new CustomEvent('maui:grid-replace-rows', {
-                detail: { rows: Array.isArray(payload?.rows) ? payload.rows : [] }
-            }));
-            setLastRefresh(payload?.refreshedUtc || new Date().toISOString());
-            succeeded = true;
+            await operation();
+            return true;
         } catch (error) {
-            console.warn('Report refresh failed.');
-            if (!window.MauiMoveItGridConnection?.isHandled(error)) showStatus(`Report refresh failed: ${error.message}`, 5000, 'error', 'page');
+            console.warn(failureMessage);
+            if (!window.MauiMoveItGridConnection?.isHandled(error)) {
+                showStatus(`${failureMessage}: ${error.message}`, 5000, 'error', 'page');
+            }
+            return false;
         } finally {
+            showFetchProgress(null);
             setRefreshBusy(false);
             scheduleRefresh();
         }
-        return succeeded;
     }
 
-    // Purpose: Loads the next available report batch.
-    async function fetchNextBatch() {
-        if (!hasMore || !nextCursor || refreshInFlight) return;
-        const currentRows = grid.querySelectorAll('[data-grid-body] tr[data-row-id]').length;
-        const nextOffset = Math.min(maximumEntries, currentOffset + currentRows);
-        const nextState = { cursor: nextCursor, offset: nextOffset };
-        const previousHistory = batchHistory;
-        const previousIndex = batchHistoryIndex;
-        batchHistory = batchHistory.slice(0, batchHistoryIndex + 1);
-        batchHistory.push(nextState);
-        batchHistoryIndex += 1;
-        const succeeded = await loadBatch(nextState.cursor, nextState.offset, true);
-        if (!succeeded) {
-            batchHistory = previousHistory;
-            batchHistoryIndex = previousIndex;
-            updateBatchUi({
-                offset: currentOffset,
-                end: currentOffset + grid.querySelectorAll('[data-grid-body] tr[data-row-id]').length,
-                totalCount: Number(grid.dataset.totalCountOverride || maximumEntries),
-                hasMore, currentCursor, nextCursor, nextCount
-            });
-        }
+    function loadBatch(cursor, offset) {
+        return runBatchOperation(async () => {
+            const payload = await fetchJson(buildBatchUrl(cursor, offset), { method: 'GET' });
+            showBatch(payload);
+        });
     }
 
-    // Purpose: Loads the previous report batch from retained cursor history.
-    async function fetchPreviousBatch() {
-        if (batchHistoryIndex <= 0 || refreshInFlight) return;
-        const previousIndex = batchHistoryIndex;
-        const previousState = batchHistory[batchHistoryIndex - 1];
-        if (!previousState) return;
-        batchHistoryIndex -= 1;
-        const succeeded = await loadBatch(previousState.cursor, previousState.offset, true);
-        if (!succeeded) {
-            batchHistoryIndex = previousIndex;
-            updateBatchUi({
-                offset: currentOffset,
-                end: currentOffset + grid.querySelectorAll('[data-grid-body] tr[data-row-id]').length,
-                totalCount: Number(grid.dataset.totalCountOverride || maximumEntries),
-                hasMore, currentCursor, nextCursor, nextCount
-            });
-        }
+    function refreshRecords(manual) {
+        if (!recordBatches) return loadBatch('', 0);
+        return runBatchOperation(manual ? recordBatches.refreshAllLoaded : recordBatches.refreshNewest);
+    }
+
+    function fetchOlderRecords(all) {
+        if (!canFetchOlder) return;
+        const failureMessage = all ? 'Unable to fetch all rows' : 'Unable to fetch more rows';
+        return runBatchOperation(() => recordBatches.fetchOlder(all), failureMessage);
     }
 
     // Purpose: Returns the field labels used by the active report-details dialog.
@@ -454,7 +431,7 @@
             });
             const name = String(payload?.taskName || task.taskName || id).trim();
             showStatus(`Started task ${name}.`, 5000);
-            await loadBatch(currentCursor, currentOffset, true);
+            await refreshRecords(true);
         } catch (error) {
             showStatus(`Run Task Now: ${error?.message || 'Unable to start the task.'}`, 5000, 'error');
         }
@@ -621,7 +598,7 @@
         updateRefreshUi();
         refreshToggle?.closest('[data-menu]')?.classList.remove('open');
         if (refreshPaused) clearRefreshTimer();
-        else loadBatch(currentCursor, currentOffset, false);
+        else refreshRecords(false);
     }
 
     // Purpose: Opens the referenced Task using the configured editor preference.
@@ -651,20 +628,6 @@
 
         if (reportRowActionMenu && !reportRowActionMenu.hidden && !event.target.closest('[data-report-row-action-menu]')) {
             closeReportRowActionMenu();
-        }
-
-        const previousAction = event.target.closest('[data-report-fetch-previous]');
-        if (previousAction && grid.contains(previousAction)) {
-            event.preventDefault();
-            fetchPreviousBatch();
-            return;
-        }
-
-        const action = event.target.closest('[data-grid-count-action]');
-        if (action && grid.contains(action)) {
-            event.preventDefault();
-            fetchNextBatch();
-            return;
         }
 
         const taskLink = event.target.closest('[data-native-task-editor]');
@@ -762,15 +725,17 @@
         navigateToReport(endpoint('auditReportUrl'), { targetType: 'task', targetId: task.taskId, targetName: task.taskName });
     });
 
+    fetchNextAction?.addEventListener('click', () => fetchOlderRecords(false));
+    fetchAllAction?.addEventListener('click', () => fetchOlderRecords(true));
     refreshToggle?.addEventListener('click', toggleRefresh);
     refreshNow?.addEventListener('click', () => {
         refreshNow.closest('[data-menu]')?.classList.remove('open');
-        loadBatch(currentCursor, currentOffset, true);
+        refreshRecords(true);
     });
 
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) clearRefreshTimer();
-        else if (!refreshPaused && uiRefreshSeconds > 0) loadBatch(currentCursor, currentOffset, false);
+        else if (!refreshPaused && uiRefreshSeconds > 0) refreshRecords(false);
     });
 
     window.addEventListener('resize', () => {
@@ -782,21 +747,13 @@
 
     setLastRefresh(refreshControl?.dataset.lastRefreshUtc || '');
     updateRefreshUi();
-    updateBatchUi({
-        offset: currentOffset,
-        end: currentOffset,
-        totalCount: 0,
-        hasMore: false,
-        currentCursor,
-        nextCursor: '',
-        nextCount: 0
-    });
+    updateBatchUi();
 
     // Loads the first native MOVEit Records batch while the shared Loading shell is visible.
     // The page HTML contains no report rows, matching the proven Tasks/Hosts/Upcoming Runs pattern.
     async function loadInitialRecordsGrid() {
         try {
-            await loadBatch('', 0, false);
+            await refreshRecords(false);
         } finally {
             grid.dispatchEvent(new CustomEvent('maui:grid-initial-data-ready'));
         }

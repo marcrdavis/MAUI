@@ -1,4 +1,6 @@
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Options;
@@ -19,8 +21,13 @@ public sealed class EnvironmentCopyJournalTests
         var report=new CopyReport{OperationId=plan.Id,InitiatedBy="Admin",Source="DEV",Destination="PROD",CompletedUtc=DateTimeOffset.UtcNow,
             Items=[new(source.Key,"Host","1","Source","overwrite","2","Destination","Overwritten","Saved",[],true)]};
         await f.Store.SaveReportAsync(report);
-        var files=Directory.GetFiles(Path.Combine(f.Directory,"Data","EnvironmentCopy"));
+        var directory = Path.Combine(f.Directory, "Data", "EnvironmentCopy");
+        var files = Directory.GetFiles(directory);
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(source.Key)));
+        Assert.Contains(Path.Combine(directory, plan.Id + ".json"), files);
+        Assert.Contains(Path.Combine(directory, plan.Id + "-" + hash + ".recovery"), files);
         foreach(var file in files)Assert.DoesNotContain("retained-protected-secret",await File.ReadAllTextAsync(file));
+        Assert.Equal(plan.Id, (await f.Store.ReadReportAsync(plan.Id, "Admin")).OperationId);
         var restored=await f.Store.ReadRecoveryAsync(plan.Id,source.Key,"Admin");Assert.Equal(item.DestinationXml,restored.Xml);Assert.Equal("2",restored.TargetId);
         await Assert.ThrowsAsync<InvalidOperationException>(()=>f.Store.ReadRecoveryAsync(plan.Id,source.Key,"Other admin"));
         await Assert.ThrowsAsync<InvalidOperationException>(()=>f.Store.ReadReportAsync(plan.Id,"Other admin"));
@@ -84,6 +91,22 @@ public sealed class EnvironmentCopyJournalTests
         File.SetLastWriteTimeUtc(Path.Combine(f.Directory,"Data","EnvironmentCopy",id+".json"),DateTime.UtcNow.AddDays(-31));
         await Assert.ThrowsAsync<InvalidOperationException>(()=>f.Store.ReadReportAsync(id,"Admin"));
         await Assert.ThrowsAsync<ArgumentException>(()=>f.Store.ReadReportAsync("../outside","Admin"));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" 0123456789abcdef0123456789abcdef ")]
+    [InlineData("0123456789ABCDEF0123456789ABCDEF")]
+    [InlineData("01234567-89ab-cdef-0123-456789abcdef")]
+    public async Task ReportAndRecoveryRejectNoncanonicalIdsBeforeEnteringTheJournal(string? operationId)
+    {
+        using var f = new Fixture();
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAsync<ArgumentException>(() => f.Store.ReadReportAsync(operationId!, "Admin", cancellation.Token));
+        await Assert.ThrowsAsync<ArgumentException>(() => f.Store.ReadRecoveryAsync(operationId!, "Host|1", "Admin", cancellation.Token));
     }
 
     [Fact]

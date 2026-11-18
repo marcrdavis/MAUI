@@ -51,6 +51,114 @@ for (const kind of ['Task','Host']) {
  assert.equal(context.openNotificationTemplateSaveDialog(),false);assert.equal(await context.saveNotificationTemplate(),false);
  assert.equal(modal.open,false);assert.equal(deniedRequests,0,'Ordinary users cannot open or submit template saving');
  context.canSaveTemplates=true;
+ const preserveRow=control();
+ const select=()=>({...control(),options:[],replaceChildren(){this.options=[];this.value='';},appendChild(option){this.options.push(option);}});
+ const notification={
+  notificationModeInputs:['add','update','remove'].map(value=>({...control(),value})),
+  notificationModeLabels:{add:'Add',update:'Update',remove:'Remove'},notificationSingleTask:false,notificationExisting:[],notificationSetupRequest:null,
+  notificationExistingRow:control(),notificationExistingSelect:select(),notificationResultInputs:[],
+  notificationFormat:{value:'text'},notificationHost:select(),notificationRecipients:control(),
+  notificationSubject:{value:'Subject'},notificationTextEditor:{value:'Body'},notificationHtmlSource:null,
+  notificationPreserveRecipients:{...control(),closest:()=>preserveRow},notificationMacroSelects:[],notificationVisualHtmlControls:[],
+  notificationHtmlSourceMode:false,notificationHtmlToggle:null,notificationHtmlEditor:null,notificationResultsFieldset:null,
+  notificationMessageFields:null,notificationApply:control(),notificationTemplateButton:null,notificationTemplateSave:null,
+  notificationTemplateMenu:null,notificationError:control(),notificationBusy:false,notificationTargets:[{id:'1'},{id:'2'}],
+  notificationConfirmDialog:{...modal},notificationConfirmMessage:control(),
+  selectedNotificationResults:()=>({failure:true,noAction:false,success:false}),executeTaskNotifications:async()=>{}
+ };
+ notification.notificationHost.value='smtp';
+ vm.createContext(notification);
+ for(const name of ['selectedNotificationMode','selectedExistingNotificationIndex','updateNotificationModeUi','currentNotificationPayload','applyTaskNotifications'])
+  vm.runInContext(fn(tasks,name).split("\n    notificationModeInputs.forEach(")[0],notification);
+ const selectMode=mode=>{
+  notification.notificationModeInputs.forEach(input=>{input.checked=input.value===mode;});
+  notification.updateNotificationModeUi();
+ };
+ notification.notificationPreserveRecipients.checked=true;
+ selectMode('add');assert.equal(preserveRow.hidden,true);assert.equal(notification.notificationRecipients.disabled,false);
+ await notification.applyTaskNotifications();assert.match(notification.notificationError.textContent,/recipient/i);
+ assert.equal(notification.notificationConfirmDialog.open,false);
+ notification.notificationRecipients.value='new@example.test';
+ await notification.applyTaskNotifications();assert.equal(notification.pendingNotificationBulkApply.payloadBase.mode,'add');
+ assert.equal(notification.pendingNotificationBulkApply.payloadBase.preserveExistingRecipients,false);
+ notification.notificationConfirmDialog.close();
+ selectMode('update');assert.equal(preserveRow.hidden,false);assert.equal(notification.notificationRecipients.disabled,true);
+ notification.notificationRecipients.value='';
+ await notification.applyTaskNotifications();assert.equal(notification.pendingNotificationBulkApply.payloadBase.mode,'update');
+ assert.equal(notification.pendingNotificationBulkApply.payloadBase.preserveExistingRecipients,true);
+ notification.notificationPreserveRecipients.checked=false;notification.updateNotificationModeUi();
+ assert.equal(notification.notificationRecipients.disabled,false);
+ notification.notificationSingleTask=true;notification.notificationExisting=[{actionIndex:0}];
+ notification.notificationExistingSelect.value='0';notification.updateNotificationModeUi();
+ assert.equal(notification.currentNotificationPayload().actionIndex,0);
+ selectMode('remove');assert.equal(preserveRow.hidden,true);assert.equal(notification.notificationRecipients.disabled,true);
+ // Drive the production setup with a delayed response. Only a mode change may
+ // insert the existing-notification row, and the select itself stays in place.
+ let resolveSetup, rejectSetup, setupSignal;
+ Object.assign(notification,{
+  AbortController,document:{createElement:()=>control()},notificationDialog:{...modal},
+  notificationSubtitle:control(),notificationWarning:control(),notificationMultiWarning:control(),
+  notificationConfig:control(),notificationCancel:control(),notificationClose:control(),
+  notificationConfirmDialog:{...modal},notificationTemplateSaveDialog:null,notificationLinkDialog:null,
+  normalizeSelectedTaskIds:ids=>ids,endpoint:()=>'/Tasks/NotificationSetup',
+  setDefaultNotificationResults:()=>{},populateNotificationTemplates:()=>{},resetNotificationProgress:()=>{},
+  clearNotificationMessageFields:()=>{notification.notificationRecipients.value='';},
+  fetchJson:(_url,{signal})=>{setupSignal=signal;return new Promise((resolve,reject)=>{resolveSetup=resolve;rejectSetup=reject;});}
+ });
+ for(const name of ['notificationResultLabel','populateExistingNotifications','resetNotificationDialog','openTaskNotifications'])
+  vm.runInContext(fn(tasks,name),notification);
+ const setup={eligible:[{id:'1'}],smtpHosts:[{id:'smtp',name:'SMTP'}],existing:{notifications:[{actionIndex:0,doIfFailure:true}]}};
+ let loading=notification.openTaskNotifications(['1']);
+ assert.equal(notification.notificationExistingRow.hidden,true,'Add hides the selector during setup');
+ assert.equal(notification.notificationApply.disabled,true);
+ notification.notificationRecipients.value='draft@example.test';
+ resolveSetup(setup);await loading;
+ assert.equal(notification.notificationExistingRow.hidden,true,'Finishing setup keeps the Add layout');
+ assert.equal(notification.notificationRecipients.value,'draft@example.test','Setup preserves input entered while loading');
+ assert.equal(notification.notificationApply.disabled,false);
+ notification.notificationDialog.close();
+
+ loading=notification.openTaskNotifications(['1']);
+ assert.equal(notification.notificationModeInputs[1].disabled,false,'Update can be selected while setup is pending');
+ selectMode('update');
+ const existingSelect=notification.notificationExistingSelect;
+ assert.equal(notification.notificationExistingRow.hidden,false);
+ assert.equal(existingSelect.disabled,true);
+ assert.equal(existingSelect.options[0].textContent,'Loading notifications…');
+ selectMode('remove');
+ resolveSetup(setup);await loading;
+ assert.equal(notification.notificationExistingRow.hidden,false,'The selector stays visible when Remove finishes loading');
+ assert.equal(existingSelect.disabled,false);
+ assert.equal(existingSelect.options[1].value,'0');
+ selectMode('add');assert.equal(notification.notificationExistingRow.hidden,true);
+ notification.notificationDialog.close();
+
+ loading=notification.openTaskNotifications(['1']);selectMode('update');
+ resolveSetup({...setup,existing:{notifications:[]}});await loading;
+ assert.equal(notification.notificationExistingRow.hidden,false);
+ assert.equal(existingSelect.options[0].textContent,'No existing notifications');
+ assert.equal(notification.notificationApply.disabled,true);
+ notification.notificationDialog.close();
+
+ loading=notification.openTaskNotifications(['1']);selectMode('remove');
+ rejectSetup(new Error('Setup failed'));await loading;
+ assert.equal(notification.notificationExistingRow.hidden,false);
+ assert.equal(existingSelect.options[0].textContent,'Unable to load notifications');
+ assert.equal(notification.notificationError.textContent,'Setup failed');
+ assert.equal(notification.notificationApply.disabled,true);
+ notification.notificationDialog.close();
+
+ const abandoned=notification.openTaskNotifications(['1']);
+ const resolveAbandoned=resolveSetup, abandonedSignal=setupSignal;
+ notification.notificationDialog.close();
+ loading=notification.openTaskNotifications(['2']);
+ assert.equal(abandonedSignal.aborted,true);
+ resolveAbandoned(setup);await abandoned;
+ assert.equal(notification.notificationApply.disabled,true,'A previous setup cannot enable the current form');
+ assert.equal(existingSelect.options[0].textContent,'Loading notifications…');
+ resolveSetup({...setup,eligible:[{id:'2'}]});await loading;
+ assert.equal(notification.notificationTargets[0].id,'2');
+ assert.equal(notification.notificationExistingRow.hidden,true);
  assert.match(tasks,/onCloneTask:.*openCloneTaskDialog/);assert.match(tasks,/onSaveNotificationTemplate:.*openEditorNotificationTemplateSave/);
  assert.doesNotMatch(read('wwwroot/js/editors/traditional-task-editor.js'),/showPlaceholderAction\('Save Notification Template'\)/);
  assert.match(read('wwwroot/js/hosts.js'),/onCloneHost:.*openCloneHostDialog/);
@@ -182,7 +290,8 @@ for (const kind of ['Task','Host']) {
  const partial=read('Views/Shared/_NewHostDialog.cshtml');
  assert.ok(partial.indexOf('_ObjectCreationResourceGroup')<partial.indexOf('data-new-host-name'));
  assert.ok(partial.indexOf('data-new-host-auto-format')<partial.indexOf('data-new-host-unc-field'));
- assert.ok(partial.indexOf('data-new-host-unc-field')<partial.indexOf('<legend>Host Type'));
+ const uncCard=partial.match(/<div class="new-task-type-card new-host-unc-card">([\s\S]*?)<\/div>/)?.[1] || '';
+ assert.match(uncCard,/value="Share"[\s\S]*?Windows network share accessed by UNC path\.[\s\S]*?data-new-host-unc-field/);
  for (const type of ['source','destination']) for (const maui of [false,true]) {
   const quick=read('wwwroot/js/quick-transfer.js'),start=quick.indexOf('    // Reuse the Hosts creation form/controller'),end=quick.indexOf('    // Event bindings.',start);
   const events=[],refreshes=[],native=[],routes=[];let options;
@@ -202,5 +311,5 @@ for (const kind of ['Task','Host']) {
   await options.refresh(false);assert.deepEqual(refreshes.at(-1),[true,'new-id',type],'New Hosts must bypass the Quick Transfer reference cache');
   assert.equal(options.allowedTypes.includes('POP3'),false);assert.equal(options.allowedTypes.includes('SMTP'),false);
  }
- console.log('PASS large bulk-state counts, template create/overwrite/cancel/errors, Host clone routing/uncertainty, New Advanced/Sync and Host creation, recovery and editor integration.');
+ console.log('PASS large bulk-state counts, notification actions and loading, template create/overwrite/cancel/errors, Host clone routing/uncertainty, New Advanced/Sync and Host creation, recovery and editor integration.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

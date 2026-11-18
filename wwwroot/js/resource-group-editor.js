@@ -113,6 +113,7 @@
     async function open(name = '') {
         if (dialog.open || busy) return;
         originalName = name; selected = []; items = []; catalog = []; tab = 'task'; uncertain = false; blockingMessage = '';
+        dialog.classList.toggle('is-editing', Boolean(name));
         field('name').value = ''; field('description').value = ''; editVersion = ''; baseline = signature();
         field('title').textContent = name ? 'Edit Resource Group' : 'New Resource Group';
         field('subtitle').textContent = name || 'Choose the resources to include in this Resource Group.';

@@ -1070,49 +1070,35 @@ public sealed class TasksController : Controller
             var snapshot = await _taskService.GetNotificationSnapshotAsync(request.TaskId, cancellationToken);
             if (!snapshot.TaskType.Equals("Traditional", StringComparison.OrdinalIgnoreCase))
                 return BadRequest(new { message = "Notifications can be managed only for Traditional Tasks." });
-            var mode = (request.Mode ?? string.Empty).Trim();
-            if (!mode.Equals("upsert", StringComparison.OrdinalIgnoreCase) && !mode.Equals("remove", StringComparison.OrdinalIgnoreCase))
-                return BadRequest(new { message = "Notification action must be Add/Update or Remove." });
+            var mode = (request.Mode ?? string.Empty).Trim().ToLowerInvariant();
+            if (mode is not ("add" or "update" or "remove" or "upsert"))
+                return BadRequest(new { message = "Notification action must be Add, Update, or Remove." });
 
-            if (request.ActionIndex.HasValue && !snapshot.Notifications.Any(item => item.ActionIndex == request.ActionIndex.Value))
+            var actionIndex = mode == "add" ? null : request.ActionIndex;
+            if (actionIndex.HasValue && !snapshot.Notifications.Any(item => item.ActionIndex == actionIndex.Value))
                 return BadRequest(new { message = "The selected notification no longer exists. Close and reopen Edit Notifications, then try again." });
 
-            if (mode.Equals("remove", StringComparison.OrdinalIgnoreCase))
-            {
-                if (snapshot.Notifications.Count == 0)
-                    return Json(new { success = true, skipped = true, taskId = snapshot.TaskId, taskName = snapshot.TaskName, message = "No task-level Email notification exists." });
+            var hasSelectedResult = request.DoIfFailure || request.DoIfNoAction || request.DoIfSuccess;
+            if (!(mode == "remove" && actionIndex.HasValue) && !hasSelectedResult)
+                return BadRequest(new { message = "Select at least one notification result: Failure, No Transfer, or Success." });
 
-                if (!request.ActionIndex.HasValue)
-                {
-                    var hasSelectedResult = request.DoIfFailure || request.DoIfNoAction || request.DoIfSuccess;
-                    if (!hasSelectedResult) return BadRequest(new { message = "Select at least one notification result: Failure, No Transfer, or Success." });
-                    var hasExactMatch = snapshot.Notifications.Any(item =>
-                        item.DoIfFailure == request.DoIfFailure &&
-                        item.DoIfNoAction == request.DoIfNoAction &&
-                        item.DoIfSuccess == request.DoIfSuccess);
-                    if (!hasExactMatch)
-                        return Json(new { success = true, skipped = true, taskId = snapshot.TaskId, taskName = snapshot.TaskName, message = "No matching task-level Email notification exists." });
-                }
-            }
+            var hasExactMatch = snapshot.Notifications.Any(item =>
+                item.DoIfFailure == request.DoIfFailure &&
+                item.DoIfNoAction == request.DoIfNoAction &&
+                item.DoIfSuccess == request.DoIfSuccess);
+            if ((mode is "update" or "remove") && !actionIndex.HasValue && !hasExactMatch)
+                return Json(new { success = true, skipped = true, taskId = snapshot.TaskId, taskName = snapshot.TaskName, message = "No matching task-level Email notification exists." });
 
             var hostId = (request.HostId ?? string.Empty).Trim();
             var addressTo = request.AddressTo ?? string.Empty;
-
-            if (mode.Equals("upsert", StringComparison.OrdinalIgnoreCase))
+            var updatesExistingNotification = mode == "update" || actionIndex.HasValue || (mode == "upsert" && request.MatchExactResults && hasExactMatch);
+            var preserveRecipients = mode != "add" && request.PreserveExistingRecipients;
+            if (mode != "remove")
             {
-                if (!request.DoIfFailure && !request.DoIfNoAction && !request.DoIfSuccess)
-                    return BadRequest(new { message = "Select at least one notification result: Failure, No Transfer, or Success." });
-
                 var hasRecipient = addressTo
                     .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                     .Any(item => item.Length > 0);
-                var updatesExistingNotification = request.ActionIndex.HasValue ||
-                    (request.MatchExactResults && snapshot.Notifications.Any(item =>
-                        item.DoIfFailure == request.DoIfFailure &&
-                        item.DoIfNoAction == request.DoIfNoAction &&
-                        item.DoIfSuccess == request.DoIfSuccess));
-                var requiresRecipient = !request.PreserveExistingRecipients || !updatesExistingNotification;
-                if (requiresRecipient && !hasRecipient) return BadRequest(new { message = "Enter at least one recipient." });
+                if (!(preserveRecipients && updatesExistingNotification) && !hasRecipient) return BadRequest(new { message = "Enter at least one recipient." });
                 if (string.IsNullOrWhiteSpace(request.Subject)) return BadRequest(new { message = "Subject is required." });
                 if (string.IsNullOrWhiteSpace(request.Message)) return BadRequest(new { message = "Message Body is required." });
 
@@ -1124,8 +1110,10 @@ public sealed class TasksController : Controller
 
             await _taskUndoService.CaptureAsync(request.TaskId, session.Username, cancellationToken);
             var result = await _taskService.UpdateNotificationAsync(request.TaskId, new TaskNotificationUpdateRequest(
-                mode, request.ActionIndex, request.MatchExactResults, request.DoIfFailure, request.DoIfNoAction, request.DoIfSuccess,
-                request.IsHtml, hostId, addressTo, request.PreserveExistingRecipients, request.Subject, request.Message), cancellationToken);
+                mode, actionIndex, request.MatchExactResults, request.DoIfFailure, request.DoIfNoAction, request.DoIfSuccess,
+                request.IsHtml, hostId, addressTo, preserveRecipients, request.Subject, request.Message), cancellationToken);
+            if (!result.Changed)
+                return Json(new { success = true, skipped = true, taskId = result.TaskId, taskName = result.TaskName, message = result.Message });
             var warning = string.Empty;
             try
             {
@@ -1136,7 +1124,7 @@ public sealed class TasksController : Controller
                 _logger.LogError(ex, "Task notification update succeeded, but MAUI could not record modification metadata for Task {TaskId}.", request.TaskId);
                 warning = "The MOVEit notification was updated, but MAUI could not fully update its local audit metadata.";
             }
-            return Json(new { success = true, skipped = !result.Changed, taskId = result.TaskId, taskName = result.TaskName, message = result.Message, warning });
+            return Json(new { success = true, skipped = false, taskId = result.TaskId, taskName = result.TaskName, message = result.Message, warning });
         }
         catch (Exception ex) when (ex is MoveItApiException or MoveItComException or InvalidOperationException or ArgumentException)
         {

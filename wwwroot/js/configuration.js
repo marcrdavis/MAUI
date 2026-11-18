@@ -72,6 +72,7 @@
         categoryButtons.forEach(button => button.classList.toggle('active', button.dataset.configSectionTarget === key));
         sections.forEach(section => section.classList.toggle('active', section.dataset.configSection === key));
         if (openingBackup) void window.MauiConfigurationOperations?.refreshBackups?.();
+        if (key === 'security') window.MauiLocalGroupSettings?.open();
     }
 
     // Purpose: Initializes category navigation and removes categories that have no rendered settings section.
@@ -492,6 +493,7 @@
             autoFormatNewTaskHostNames: checked('autoFormatNewTaskHostNames'),
             importRowLimit: numberValue('importRowLimit'),
             enableQuickTransfer: checked('enableQuickTransfer'),
+            moveItLocalGroups: window.MauiLocalGroupSettings?.read(),
             taskJsonEditor: checked('taskJsonEditor'),
             copyBetweenEnvironments: checked('copyBetweenEnvironments'),
             copyRecoveryRetentionDays: Number(value('copyRecoveryRetentionDays') || 30),
@@ -852,6 +854,7 @@
 
             window.MauiConfigurationOperations?.markSettingsSaved();
             window.MauiSshAlgorithmSettings?.markSaved();
+            window.MauiLocalGroupSettings?.markSaved();
             baseline = payloadSignature();
             updateRestartBanner(Boolean(data.restartRequired), data.restartReasons || []);
             if (payload.smtp) payload.smtp.password = '';
@@ -888,3 +891,4 @@
     initializeGridDefinitions();
     initializeDirtyTracking();
 })();
+

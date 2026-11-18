@@ -1,0 +1,107 @@
+@model ConfigurationSettingsViewModel
+<div class="panel-card configuration-card" data-lg-panel hidden="@(!Model.MoveItLocalGroups.Enabled)"
+     data-enabled="@(Model.MoveItLocalGroups.Enabled ? "true" : "false")" data-can-manage="@(ViewData["IsMoveItAdmin"] is true ? "true" : "false")"
+     data-state-url="@Url.Action("State", "LocalGroups")" data-execute-url="@Url.Action("Execute", "LocalGroups")">
+    <div class="configuration-card-heading row-heading">
+        <div><h3>MOVEit User Management</h3><p>Manage local security groups on <strong data-lg-server>@ViewData["LocalGroupsServer"]</strong>.</p></div>
+        <button type="button" class="secondary-button" data-lg-load>Load Groups</button>
+    </div>
+    <div class="local-groups-body">
+        <div class="local-groups-inventory-loading" data-lg-inventory-loading hidden aria-hidden="true"><span class="inline-spinner"></span></div>
+        <div class="local-groups-grid" data-lg-workspace hidden>
+            <section class="local-groups-list local-groups-subpanel" aria-label="Local Groups">
+                <div class="local-groups-filter-row">
+                    <label class="field-block"><span>Local Groups</span><input class="text-input" data-lg-filter placeholder="Filter Local Groups" /></label>
+                    <button type="button" class="secondary-button" data-lg-new>+ New Group</button>
+                </div>
+                <div class="local-groups-list-scroll"><table class="configuration-table local-groups-table"><thead><tr><th>Group</th><th>MOVEit Resource Groups</th></tr></thead><tbody data-lg-groups></tbody></table></div>
+                <p class="field-help" data-lg-empty>No local groups loaded.</p>
+            </section>
+            <section class="local-groups-details-panel local-groups-subpanel" data-lg-right aria-label="Group Properties" aria-busy="false">
+                <div class="local-groups-loading" data-lg-loading hidden role="status" aria-label="Loading group data"><span class="inline-spinner" aria-hidden="true"></span></div>
+                <div data-lg-right-content>
+                    <div class="local-groups-create" data-lg-create hidden>
+                        <h4>New Local Group</h4>
+                        <div class="details-grid">
+                            <label class="field-block"><span>Group Name</span><input class="text-input" maxlength="256" data-lg-create-name /></label>
+                            <label class="field-block"><span>Description</span><input class="text-input" maxlength="256" data-lg-create-description /></label>
+                        </div>
+                        <div class="local-groups-toolbar"><button type="button" class="secondary-button" data-lg-create-cancel>Cancel</button><button type="button" class="primary-button" data-lg-create-save>Create Group</button></div>
+                    </div>
+                    <div data-lg-details hidden>
+                        <div class="configuration-card-heading row-heading"><h4 data-lg-selected-name></h4><button type="button" class="configuration-remove-button" data-lg-delete>Delete Group</button></div>
+                        <label class="field-block"><span>Description</span><textarea class="text-input textarea-input" rows="2" maxlength="256" data-lg-description></textarea></label>
+                        <div class="local-groups-toolbar local-groups-save-row"><button type="button" class="primary-button" data-lg-description-save>Save Description</button></div>
+                        <h4 id="local-groups-members-title">Members</h4>
+                        <div class="local-groups-members-scroll">
+                            <table class="configuration-table local-groups-table" aria-labelledby="local-groups-members-title">
+                                <thead><tr><th scope="col">Account</th><th scope="col">Type</th><th scope="col" aria-label="Actions"></th></tr></thead>
+                                <tbody data-lg-members></tbody>
+                                <tbody data-lg-members-empty><tr><td colspan="3" class="local-groups-empty-cell">No members.</td></tr></tbody>
+                            </table>
+                        </div>
+                        <div class="local-groups-toolbar local-groups-save-row local-groups-member-toolbar">
+                            <button type="button" class="primary-button" data-lg-add-open>Add</button>
+                        </div>
+                        <div class="local-groups-confirm" data-lg-confirm hidden>
+                            <strong data-lg-confirm-text></strong>
+                            <label class="field-block"><span>Type the Group Name to Confirm</span><input class="text-input" data-lg-confirm-name autocomplete="off" /></label>
+                            <div class="local-groups-toolbar"><button type="button" class="secondary-button" data-lg-confirm-cancel>Cancel</button><button type="button" class="configuration-remove-button" data-lg-confirm-apply>Delete Group</button></div>
+                        </div>
+                    </div>
+                    <p class="local-groups-select-note" data-lg-select-note>Select a group to view its description and members.</p>
+                </div>
+            </section>
+        </div>
+        <div class="local-groups-footer" aria-live="polite"><span data-lg-status>Ready.</span><span class="error-text" data-lg-error hidden role="alert"></span></div>
+    </div>
+    <dialog class="new-task-dialog" data-lg-add-dialog aria-labelledby="local-groups-add-title" aria-describedby="local-groups-add-message">
+        <div class="new-task-card">
+            <div class="settings-header">
+                <div>
+                    <h2 id="local-groups-add-title">Add Users or Groups</h2>
+                    <p id="local-groups-add-message">Add members to <strong data-lg-add-group></strong>.</p>
+                </div>
+                <button type="button" class="dialog-close" data-lg-add-close aria-label="Close">×</button>
+            </div>
+            <div class="new-task-body local-groups-add-body" data-lg-add-body>
+                <div>
+                    <div class="local-groups-picker">
+                        <label class="field-block"><span>Find Users or Groups</span><input class="text-input" maxlength="256" data-lg-query autofocus aria-describedby="local-groups-find-help" placeholder="Name, .\name, COMPUTER\account or DOMAIN\account" /></label>
+                        <button type="button" class="secondary-button" data-lg-find>Find</button>
+                    </div>
+                    <p class="field-help" id="local-groups-find-help">Find local or domain users and security groups. Enter a qualified account or SID to resolve it exactly. Use <code>.\name</code> for partial local search or <code>DOMAIN\prefix</code> to search one domain.</p>
+                </div>
+                <div class="local-groups-results-scroll">
+                    <table class="configuration-table local-groups-table local-groups-results" aria-label="Find Results">
+                        <thead><tr><th scope="col" class="local-groups-result-check" aria-label="Select"></th><th scope="col">Account</th><th scope="col">Type</th></tr></thead>
+                        <tbody data-lg-results></tbody>
+                        <tbody data-lg-results-empty><tr><td colspan="3" class="local-groups-empty-cell">No results.</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="settings-footer new-task-footer">
+                <span class="maui-modal-feedback" data-lg-add-status role="status"></span>
+                <span class="maui-modal-feedback" data-feedback-kind="error" data-lg-add-error hidden role="alert"></span>
+                <button type="button" class="secondary-button" data-lg-add-cancel>Cancel</button>
+                <button type="button" class="primary-button" data-lg-add disabled>Add</button>
+            </div>
+        </div>
+    </dialog>
+    <dialog class="new-task-dialog" data-lg-remove-dialog aria-labelledby="local-groups-remove-title" aria-describedby="local-groups-remove-message">
+        <div class="new-task-card">
+            <div class="settings-header">
+                <div><h2 id="local-groups-remove-title">Remove Group Member</h2></div>
+                <button type="button" class="dialog-close" data-lg-remove-close aria-label="Close">×</button>
+            </div>
+            <div class="new-task-body">
+                <p id="local-groups-remove-message">Remove <strong data-lg-remove-account></strong> from <strong data-lg-remove-group></strong>?</p>
+            </div>
+            <div class="settings-footer new-task-footer">
+                <span class="maui-modal-feedback" data-feedback-kind="error" data-lg-remove-error hidden role="alert"></span>
+                <button type="button" class="secondary-button" data-lg-remove-cancel autofocus>Cancel</button>
+                <button type="button" class="danger-button" data-lg-remove-apply>Remove Member</button>
+            </div>
+        </div>
+    </dialog>
+</div>

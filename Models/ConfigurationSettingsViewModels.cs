@@ -6,6 +6,7 @@ namespace MoveItAutomationUI.Models;
 
 public sealed class ConfigurationSettingsViewModel
 {
+    public MoveItAutomationUI.Features.LocalGroups.LocalGroupsSettings MoveItLocalGroups { get; init; } = new();
     public bool TaskJsonEditor { get; init; }
     public bool CopyBetweenEnvironmentsAvailable { get; init; }
     public bool CopyBetweenEnvironments { get; init; }
@@ -195,6 +196,7 @@ public sealed class SshAlgorithmSettingsSaveRequest
 
 public sealed class ConfigurationSettingsSaveRequest
 {
+    public MoveItAutomationUI.Features.LocalGroups.LocalGroupsSettings? MoveItLocalGroups { get; set; }
     public bool TaskJsonEditor { get; set; }
     public bool CopyBetweenEnvironments { get; set; }
     public int CopyRecoveryRetentionDays { get; set; } = 30;
@@ -296,3 +298,4 @@ public sealed class ConfigurationSaveResult
     public bool SmtpPasswordConfigured { get; init; }
     public IReadOnlyList<string> ClearedDataAccessServerKeys { get; init; } = Array.Empty<string>();
 }
+

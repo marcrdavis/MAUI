@@ -1,0 +1,5 @@
+{
+  "brokerUrl": "https://maui.example.com/api/local-groups-agent/",
+  "certificateSha256": "",
+  "ignoreServerCertificateErrors": false
+}

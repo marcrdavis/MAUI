@@ -409,6 +409,9 @@ async function screenshot(name) {
     await evaluate("input('Finance');pick('body').querySelector('.permissions-row-menu').click();document.querySelector('.permissions-row-actions button').click()");await pause(100);
     await eq("g('title').textContent",'Edit Resource Group');
     await eq("document.querySelector('input[data-group-name]').value",'Finance');
+    await eq(`(()=>{const field=g('description'),style=getComputedStyle(field);
+        const contentHeight=field.clientHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom);
+        return field.rows===2&&Math.abs(contentHeight-2*parseFloat(style.lineHeight))<=2;})()`,true);
     await evaluate("g('description').value='Changed description';g('description').dispatchEvent(new Event('input'));document.querySelector('[data-group-tab=host]').click()");
     await screenshot('Editor-light-1400');
     await evaluate("document.documentElement.dataset.theme='dark'");await screenshot('Editor-dark-1400');

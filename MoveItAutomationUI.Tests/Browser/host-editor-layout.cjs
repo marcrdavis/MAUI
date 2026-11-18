@@ -1004,6 +1004,30 @@ async function check(name) {
             assert.deepEqual(result,{visible:type==='Share',required:type==='Share',disabled:type!=='Share',label:'Resource UNC',overflow:false});
             checks++;
         }
+        const uncLayout = await evaluate(`(() => {
+            const option = newHostTestDialog.querySelector('[for="new-host-type-share"]');
+            option.click();
+            syncNewHostConnectionField();
+            const input = newHostTestDialog.querySelector('[data-new-host-unc]');
+            const field = input.closest('label');
+            const radio = option.control;
+            const card = radio.closest('.new-task-type-card');
+            const cardBox = card.getBoundingClientRect();
+            const optionBox = option.getBoundingClientRect();
+            const inputBox = input.getBoundingClientRect();
+            const fieldBox = field.getBoundingClientRect();
+            field.querySelector('span').click();
+            return {
+                selected: radio.checked,
+                focused: document.activeElement === input,
+                insideCard: card.contains(field) && field.previousElementSibling === option,
+                aligned: Math.abs(fieldBox.left - optionBox.left) < 1,
+                padded: fieldBox.top >= optionBox.bottom + 8 && inputBox.right <= cardBox.right - 10
+                    && fieldBox.bottom <= cardBox.bottom - 10
+            };
+        })()`);
+        assert.deepEqual(uncLayout, {selected:true,focused:true,insideCard:true,aligned:true,padded:true}, 'Resource UNC is padded inside the UNC Share card and its own label focuses the input');
+        checks++;
         await evaluate('newHostTestDialog.close()');
     }
     // Admin recovery retains values, changes revision and pauses Auto Save until manual Save.

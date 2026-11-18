@@ -234,7 +234,11 @@ public sealed partial class TraditionalTaskEditorController : Controller
 
             return Json(new { success = true, taskId = normalizedTaskId, editVersion = ObjectEditVersion.SavedVersion });
         }
-        catch (ObjectCheckoutRejectedException ex) { return Conflict(ex.Feedback()); }
+        catch (ObjectCheckoutRejectedException ex)
+        {
+            _logger.LogWarning("MOVEit rejected checkout while saving Task {TaskId}.", normalizedTaskId);
+            return Conflict(ex.Feedback());
+        }
         catch (MoveItAuthenticationException)
         {
             return Unauthorized(new { message = "MOVEit session expired. Please sign in again." });
@@ -245,6 +249,7 @@ public sealed partial class TraditionalTaskEditorController : Controller
         }
         catch (Exception ex) when (ex is ObjectEditConflictException or ObjectCheckoutReleaseException)
         {
+            _logger.LogWarning("Task {TaskId} save was blocked by {ConflictType}.", normalizedTaskId, ex.GetType().Name);
             return Conflict(new { message = ex.Message, moveItSaved = false, editConflict = true });
         }
         catch (TraditionalTaskEditorPartialSaveException ex)

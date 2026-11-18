@@ -1,8 +1,8 @@
 # MAUI — MOVEit Automation User Interface
 
-- **Version:** `0.18.529-RC3`
+- **Version:** `0.18.556-RC3`
 - **Release:** Release Candidate 3 (RC3) — **not the final release**
-- **Build:** `20261105`
+- **Build:** `20261117`
 - **Target framework:** .NET 8
 - **Database schema / configuration version:** `1` / `1`
 
@@ -48,7 +48,7 @@ MOVEit version-specific controls are gated by the connected server's reported ca
 
 Shared grids provide sorting, column filters, saved views, CSV/Print and per-user preferences. MAUI metadata includes Tags and organization-defined fields. Task filename search reads configured Source masks and Destination filenames on demand; ordinary grid loads do not fetch Task steps. Date/time filters support comparison operators, alternatives and relative-date macros; use the grid's Filter Help for syntax and examples.
 
-Tasks and Hosts also support JSON element/value searches when the search begins with **`JSON:`**, for example `JSON: DoIfFailure=1`. Only matching objects appear; ordinary search and textbox hints are unchanged. This read-only search is independent of the experimental JSON Editor. Calendar **Search** highlights matching days/time slots while keeping all runs visible; **Filter** shows only matching runs. Both Calendar modes match Task names.
+Tasks and Hosts also support JSON element/value searches when the search begins with **`JSON:`**, for example `JSON: DoIfFailure=1`. Only matching objects appear; ordinary search and textbox hints are unchanged. This read-only search is independent of the experimental JSON Editor. In the Tasks grid, join comparisons with `AND` or `OR`, for example `JSON: DoIfFailure=1 AND DoIfSuccess=1`. `AND` takes precedence over `OR`. Put double quotes around literal values that could be read as another comparison. Calendar **Search** highlights matching days/time slots while keeping all runs visible; **Filter** shows only matching runs. Both Calendar modes match Task names.
 
 Task editors and Quick Transfer use the same sortable Browse modal. Double-click a file to select its folder and filename, or select a folder and click OK to leave the filename unchanged. Host Editor **Browse Host** is inspection-only; selecting an entry there does not transfer or modify it.
 
@@ -82,7 +82,7 @@ Task Process panels display built-in Script descriptions and parameter requireme
 
 ### Experimental features
 
-Both features below are configured under **Configuration > Settings > Experimental**, are **off by default**, and require Save Configuration and a page reload after enabling. Enabling either feature does not change the normal MAUI/native editor preferences.
+The features below are configured under **Configuration > Settings > Experimental** and are **off by default**. Save Configuration and reload the page after enabling a feature. Editor preferences are managed separately.
 
 <a id="experimental-task-json-editor"></a>
 
@@ -108,6 +108,10 @@ Choose **Copy To** from supported row or Bulk Actions menus in Tasks, Hosts, Scr
 - Copying continues after modal Close. Stop Copy stops before the next write; process restart marks unfinished work Interrupted. Uncertain writes are not automatically replayed. Retain reports/recovery files and Data Protection keys; recovery retention defaults to 30 days, configurable from 1–90.
 
 See [Copy To limitations and contracts](CHANGELOG.md#copy-between-environments) and [two-environment acceptance](TESTING.md#copy-between-environments-acceptance).
+
+#### MOVEit User Management
+
+MAUI and MOVEit administrators can manage local security groups and their local or domain members on the current Automation server under **Configuration > Settings > Security**. Each managed server runs the optional Local Groups Service from `IntegrationAssets\MOVEitUserManagement`. See [service installation, IIS configuration and certificates](INSTALLATION.md#13-optional-moveit-user-management).
 
 <a id="authentication-and-authorization"></a>
 <a id="moveit-object-permissions"></a>
@@ -262,3 +266,4 @@ Progress, MOVEit, and related Progress product names and marks are trademarks or
 ### Documentation maintenance
 
 Maintain only `README.md`, `CHANGELOG.md`, `INSTALLATION.md`, `SECURITY.md`, `TESTING.md`, `UPGRADE.md` and the existing `LICENSE`. Incorporate implementation and validation notes into these documents. **Do not create a new `.md` file without Marc's approval.** Keep current RC3 guidance separate from historical release notes and distinguish automated checks from live IIS/MOVEit acceptance.
+

@@ -2,6 +2,7 @@
 // Project: MAUI - MOVEit Automation UI
 // This source file is part of the MAUI application.
 
+using MoveItAutomationUI.Features.LocalGroups;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +24,10 @@ using MoveItAutomationUI.Services.Reporting;
 using MoveItAutomationUI.Services.SystemJobs;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Negotiate optional client certificates when running directly under Kestrel (including VS).
+// Browser access remains cookie-based; only the agent actions require the enrolled certificate.
+builder.WebHost.ConfigureKestrel(LocalGroupsHosting.ConfigureHttps);
 
 // Recover a committed Factory Reset before Data Protection, databases, or hosted jobs open Data.
 MauiFactoryResetRecovery.CompletePendingReset(builder.Environment.ContentRootPath);
@@ -119,6 +124,13 @@ builder.Services
             }
         };
     });
+
+// Optional standalone Windows agent; its TLS scheme never accepts browser cookies.
+builder.Services.AddAuthentication().AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, AgentAuthenticationHandler>(LocalGroupsProtocol.AgentScheme, _ => { });
+builder.Services.AddSingleton<LocalGroupsConfiguration>();
+builder.Services.AddSingleton<LocalGroupsLedger>();
+builder.Services.AddSingleton<LocalGroupsBroker>();
+builder.Services.AddScoped<LocalGroupsService>();
 
 // Protects every MVC endpoint by default. Login explicitly opts out with [AllowAnonymous].
 builder.Services.AddAuthorization(options =>
@@ -404,4 +416,5 @@ app.MapControllerRoute(
     pattern: "{controller=Account}/{action=Login}/{id?}");
 
 app.Run();
+
 

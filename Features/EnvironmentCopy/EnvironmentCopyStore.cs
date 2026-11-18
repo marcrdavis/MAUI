@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
 using Microsoft.AspNetCore.DataProtection;
@@ -79,20 +81,26 @@ public sealed class EnvironmentCopyStore
     }
     public async Task SaveReportAsync(CopyReport report, CancellationToken ct = default)
     {
-        ValidateId(report.OperationId); await _journal.WaitAsync(ct);
+        var operationId = ParseOperationId(report.OperationId);
+        await _journal.WaitAsync(ct);
         try
         {
-            Directory.CreateDirectory(_directory); var path = Path.Combine(_directory, report.OperationId + ".json");
+            Directory.CreateDirectory(_directory);
+            var path = ReportPath(operationId);
             var temp = path + ".tmp"; await File.WriteAllTextAsync(temp, JsonSerializer.Serialize(report), ct); File.Move(temp, path, true);
         }
         finally { _journal.Release(); }
     }
-    public async Task<CopyReport> ReadReportAsync(string id, string owner, CancellationToken ct = default)
+    public async Task<CopyReport> ReadReportAsync(string id, string owner, CancellationToken ct = default) =>
+        await ReadReportAsync(ParseOperationId(id), owner, ct);
+
+    private async Task<CopyReport> ReadReportAsync(Guid operationId, string owner, CancellationToken ct)
     {
-        ValidateId(id); await _journal.WaitAsync(ct);
+        var id = operationId.ToString("N");
+        await _journal.WaitAsync(ct);
         try
         {
-            var path = Path.Combine(_directory, id + ".json");
+            var path = ReportPath(operationId);
             if (!File.Exists(path) || File.GetLastWriteTimeUtc(path) < DateTime.UtcNow.AddDays(-Math.Clamp(_options.CurrentValue.RecoveryRetentionDays.Value, 1, 90)))
                 throw new InvalidOperationException("The copy report is unavailable or its retention period has ended.");
             var report = ParseReport(await File.ReadAllTextAsync(path, ct), id);
@@ -108,22 +116,22 @@ public sealed class EnvironmentCopyStore
     }
     internal async Task CaptureRecoveryAsync(CopyPlan plan, CopyPlanItem item, CancellationToken ct)
     {
+        var operationId = ParseOperationId(plan.Id);
         // DP-protected complete configuration is separate from the downloadable operation report.
         Directory.CreateDirectory(_directory);
         var payload = JsonSerializer.Serialize(new CopyRecoveryDefinition(plan.Destination, item.Choice.TargetId, item.Source.Type, item.DestinationXml));
-        var key = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(item.Source.Key)));
-        await File.WriteAllTextAsync(Path.Combine(_directory, plan.Id + "-" + key + ".recovery"), _protector.Protect(payload), ct);
+        await File.WriteAllTextAsync(RecoveryPath(operationId, item.Source.Key), _protector.Protect(payload), ct);
     }
     public async Task<CopyRecoveryDefinition> ReadRecoveryAsync(string operationId, string key, string owner, CancellationToken ct = default)
     {
+        var id = ParseOperationId(operationId);
         // Read the report first for authorization, then protect the physical read from retention cleanup.
-        var report = await ReadReportAsync(operationId, owner, ct);
+        var report = await ReadReportAsync(id, owner, ct);
         if (!report.Items.Any(x => x.Key == key && x.RecoveryCaptured)) throw new InvalidOperationException("No retained recovery definition exists for this object.");
-        var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(key)));
         await _journal.WaitAsync(ct);
         try
         {
-            var path = Path.Combine(_directory, operationId + "-" + hash + ".recovery");
+            var path = RecoveryPath(id, key);
             if (!File.Exists(path)) throw new InvalidOperationException("The protected recovery definition is unavailable.");
             return JsonSerializer.Deserialize<CopyRecoveryDefinition>(_protector.Unprotect(await File.ReadAllTextAsync(path, ct)))
                 ?? throw new InvalidOperationException("The protected recovery definition could not be read.");
@@ -212,7 +220,20 @@ public sealed class EnvironmentCopyStore
         if (report.Phase == "Completed with skips") report.Phase = report.Status;
         return report;
     }
-    private static void ValidateId(string id) { if (!Guid.TryParseExact(id, "N", out _)) throw new ArgumentException("Invalid copy operation ID."); }
+    private string ReportPath(Guid operationId) => Path.Combine(_directory, $"{operationId:N}.json");
+
+    private string RecoveryPath(Guid operationId, string key)
+    {
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key)));
+        return Path.Combine(_directory, $"{operationId:N}-{hash}.recovery");
+    }
+
+    private static Guid ParseOperationId(string id)
+    {
+        if (!Guid.TryParseExact(id, "N", out var operationId) || !string.Equals(id, operationId.ToString("N"), StringComparison.Ordinal))
+            throw new ArgumentException("Invalid copy operation ID.");
+        return operationId;
+    }
 }
 
 public sealed record CopyRecoveryDefinition(string Environment, string TargetId, string Type, string Xml);

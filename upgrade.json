@@ -1,7 +1,7 @@
 {
   "ManifestVersion": 1,
-  "Description": "Correct Task Script parameter scope guidance and editing while preserving native parameter storage.",
-  "TargetVersion": "0.18.529-RC3",
+  "Description": "Merge User Management and the reviewed Records improvements into master.",
+  "TargetVersion": "0.18.556-RC3",
   "MinimumSupportedVersion": "0.16.77-integration",
   "RequiredSchemaVersion": 1,
   "RequiredConfigurationVersion": 1,

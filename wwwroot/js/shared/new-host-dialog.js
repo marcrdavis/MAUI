@@ -185,7 +185,10 @@
 
 
         if (options.allowedTypes) newHostDialog?.querySelectorAll('input[name="newHostType"]').forEach(input => {
-            if (!options.allowedTypes.includes(input.value)) { input.disabled = true; input.closest('label').hidden = true; }
+            if (!options.allowedTypes.includes(input.value)) {
+                input.disabled = true;
+                input.closest('.new-task-type-card').hidden = true;
+            }
         });
         return { open: openNewHostDialog, get busy() { return newHostBusy; }, get isOpen() { return Boolean(newHostDialog?.open); } };
     }

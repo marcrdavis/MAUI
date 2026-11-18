@@ -86,7 +86,7 @@ window.fetch = async (url, options = {}) => {
     if(String(url).includes('/ObjectEditLease/')) {
         recoveryCalls.push({url:String(url),body:JSON.parse(options.body)});
         if (lockOnOpening && String(url).endsWith('/Open')) return new Response(JSON.stringify({message:'This object has been checked out to miadmin since 2026-10-24 17:27:53',checkoutConflict:true}),{status:409,headers:{'Content-Type':'application/json'}});
-        return new Response(JSON.stringify(String(url).endsWith('/Override') ? {success:true,leaseId:'task-recovered',editVersion:'recovered-task-revision'} : String(url).endsWith('/Open') ? {required:true,leaseId:'task-open'} : {success:true}),{headers:{'Content-Type':'application/json'}});
+        return new Response(JSON.stringify(String(url).endsWith('/Override') ? {success:true,leaseId:'task-recovered',editVersion:'recovered-task-revision'} : String(url).endsWith('/Open') ? {required:true,leaseId:'task-open-'+JSON.parse(options.body).id} : {success:true}),{headers:{'Content-Type':'application/json'}});
     }
     if(String(url).includes('/HostEditor/')) {
         window.hostEditRequests=(window.hostEditRequests||0)+1;
@@ -919,6 +919,7 @@ async function check(name) {
         model.task.nextActions=[];model.smtpHosts=[{id:'smtp-test',name:'Test SMTP',type:'SMTP'}];model.taskOptions=[{id:'other-task',name:'Other Task'}];
         await evaluate(`loadFixture(${JSON.stringify(model)})`);
         await evaluate(name==='Advanced'?`insertStep('Email')`:`document.querySelector('[data-traditional-task-editor-section-button="next-actions"]').click();document.querySelector('[data-traditional-task-editor-add-email-action]').click()`);
+        assert.equal(await evaluate(`document.querySelector('[data-next-action-field="hostId"]').value`),'smtp-test',name+' preselects the only SMTP Host for a new email');
         assert.equal(await evaluate(`document.querySelector('[data-traditional-task-editor-next-action-tab="conditions"]')`),null);
         assert.equal(await evaluate(`document.querySelector('[data-next-action-field="addressTo"]').closest('[data-traditional-task-editor-next-action-panel]').dataset.traditionalTaskEditorNextActionPanel`),'message');
         assert.equal(await evaluate(`document.querySelector('[data-traditional-task-editor-next-action-conditions]').hidden`),name==='Advanced');
@@ -927,7 +928,7 @@ async function check(name) {
             if(name==='Traditional')await screenshot('mail-general-placement');
             await evaluate(`change('[data-next-action-field="doIfSuccess"]',true);change('[data-next-action-field="doIfFailure"]',false);change('[data-next-action-field="doIfNoAction"]',true);document.querySelector('[data-next-action-field="doAfter"][value="FileDone"]').click()`);
         }
-        await evaluate(`change('[data-next-action-field="hostId"]','smtp-test');document.querySelector('[data-traditional-task-editor-next-action-tab="message"]').click();change('[data-next-action-field="format"]','text');change('[data-next-action-field="addressTo"]','test@example.test');change('[data-next-action-field="subject"]','Moved mail fields');change('[data-next-action-field="messageText"]','Mail body')`);
+        await evaluate(`document.querySelector('[data-traditional-task-editor-next-action-tab="message"]').click();change('[data-next-action-field="format"]','text');change('[data-next-action-field="addressTo"]','test@example.test');change('[data-next-action-field="subject"]','Moved mail fields');change('[data-next-action-field="messageText"]','Mail body')`);
         assert.equal(await evaluate(`(()=>{const f=document.querySelector('[data-next-action-field="format"]').closest('label').getBoundingClientRect(),r=document.querySelector('[data-next-action-field="addressTo"]').closest('label').getBoundingClientRect(),s=document.querySelector('[data-next-action-field="subject"]').closest('label').getBoundingClientRect();return r.height>0&&f.height>0&&s.height>0&&r.top>=f.bottom&&r.bottom<=s.top;})()`),true);
         for(const mode of ['text','html','source']) {
             await evaluate(`change('[data-next-action-field="format"]',${JSON.stringify(mode==='text'?'text':'html')})`);
@@ -942,13 +943,23 @@ async function check(name) {
         await evaluate(`document.querySelector('[data-traditional-task-editor-save]').click()`);
         for(let i=0;i<100&&!await evaluate('saveCalls.length');i++)await pause(20);
         assert.equal(await evaluate('saveCalls[0].payload.nextActions[0].addressTo'),'test@example.test');
+        assert.equal(await evaluate('saveCalls[0].payload.nextActions[0].hostId'),'smtp-test',name+' saves the default host without a dropdown change');
         if(name!=='Advanced') {assert.equal(await evaluate('saveCalls[0].payload.nextActions[0].doIfNoAction'),true);assert.equal(await evaluate('saveCalls[0].payload.nextActions[0].doAfter'),'FileDone');}
         await evaluate(`loadFixture(${JSON.stringify(model)})`);
         await evaluate(name==='Advanced'?`insertStep('RunTask')`:`document.querySelector('[data-traditional-task-editor-section-button="next-actions"]').click();document.querySelector('[data-traditional-task-editor-add-run-task-action]').click()`);
         assert.equal(await evaluate(`document.querySelector('[data-traditional-task-editor-next-action-tab="conditions"]')`),null);
         if(name!=='Advanced')assert.equal(await evaluate(`(()=>{const c=document.querySelector('[data-traditional-task-editor-next-action-conditions]').getBoundingClientRect(),t=document.querySelector('[data-next-action-field="taskId"]').closest('label').getBoundingClientRect();return c.height>0&&t.height>0&&c.bottom<=t.top;})()`),true);
         if(name==='Traditional')await screenshot('run-task-general-placement');
-        checks+=9;
+        checks+=11;
+    }
+    for (const smtpHosts of [[], [{ id: 'smtp-one', name: 'SMTP One' }, { id: 'smtp-two', name: 'SMTP Two' }]]) {
+        const model = structuredClone(fixtures.Traditional);
+        model.task.nextActions = [];
+        model.smtpHosts = smtpHosts;
+        await evaluate(`loadFixture(${JSON.stringify(model)})`);
+        await evaluate(`document.querySelector('[data-traditional-task-editor-section-button="next-actions"]').click();document.querySelector('[data-traditional-task-editor-add-email-action]').click()`);
+        assert.equal(await evaluate(`document.querySelector('[data-next-action-field="hostId"]').value`),'','no default unless exactly one host is available');
+        checks++;
     }
     // Host 0 opens in place from every Task type and returns to its unchanged parent draft.
     for(const name of ['Traditional','Advanced','Sync-FileSystem']) {
@@ -1245,6 +1256,27 @@ async function check(name) {
         assert.equal(await evaluate('cloneCalls[0].editorOpen'),false);
         assert.equal(await evaluate('cloneCalls[0].saves'),1);
     }
+    // The clone may open while another route tries to replace the editor. Its first
+    // Save must use its own checkout and shell revision, with no forced checkout.
+    const cloned = structuredClone(fixtures.Traditional);
+    cloned.task.id = '901';
+    cloned.task.name = 'Cloned Task';
+    cloned.editVersion = 'cloned-task-revision';
+    cloned.checkoutObjectsForDurationOfEdit = true;
+    cloned.preferences = { ...cloned.preferences, autoSave: false };
+    await evaluate(`window.fixture=${JSON.stringify(cloned)};window.recoveryCalls=[];window.saveCalls=[];
+        window.cloneOpening=editor.open('901','Cloned Task','Traditional');
+        window.competingOpening=editor.open('902','Other Task','Traditional');void 0;`);
+    assert.equal(await evaluate('competingOpening'), false);
+    assert.equal(await evaluate('cloneOpening'), true);
+    await evaluate(`change('[data-editor-field="name"]','Edited Clone');document.querySelector('[data-traditional-task-editor-save]').click()`);
+    for (let i=0; i<100 && !await evaluate('saveCalls.length'); i++) await pause(20);
+    assert.equal(await evaluate("new URL(saveCalls[0].url).searchParams.get('id')"), '901');
+    assert.equal(await evaluate("saveCalls[0].headers.get('X-MAUI-Edit-Lease')"), 'task-open-901');
+    assert.equal(await evaluate('saveCalls[0].payload.editVersion'), 'cloned-task-revision');
+    assert.deepEqual(await evaluate('recoveryCalls.filter(call=>call.url.endsWith("/Open")).map(call=>call.body.id)'), ['901']);
+    assert.equal(await evaluate('recoveryCalls.some(call=>call.url.endsWith("/Override"))'), false);
+    checks+=7;
     // Real Traditional action flushes the draft, creates once, and reuses the modal for the disabled Advanced copy.
     await evaluate(`loadFixture(${JSON.stringify(fixtures.Traditional)})`);
     const converted=structuredClone(fixtures.Advanced);converted.task.id='900';converted.task.name='Converted Advanced';converted.task.enabled=false;

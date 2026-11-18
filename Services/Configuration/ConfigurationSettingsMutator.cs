@@ -59,6 +59,15 @@ public sealed class ConfigurationSettingsMutator : IConfigurationSettingsMutator
         AppSettingsJson.SetSettingValue(root, UiOptions.SectionName, nameof(UiOptions.CheckoutObjectsForDurationOfEdit), request.CheckoutObjectsForDurationOfEdit, templateRoot);
         AppSettingsJson.SetSettingValue(root, UiOptions.SectionName, nameof(UiOptions.AutoFormatNewTaskHostNames), request.AutoFormatNewTaskHostNames, templateRoot);
         AppSettingsJson.SetSettingValue(root, UiOptions.SectionName, nameof(UiOptions.ImportRowLimit), request.ImportRowLimit, templateRoot);
+        if (request.MoveItLocalGroups is { } localGroups)
+        {
+            const string section = MoveItAutomationUI.Features.LocalGroups.LocalGroupsOptions.SectionName;
+            MoveItAutomationUI.Features.LocalGroups.LocalGroupsBinding.BindRegistrations(localGroups, root, request.Servers);
+            AppSettingsJson.SetSettingValue(root, section, "Enabled", localGroups.Enabled, templateRoot);
+            var values = AppSettingsJson.GetOrCreateSection(root, section, templateRoot);
+            values.Remove("AgentHost"); // Remove the redundant endpoint setting from the saved document.
+            values["Agents"] = JsonSerializer.SerializeToNode(localGroups.Agents);
+        }
         AppSettingsJson.SetSettingValue(root, UiOptions.SectionName, nameof(UiOptions.TaskJsonEditor), request.TaskJsonEditor, templateRoot);
         AppSettingsJson.SetSettingValue(root, UiOptions.SectionName, nameof(UiOptions.EnableQuickTransfer), request.EnableQuickTransfer, templateRoot);
         AppSettingsJson.SetSettingValue(root, MauiEditorOptions.SectionName, nameof(MauiEditorOptions.UseMauiTaskEditor), request.UseMauiTaskEditor, templateRoot);
@@ -247,3 +256,4 @@ public sealed class ConfigurationSettingsMutator : IConfigurationSettingsMutator
 
 
 }
+

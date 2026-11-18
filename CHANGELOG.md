@@ -1,6 +1,145 @@
 # MAUI Changelog
 
-**Current candidate:** v0.18.529-RC3, build 20261105 — **Release Candidate 3, not the final release**. Bugs, regressions and incomplete behavior may remain; validate the candidate against the target MOVEit environment.
+**Current candidate:** v0.18.556-RC3, build 20261117 — **Release Candidate 3, not the final release**. Bugs, regressions and incomplete behavior may remain; validate the candidate against the target MOVEit environment.
+
+## v0.18.556-RC3 — 2026-11-17
+
+- Merge the User Management branch into master, including the optional Windows service, Task Run Resource Group column, and shared Records fetch controls.
+
+## v0.18.555-RC3 — 2026-11-17 (feature branch)
+
+- Group Next and All under a shared Fetch label in Records, next to the loaded row count and limit.
+
+## v0.18.554-RC3 — 2026-11-16 (feature branch)
+
+- Use a chevron with the batch count for Fetch Next and a layers icon for Fetch All in Records. Show the same footer loading status for both actions.
+
+## v0.18.553-RC3 — 2026-11-16 (feature branch)
+
+- Place the Resource UNC field below the description in the UNC Share card in the New Host dialog.
+
+## v0.18.551-RC3 — 2026-11-16 (feature branch)
+
+- Restore Initial Setup for clean source checkouts and keep the default HTTPS launch profile on localhost.
+- Fail Task Run reports that depend on a Resource Group filter when the group inventory cannot be loaded.
+- Correct the bundled Local Groups Service instructions and update Records validation guidance.
+
+## v0.18.549-RC3 — 2026-11-16 (feature branch)
+
+- Use the Task Run Fetch Next, Fetch All, and refresh behavior in File Activity and Audit.
+
+## v0.18.548-RC3 — 2026-11-15 (feature branch)
+
+- Update the existing MOVEit connection regression test for the Task Run refresh changes.
+
+## v0.18.547-RC3 — 2026-11-15 (feature branch)
+
+- Append older batches in Task Run and add Fetch All with footer progress. Automatic refresh merges recent runs, and Refresh Now reloads the loaded range.
+- Change the Run Report modal's Cancel button to Close when the queue finishes.
+
+## v0.18.546-RC3 — 2026-11-15 (feature branch)
+
+- Add the optional Resource Group column to Task Run. Use the existing column filter to find runs by the task's current Resource Group assignments.
+
+## v0.18.544-RC3 — 2026-11-10 (feature branch)
+
+- Keep the Task Notifications Add form steady during setup. Show the existing notification selector only for Update or Remove, with loading feedback inside the dropdown.
+- Build Copy Between Environments report and recovery paths from a validated operation GUID. Reject malformed IDs before file access and preserve existing journal filenames, ownership checks and retention. [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/43234065994) passed.
+- Document the optional MOVEit User Management service under `IntegrationAssets\MOVEitUserManagement`, including path-scoped IIS authentication, client-certificate negotiation, trust in both directions, service installation and connectivity checks. See [Installation](INSTALLATION.md#13-optional-moveit-user-management).
+
+## v0.18.543-RC3 — 2026-11-09 (feature branch)
+
+- Split Task Notifications into Add, Update, and Remove. Add requires recipients and always creates a notification. Bulk Update changes only matching notifications and can preserve each notification's recipients.
+- Serialize Task Editor opens while the previous checkout is being released so a competing open cannot replace a clone's checkout before its first Save.
+
+## v0.18.542-RC3 — 2026-11-09 (feature branch)
+
+- Default new Send Email actions to the only available SMTP Host in the Traditional, Synchronization, and Advanced task editors.
+- Show two rows in the Edit Resource Group description field.
+
+## v0.18.541-RC3 — 2026-11-09 (feature branch)
+
+- Support case-insensitive `AND` and `OR` between comparisons in the Tasks grid's `JSON:` search. Evaluate `AND` before `OR` and match each condition within the same task.
+
+## v0.18.540-RC3 — 2026-11-08 (feature branch)
+
+- Enable unscheduled tasks from both the Tasks row menu and Bulk Actions, consistent with the task editor. The grid still blocks enabling incomplete tasks.
+
+## v0.18.539-RC3 — 2026-11-07 (feature branch)
+
+- Show a card-level MAUI spinner during the initial Local Groups load and Reload Groups. Retry a temporary failure up to three times and offer a manual reload if all attempts fail.
+- Retire unanswered inventory reads so they cannot block later requests. Require an inventory reload to reconcile an uncertain write.
+- Preserve group errors when the Add Users or Groups modal closes and keep table resizing stable when the panels reappear.
+- [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42387138915) passed Debug and Release builds and tests, including 195 User Management browser checks.
+
+## v0.18.538-RC3 — 2026-11-07 (feature branch)
+
+- Keep the selected group visible while Find searches for accounts in the Add Users or Groups modal.
+- Show search and membership update progress in the modal footer, including while MAUI verifies the updated membership.
+- [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42379531694) passed Debug and Release builds and tests, including 184 User Management browser checks.
+
+## v0.18.537-RC3 — 2026-11-07 (feature branch)
+
+- Open the account picker in the Add Users or Groups modal from Members. Close the modal on success and show failures in its footer.
+- Scroll the Local Groups and Members tables after 14 groups and 10 members respectively.
+- [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42377567736) passed Debug and Release builds and tests, including 171 User Management browser checks.
+
+## v0.18.536-RC3 — 2026-11-07 (feature branch)
+
+- Separate Members from Add User or Group with a divider and add space above Add Member.
+- Show No members and No results in full-width table rows so both tables retain their borders and headers when empty.
+- Point the installation guide to the corrected 1.0.6 service source package.
+- [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42344509526) passed for source commit `9a55fd4029de8bc2b9c17da7f95374493f68d999`. Both configurations passed all 2,838 xUnit tests. The 153 User Management browser checks, 3,152 Task Editor checks, and package and isolation checks passed. Reviewed the spacing and empty row in the Edge screenshots.
+
+## v0.18.535-RC3 — 2026-11-07 (feature branch)
+
+- Confirm member removal in the standard MAUI modal and right-align the Remove buttons. The modal shows service errors in its footer.
+- Show Find matches in a persistent table with checkboxes and a bottom-right Add Member button. Apply selected accounts in order and read the group after each change. Stop on a failure and retain the remaining selections.
+- Use `.\name` for partial local search and `DOMAIN\prefix` to match the start of an account name in one domain with service 1.0.5. Use a computer-qualified name, UPN or SID for an exact lookup.
+- Document the 1.0.5 service update and its certificate troubleshooting and outage logging behavior.
+- [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42342659600) passed for source commit `79963fbb8ad15ff50347a3b01d26dba8fc279954`. Debug and Release each passed all 2,838 xUnit tests, 153 User Management browser checks, 3,152 Task editor checks, and the package and isolation checks. Release built with zero warnings or errors. Reviewed the removal modal, selected results, and narrow dark layout.
+
+## v0.18.534-RC3 — 2026-11-06 (feature branch)
+
+- Remove the endpoint browsing note from the MOVEit User Management settings card.
+- When the Windows Service returns the older domain-only membership error, identify the Automation computer and direct the administrator to update and restart the service. Other membership failures retain their original message.
+- Document how to update the executable registered with Windows while retaining the service settings.
+- [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42338502154) passed for source commit `25d0dee3955a389311ad6bc505538dd7be2e065a`. Debug and Release passed all 2,838 xUnit tests in each configuration, 129 User Management browser checks, 3,152 Task editor checks, and the package and build isolation checks. Release built with zero warnings or errors. Reviewed the rendered settings card.
+
+## v0.18.533-RC3 — 2026-11-06 (feature branch)
+
+- Separate the inline group list and properties with bordered panels. Place New Group beside the filter and use plain text for group names. Hide protected groups and remove the SID field, Cancel Changes button and connection success notice. Align Save Description to the right.
+- Load groups automatically on first opening Security. Use Reload Groups for subsequent reads. Center the loading spinner in the properties panel and discard responses from superseded settings registrations.
+- Disable Delete Group while the group has members or MOVEit Resource Group assignments. MAUI checks the assignments again before dispatch. The standalone service checks membership before native deletion.
+- Add local user and group lookup alongside domain lookup using protocol 1. The separate service 1.0.4 source package includes the membership changes. Windows applies its account type and nesting rules.
+- [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42336446446) passed for source commit `414fedce0eea4d6229ba29e1a499f467403c898f`. Visual Studio rebuilt both projects in Debug. Release built with zero warnings or errors. All 2,833 xUnit tests passed in each configuration, along with 129 User Management browser checks, 3,152 Task editor checks, the existing package and browser suite, and all 20 build isolation probes. Reviewed the light and dark screenshots, including the centered spinner and narrow layout. The separate service package passed static checks.
+
+## v0.18.532-RC3 — 2026-11-06 (feature branch)
+
+- Configure Kestrel HTTPS listeners, including the Visual Studio HTTPS profile, to request optional client certificates during the TLS handshake. Browser access remains available without a certificate; service poll/result actions retain their enrolled-certificate, trust/purpose/revocation and HTTPS requirements. No added setting, listener, hostname or service dependency.
+- Add a static, anonymous GET response at the agent base URL so a browser reachability check returns endpoint information instead of a login redirect or 404. It does not expose enrollment, computer, configuration or connection status and does not authorize service operations.
+- Clarify Visual Studio/VM testing, reachable endpoint addresses, HTTPS certificate trust/name requirements, IIS Express setup and the distinction between endpoint reachability and an authenticated service connection. Keep the service's existing two-field configuration and install/uninstall scripts.
+- Add real Kestrel/TLS 1.2 regression coverage for optional certificate transmission, browser login, static information at root/virtual paths and certificate-only POST challenges. Test certificate pins are confined to the fixture; production validation is unchanged.
+- Validation: [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42327516053) passed for application/test commit `40cb4c992301c385434aebbc0dadfd9f200f131a`. Visual Studio rebuilt both projects in Debug; Release built with zero warnings/errors. All **2,833 xUnit tests in each configuration** passed, including actual TLS 1.2 certificate-transmission, anonymous-info, cookie-isolation and POST-challenge tests at root and `/MAUI` paths. **98 User Management browser checks**, **3,152 Task editor checks**, the existing browser/package suite and all 20 retained isolation probes passed. Reviewed the updated Settings screenshot. Live service/PKI/IIS/native acceptance remains separate. This result-recording follow-up changes documentation only.
+
+## v0.18.531-RC3 — 2026-11-06 (feature branch)
+
+- Reduce MOVEit User Management setup to the feature toggle and a client-certificate SHA-256 association for each managed Automation server. Remove the Agent HTTPS Host and manually entered Windows computer name from controls, settings models and validation.
+- Learn the computer name from authenticated service polls, display it in the Security card, and preserve certificate/connection binding, command targeting, duplicate result handling and deletion safeguards. Reject a different computer while a command is outstanding.
+- Show the current MAUI endpoint as copyable setup information using the existing hostname, port and application path. Remove redundant URL-building controls/listeners and obsolete deployment/version comparisons.
+- Reduce the separate Windows Service configuration to broker URL and certificate SHA-256; keep polling timing internal and SCM-only install/uninstall scripts. Update the optional installation guide and service source package. No additional solution project or schema change.
+- Validation: [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42324592947) passed for application/test commit `a796c727a62ce3ad51fc2e85122b4e9d1dc74d07`. Visual Studio rebuilt both projects in Debug; Release built with zero warnings/errors; **2,831 xUnit tests in each configuration**, **98 User Management browser checks**, **3,152 Task editor checks** and all existing browser/package checks passed. All 20 isolation probes remained present and excluded. Screenshots were reviewed. The separate service package passed static/source/package checks; its Windows compilation, SCM/native and live IIS/directory testing remain separate. This result-recording follow-up changes documentation only.
+
+## v0.18.530-RC3 — 2026-11-06 (feature branch)
+
+- Simplify the separately delivered Windows Service deployment scripts: register the EXE from the current working folder with SCM, and deregister only. Update the optional installation instructions for manual configuration/startup and retain all files during deregistration. The service source/protocol and MAUI application code are unchanged.
+- Follow-up: classify a truncated/invalid JSON reply, an HTML success response or a null success acknowledgement after a group write as an uncertain outcome. Keep the entered values, block another write until refresh, and verify the saved state without resending the write. Failed directory reads remain retryable. The follow-up passed the Windows validation linked below.
+- Validation: [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/42312563950) passed for application/test commit `f8ff304182d2277bb73f0fddeddf90bc45263b64`. Visual Studio rebuilt both projects in Debug; Release built with zero warnings/errors; all **2,824 xUnit tests in each configuration** passed, plus the complete browser/package suites, including **90 inline Local Groups UI checks** and **3,152 Task editor checks**. All 20 isolation probes remained on disk and excluded. The response regressions reproduce successful writes with truncated JSON, HTML success responses and null acknowledgements, require refresh without a second write, and verify retryable read failures. No live Windows Service, IIS/mTLS, domain-directory or MOVEit validation is claimed; the separate service is not built by this solution. This result-recording follow-up changes documentation only.
+- Add the optional MOVEit User Management feature on `feature/moveit-user-management-ui`, based on master. The Experimental toggle defaults Off; related HTTPS/certificate registrations live in the same Experimental card.
+- Add an inline MOVEit User Management card below MAUI Users under Security. Load/filter local groups, create groups, edit descriptions, find domain users/security groups, add/remove members and confirm deletion within that card. No feature management modal or additional solution project.
+- Match the standalone MAUI Local Groups Service 1.0.0 flat JSON/poll/result contract. Keep the separately delivered Windows Service outside the repository and application package. Use a dedicated HTTPS client-certificate binding and per-computer/environment enrollment.
+- Recheck MAUI/MOVEit administrator permissions at dispatch; protect default/reserved groups and check all current Resource Group ACL references before deletion. Preserve issued command IDs, compact durable outcomes, post-recycle expiry-only reconciliation and duplicate result acknowledgement. Remove expired receipt files during continuous operation and release completed in-memory authorization/read contexts.
+- Retain existing settings save/revision behavior, native editor/import flows and held-feature exclusions. Update optional installation instructions; no database/configuration schema change. Keep the separately delivered service and live deployment acceptance checks distinct from this branch's automated validation.
 
 ## v0.18.529-RC3 — 2026-11-05
 
@@ -27,7 +166,7 @@
 
 ## RC3 release overview
 
-RC3 builds on the RC2 Task/Host/resource editors, permissions, shared Browse and Copy To baseline. Late RC2 added MOVEit Settings and Lockouts; RC3 organizes those controls and refines the existing workflows. Current application identity is **0.18.529-RC3, build 20261105**, with database/configuration versions **1 / 1**.
+RC3 builds on the RC2 Task/Host/resource editors, permissions, shared Browse and Copy To baseline. Late RC2 added MOVEit Settings and Lockouts; RC3 organizes those controls and refines the existing workflows. Current application identity is **0.18.544-RC3, build 20261110**, with database/configuration versions **1 / 1**.
 
 - Editor preferences are in **Configuration > Settings > Editors**; Resource Group folder creation is in **General > Folders**. Task JSON Editor and Copy Between Environments are under Experimental and off by default.
 - MOVEit 2026.0 / native engine 18.0 adds version-gated OneDrive Hosts and S3 AWS Config File/EC2 IMDS authentication. Shared version checks cover controls, REST operations and Copy To destinations. SharePoint App Access and Google OAuth use the supplied Test Host/Browse contracts.
@@ -2079,3 +2218,5 @@ Historical Windows CI identities consolidated from TESTING.md during RC2 cleanup
 [Windows CI 39715786974](https://github.com/marcrdavis/MAUI-RC2/actions/runs/39715786974) passed for application/test commit `44e757c4cdc0627954e614d3d622ec4408e98a71` (**0.17.468 RC2, Build 20261022**): zero build warnings/errors, **2,210 xUnit tests passed with none failed/skipped**, all registered Node/Edge suites passed, including **63 MOVEit Settings checks**, **8,301 Host layout checks** and **2,368 Task layout checks**. New real MVC/HTTP tests deliberately leave editor options unbound to reproduce production startup, then enable the live preference, load populated Logging values, save changes, and disable access again in the same running host at both root and `/maui`. Administrator, antiforgery and method restrictions are retained.
 
 [Windows CI 39713972081](https://github.com/marcrdavis/MAUI-RC2/actions/runs/39713972081) passed for application/test commit `dbecede8b709030d1accbb8199371f2eb2bc2ac3` (**0.17.467 RC2, Build 20261022**): Release build/publish with zero warnings/errors; **2,207 xUnit tests passed, zero failed/skipped**; **63 rendered MOVEit Settings checks**; all existing Node/Edge suites passed, including **8,301 Host layout checks**. The new suites include JSON casing/long-value round trips, preservation of other Globals sections, native PUT retaining or releasing checkout, rejected readback ownership, conflict and uncertain-response handling, independent cleanup cancellation, saved preference routing, directory browsing, dirty/discard behavior and layout at 1920/1000/800/600 widths in both themes. Modal images were visually reviewed. Native Globals endpoint acceptance remains a live test.
+
+

@@ -406,7 +406,7 @@
 
         runQueueActive = false;
         if (confirm) { confirm.hidden = false; confirm.disabled = false; confirm.textContent = 'Run Now'; }
-        if (cancel) { cancel.hidden = false; cancel.disabled = false; cancel.textContent = 'Cancel'; }
+        if (cancel) { cancel.hidden = false; cancel.disabled = false; cancel.textContent = 'Close'; }
         if (close) close.disabled = false;
         if (description) description.textContent = summarizeRunQueue();
 
