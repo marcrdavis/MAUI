@@ -1,6 +1,398 @@
 # MAUI Changelog
 
-**Current candidate:** v0.18.556-RC3, build 20261117 — **Release Candidate 3, not the final release**. Bugs, regressions and incomplete behavior may remain; validate the candidate against the target MOVEit environment.
+**Current candidate:** v0.18.583-RC3, build 20261124 — **Release Candidate 3, not the final release**. Bugs, regressions and incomplete behavior may remain; validate the candidate against the target MOVEit environment.
+
+## v0.18.583-RC3 — 2026-11-24
+
+### Schedule summary wording
+
+- Describe notification-only repeating times as **when files arrive between [start] and [end]**. When notifications and periodic polling both apply, use **when files arrive and every [X] minutes between [start] and [end]**. For polling without known notifications, use **every [X] minutes between [start] and [end]**.
+- Apply the shared wording to the heading and footer in Traditional, Advanced and Synchronization Task editors. Use full weekday names in the help text and concise day/time labels in the schedule list. Mixed sources describe both notifications and polling, consistent with MOVEit's scheduler/notifier behavior.
+- Retain one-time wording, multiple time rows, month/date-list selections, overnight notes, current option dependencies, tooltip-only disabled explanations and native schedule persistence. Recompute summaries after polling changes, Source/Host refresh and Undo without asserting notifications for entirely unknown metadata.
+- Extend the existing rendered-browser checks for exact message variants, full weekday names, singular/plural minutes, one-time/overnight/multiple-time/date-list cases, live polling changes, and light/dark responsive layouts.
+- Local compilation passed with zero warnings or errors; all **2,945 xUnit tests** and **628 focused schedule browser checks** passed. Use the release commit's Windows workflow for complete platform, package and editor validation.
+- Advance application/release metadata and all seven Markdown release banners to **0.18.583-RC3**, build **20261124**. Keep database schema **2** and configuration version **1**; no migration or live settings rewrite is added.
+
+## v0.18.582-RC3 — 2026-11-23
+
+### Schedule option editability correction
+
+- Correct the first-success UI restriction introduced in 0.18.580-RC3: **Repeat only until first success** is editable whenever a time row in the active schedule has Repeat selected, including with all-notifying UNC sources and with forced polling on or off. Progress's statement that the engine ignores an option is not a UI disablement rule.
+- Disable **Poll for files even though file notifications are also enabled** when no time row in that schedule repeats, in addition to the existing source-notification requirement. Preserve existing checked values while inactive, reject stale events and show only the disabled reason in a tooltip.
+- Evaluate Repeat independently for each schedule and across all its time rows. Retain Every (minutes), notification-window, overnight, read-only/busy and native save behavior. Remove the unused exported all-notifying state and correct/deduplicate the current scheduling guidance.
+- Extend the existing production-browser regressions for editable first-success values with notifying sources, checked/unchecked one-time polling values, multiple times, independent schedules, Repeat changes, Host refresh and Undo. The focused suite passes **535 checks** across all three editors.
+- Local compilation passed with zero warnings or errors; all **2,945 xUnit tests** and **535 focused schedule browser checks** passed. Use the release commit's Windows workflow for complete platform, package and editor validation.
+- Advance application/release metadata and all seven Markdown release banners to **0.18.582-RC3**, build **20261123**. Keep database schema **2** and configuration version **1**; no migration or live settings rewrite is added.
+
+## v0.18.581-RC3 — 2026-11-23
+
+### Schedule disabled-control tooltips
+
+- Show disabled explanations for **Every (minutes)**, **Repeat only until first success** and the file-notification polling override only as tooltips on the controls and their hoverable labels. Remove the inline help paragraphs and the ignored-interval aside from the notification-window summary.
+- Reuse the shared Traditional, Advanced and Synchronization Task editor controls and disabled styling. Remove unused hint creation/update code and the superseded label hook. Preserve all option dependencies, stale-event guards, saved values, notification windows and native schedule persistence.
+- Update the existing rendered-browser assertions for tooltip text, label hover targets, absent inline hints and clearing explanations when controls become applicable. Retain save, Host refresh, Undo, read-only and light/dark layout coverage.
+- Local compilation passed with zero warnings or errors; all **2,945 xUnit tests** and **475 focused schedule browser checks** passed. Use the release commit's Windows workflow for complete platform, package and editor validation.
+- Advance application/release metadata and all seven Markdown release banners to **0.18.581-RC3**, build **20261123**. Keep database schema **2** and configuration version **1** unchanged.
+
+## v0.18.580-RC3 — 2026-11-23
+
+### Schedule option audit
+
+- Match Progress documentation for **Repeat only until first success** in Traditional, Advanced and Synchronization Task editors: require at least one repeating time and disable the option when all Sources have file notifications enabled, including with forced polling selected. Explain the inactive state and retain its saved checked value.
+- Keep **Log failure if no files found during scheduled run** available with notifications. Preserve the forced-polling, Every (minutes), mixed/unknown Source, notification-window and overnight behavior introduced in the previous releases.
+- Consolidate schedule dependency refresh so Source edits, inline Host refresh and Undo update the interval and both dependent options together. Apply consistent permission/busy and stale-event guards to inactive schedule controls. Remove superseded helper wrappers and unused schedule help styling; reuse MAUI field-help and disabled-value styles.
+
+### Validation and release
+
+- Extend production-browser regressions for first-success applicability, forced polling, preserved save values, no-files failure, one-time/multiple-time schedules, Source changes, Host refresh, Undo, read-only controls and light/dark layouts. Retain the complete persistence, editor and package checks.
+- Local compilation passed with zero warnings or errors; all **2,945 xUnit tests** and **475 focused schedule browser checks** passed. Use the release commit's Windows workflow for complete platform, package and editor validation.
+- Advance application/release metadata and all seven Markdown release banners to **0.18.580-RC3**, build **20261123**. Database schema **2** and configuration version **1** remain unchanged; no migration or live settings rewrite is added.
+
+## v0.18.579-RC3 — 2026-11-23
+
+### Schedule polling option availability
+
+- Disable **Poll for files even though file notifications are also enabled** when all Sources are confirmed to have notifications disabled or unsupported, or when a Task has no Sources. Reuse the shared Traditional, Advanced and Synchronization editor logic, including nested Advanced Sources and Sync Folder A/B.
+- Keep the option available for mixed tasks with a notifying Source; unknown metadata stays editable. Preserve existing checked values while inactive, reject stale checkbox events, and recompute availability after source/Host changes, Undo and reopen. Retain read-only and busy locks plus the existing Every (minutes), notification-window and overnight behavior.
+- Grey out the inactive option with the existing dependent-value styling and explain why it is unavailable. Follow [Progress Task Schedule documentation](https://docs.progress.com/bundle/moveit-automation-web-admin-help-2026/page/Task-Schedule.html): the option applies when a source Host has file notifications enabled, rather than merely supporting the feature.
+
+### Validation and release
+
+- Extend the focused production-browser schedule suite to **238 checks**, covering unsupported Hosts, notification-capable Hosts with notifications off, mixed/unknown states, no Sources, read-only controls, retained values/save payloads, stale events and light/dark layouts. Retain the full existing editor and package regressions.
+- Local compilation passed with zero warnings or errors; all **2,945 xUnit tests** and **238 focused schedule browser checks** passed. Use the release commit's Windows workflow for complete platform, package and editor validation.
+- Advance application/release metadata and all seven Markdown release banners to **0.18.579-RC3**, build **20261123**, and update scheduling/upgrade/testing guidance. Keep database schema **2** and configuration version **1**; no migration or live configuration rewrite is added.
+
+## v0.18.578-RC3 — 2026-11-23
+
+### Task schedule repeat intervals
+
+- Apply the documented file-notification rule in the shared Traditional, Advanced and Synchronization Task editors. Every (minutes) is inactive only when all Sources are confirmed to use file notifications and the schedule's forced-polling option is off. Mixed, non-notifying, unsupported and unknown notification states remain editable.
+- Expose the actual Host UseNotif setting as read-only editor metadata, using the shared Host capability catalog for supported notification types. Include nested Advanced Source projections and Sync Folder A/B; do not infer enabled notifications from protocol support alone.
+- Grey out the inactive interval, explain why it is ignored, and describe the notification window in schedule summaries. Preserve the saved interval, Repeat/End Time, native schedule serialization and overnight handling. Recompute presentation after Source edits, Host refresh and Undo; preserve read-only and busy locks.
+
+### Validation and release
+
+- Add Host metadata regressions and rendered schedule cases across all three editors, covering forced polling, mixed/unknown sources, one-time and overnight schedules, retained save values, stale input events, and read-only Tasks. Retain the complete editor, task persistence and package regressions.
+- Local compilation passed with zero warnings or errors; all **2,945 xUnit tests** and **115 focused production-browser schedule checks** passed. Use the release commit's Windows workflow for complete platform, package and editor validation.
+- Advance application/release metadata and all seven Markdown release banners to **0.18.578-RC3**, build **20261123**. Update scheduling and testing guidance with Progress documentation references. Keep database schema **2** and configuration version **1**; no task migration or live settings rewrite is required.
+
+## v0.18.577-RC3 — 2026-11-23
+
+### Backup restore scope
+
+- Add explicit **Restore Scope** radio cards using MAUI's existing modal controls. Default to **MAUI only**, restoring appsettings.json and the backed-up SQLite database without selecting or importing MOVEit configuration. Retain the SQL Server database limitation and its visible explanation.
+- Offer **MAUI and selected MOVEit configurations** to reveal the existing environment selectors and require at least one selection. Disable this scope when the backup has no MOVEit exports, with explanatory text.
+- Clear native selections when returning to MAUI only and submit an empty environment list for that scope. Reset to MAUI only on reopening; preserve scope/selections after rejected requests and lock both scopes during restoration. Retain acknowledgement, typed confirmation, antiforgery, environment validation, pre-restore safety copy and controlled restart behavior.
+
+### Validation and release
+
+- Extend the rendered Backup fixture for both scopes, stale selections, selection requirements, failed retries, pending locks, reopening, no-export backups, SQL Server guidance and light/dark responsive layouts. Add a service regression verifying that MAUI-only recovery delegates SQLite restoration and restores settings without authenticating to or importing MOVEit.
+- Local application/test compilation passed with zero warnings or errors; all **2,931 xUnit tests** and **87 rendered Backup browser checks** passed. Use the release commit's Windows workflow for complete platform/package validation.
+- Advance application/release metadata and all seven Markdown release banners to **0.18.577-RC3**, build **20261123**. Update restore usage, upgrade and testing guidance. Reuse the existing restore API/service and backup format; retain database schema **2** and configuration version **1**.
+
+## v0.18.576-RC3 — 2026-11-23
+
+### Backup progress and interrupted runs
+
+- Show In Progress, Complete, Partial, Failed and Interrupted states with phase or outcome details. Replace the ambiguous empty-contents label with preparation/no-data wording. Automatically refresh the visible Backup list every 3 seconds during a run and every 30 seconds otherwise; pause polling in hidden sections/tabs and while the restore dialog is open.
+- Copy MAUI configuration before exporting MOVEit. Record progress without making bookkeeping a prerequisite for a successful backup. Publish `backup.complete` only after the completion record is fully written; retain existing completion-based scheduling, missed-run recovery and incomplete-backup restore validation.
+- Log cancellation and recover tracked unfinished backups at startup. Remove empty interrupted folders only when they contain MAUI status files alone; preserve saved backup data, unrelated files and legacy folders. Keep Restore, Download and Remove unavailable for an active run in the list.
+
+### Validation and release
+
+- Add lifecycle regressions for slow exports, cancellation, partial failure, status-write failure, restart recovery, legacy completion markers, temporary markers and manual/automatic creation. Extend the existing rendered Backup fixture for statuses, refresh timing and visibility/modal pauses; retain its restore and responsive light/dark checks.
+- Local application/test compilation passed without warnings; all **2,930 xUnit tests** and **59 rendered Backup browser checks** passed. Use the release commit's Windows workflow for complete platform/package validation.
+- Advance application and release metadata and all seven Markdown files to **0.18.576-RC3**, build **20261123**. Retain database schema **2**, configuration version **1**, existing backup compatibility and installation-owned settings/data. Update backup usage, upgrade and testing guidance.
+
+## v0.18.575-RC3 — 2026-11-21
+
+### Report dialogs
+
+- Remove the MAUI pills from all Edit Report Information panel headings and from the shared API Access panel used by Create and Edit.
+- Group Create Report details and Delivery and Schedule controls in the existing MAUI property cards. Use Edit's panel styling and place Time and Repeat in the same two-column field grid for recurring delivery, while retaining Create's Send Now option, recipient help, dates, weekly/monthly selections and independent API access.
+- Preserve field hooks, delivery visibility, request generation, link preparation, validation, pending locks and failed-save retry behavior. Update the existing rendered delivery fixture for the panel boundary and the Information layout fixture to expect Report identity without a source badge. Retain the identity alignment and source-badge checks for other object types.
+
+### Release and validation
+
+- Advance application and release metadata plus all seven Markdown files to **0.18.575-RC3**, build **20261121**. Retain database schema **2** and configuration version **1**; preserve existing report data, schedules, API links and installation-owned configuration.
+- Local API Access and browser-fixture syntax checks pass. Use the current commit's Windows workflow for rendered light/dark Report dialogs, complete application tests and package validation.
+
+## v0.18.574-RC3 — 2026-11-20
+
+### Automatic Backup
+
+- Preserve an advanced Backup due time when it becomes due after a missed run during an upgrade, restart or scheduling pause. Previously, the next scheduler poll could restore the original overdue time and repeatedly skip subsequent intervals without attempting a backup.
+- Keep normal completion-based intervals, successful manual backup timing, disabled scheduling, the existing missed-run policy and 15-minute retries after failed/incomplete attempts.
+- Add 15 deterministic scheduling regressions using the real Backup and System Job services across all supported frequencies. Cover state reloads, consecutive runs, another missed interval, manual completion, disabled backups and failure/warning retries. All new cases passed in focused local xUnit validation; the current commit's Windows workflow supplies full build/package/browser validation.
+
+### Release and documentation
+
+- Advance the application, assembly/file versions, release templates, upgrade target and current Markdown documentation to **0.18.574-RC3**. Retain build **20261120**, database schema **2** and configuration version **1**; existing installations do not require a new schema migration.
+- Document backup scheduling recovery after upgrades and the focused verification command. Preserve prior release history and native-integration guidance.
+
+## v0.18.573-RC3 — 2026-11-20
+
+### Reporting
+
+- Ignore an earlier queued Close event when the Report dialog is already open again, preserving the new opening's API state and pending link preparation. An actual close still clears the state. Add a deterministic regression for this event ordering.
+- Retain the Report environment readiness correction from 0.18.572: distinguish removed MOVEit environments from configured environments with missing Data Access Credentials, while preserving saved Reports, history and execution behavior.
+
+### Documentation
+
+- Add a five-step Visual Studio Quick Start near the beginning of README: prepare the writable checkout and missing empty settings file, select the https project profile, complete Initial Setup with SQLite, sign in and check the core pages. Keep IIS publishing separate from the minimum local run.
+- Review all seven Markdown files for 0.18.573-RC3, align local setup guidance, and clarify that MAUI-only editor use does not require the native Web Admin Integration components. The compatible COM API remains a separate prerequisite; the optional Local Groups Service has its own purpose and versioning.
+- Require native-editor integration reinstallation after every MOVEit Automation upgrade because the upgrade overwrites Tomcat. Document restoring the bridge, CSS/logo, trusted-origin list and script reference on every applicable node while keeping MOVEit's upgraded HTML.
+- Retain **0.18.573-RC3**, build **20261120**, database schema **2** and configuration version **1** for this documentation-only update. No application code, release JSON, project metadata or live `appsettings.json` changes are included.
+
+### Validation
+
+- [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/44793878452) passed for application commit `b48b79cbe085e419471606b4f276df2017667d1c`: Debug and Release each passed all **2,904 xUnit tests**, and Release passed the package and browser regression checks, including the rendered Report delivery/API flows.
+- Documentation checks cover relative links and anchors, Markdown code fences, the Quick Start against the launch profile and setup prerequisites, and unchanged application version/build/schema metadata. Historical release entries and the separately versioned integration asset revision are preserved.
+
+## v0.18.572-RC3 — 2026-11-20 (Report environment readiness)
+
+- Resolve Report readiness against the reloadable MOVEit connection catalog on each list request. Report missing Data Access Credentials only for environments that still have a configured connection; distinguish retained reports whose environment is no longer configured.
+- Reuse the existing Reports warning area with accurate headings and separate messages for removed connections and missing credentials, including mixed cases. Preserve report definitions, history, owner scoping, schedules, API access and execution behavior; never delete or reassign reports when a connection is removed.
+- Add removal/restoration, shared-environment connections, normalization/server-key fallback, owner-scope and empty-list regressions, plus production warning-rendering checks. Update installation/testing guidance and release metadata to 0.18.572-RC3, build 20261120. Database schema remains 2, configuration version remains 1 and live appsettings.json is unchanged.
+
+## v0.18.571-RC3 — 2026-11-20 (Report delivery validation)
+
+- Preserve the MOVEit time-zone context when saving Delivery None, so restoring One Time or Recurring delivery uses the original environment's time zone. Resolve missing legacy context only from a matching active environment. Extend the delivery-transition regression to send the same empty time-zone field as the Edit modal.
+- Update the JSON-search Report integration fixture for the shared Create save guard and control-lock dependencies, and retain its completed-snapshot and unsupported saved-search checks for None. The new rendered Create/Edit reporting checks passed in 0.18.570; the integration fixture needed this adjustment for its extracted production handler.
+- Increment release metadata to 0.18.571-RC3, build 20261120. Retain the reporting UI/API changes from 0.18.570; database schema remains 2, configuration version remains 1 and live appsettings.json is unchanged.
+
+## v0.18.570-RC3 — 2026-11-20 (Report delivery and API access)
+
+- Move Create Report's Delivery dropdown immediately below Description and add None. Hide recipients, scheduling controls and SMTP warnings for None, and save the grid definition without an email schedule or next run.
+- Reuse one API Access partial and control component in Create and Edit Report Information. Prepare/copy/regenerate new links before Save and activate the exact URL only when the report and share are committed together. Bind creation drafts to the account/environment and preserve existing report/revision guards.
+- Allow API Access with None, Send Now, One Time and Recurring delivery. Send Now with API access saves an unscheduled API report and sends the current snapshot once; an email failure after saving returns an explicit warning with the saved link retained. Existing Send Now without API access remains ad hoc.
+- Allow existing reports to switch between None and email delivery; retain scheduled-email, owner, source, permission and stored-credential requirements. Carry None through export/import without exporting API links. Preserve shared MAUI styling and lock Create controls during Save for duplicate prevention and retry.
+- Add service/SQLite and rendered browser coverage for delivery changes, drafts, validation, failure/retry, fresh API CSV, import/export and responsive layouts. Update existing documentation and increment release metadata to 0.18.570-RC3, build 20261120. Database schema remains 2, configuration version remains 1 and live appsettings.json is unchanged.
+
+## v0.18.569-RC3 — 2026-11-19 (Metadata List blank option)
+
+- Render a blank first option in List metadata dropdowns across information dialogs and MAUI editors, so optional List values can be cleared without adding an empty entry to the configured possible values.
+- Preserve configured choice order, saved selections, existing required-field checks and Boolean dropdown behavior. No database or configuration schema change is required.
+- Update release metadata to 0.18.569-RC3, build 20261119. Database schema remains 2, configuration version remains 1 and live appsettings.json is unchanged.
+
+## v0.18.568-RC3 — 2026-11-19 (ReportingAPI IIS documentation)
+
+- Add the api/reports IIS permission requirements to the Installation guide: Anonymous Authentication with application-pool identity, Windows Authentication disabled, HTTPS and no required client certificate.
+- Include a route-scoped web.config example, virtual-application path guidance, inherited URL Authorization/locked-section handling, existing NTFS permissions and an anonymous-browser verification step. Preserve the separate Local Groups agent certificate requirements.
+- Update release version metadata to 0.18.568-RC3, build 20261119. Application behavior, database schema 2, configuration version 1 and live appsettings.json are unchanged.
+
+## v0.18.567-RC3 — 2026-11-19 (ReportingAPI branch review validation)
+
+- Normalize the Report Save regression fixture's source line endings before extracting the production handler. Exercise both LF and CRLF input so the same assertions run on Linux and Windows.
+- Retain the review corrections from 0.18.566 and increment release metadata. Application behavior, database schema 2 and configuration version 1 are unchanged by this test portability correction.
+
+## v0.18.566-RC3 — 2026-11-19 (ReportingAPI branch review)
+
+- Review the ReportingAPI branch against master across shared CSV access, link persistence and revision handling, JSON ANY/NONE searches, Task Run Tags, username display, metadata ordering and release documentation.
+- Fix the existing Report edit Save handler's use of event.currentTarget after awaiting a request. Restore the original control states after success or failure, preserve form values for retry, and lock fields/API controls/Close while saving to prevent duplicate or conflicting submissions.
+- Lock metadata definitions and Add/Remove while Configuration Save establishes the saved baseline. Restore prior disabled states after completion, retaining managed Tags protection and the pending order after failure.
+- Verify browser exit before accepting a failed cleanup command as an already-completed stop; retain failures and diagnostics for browsers that are still running. Extend focused save/cleanup regressions and capture metadata screenshots after theme transitions settle.
+- Correct stale schema-1/no-migration upgrade statements, document the direct 0.18.557/schema-1 upgrade path, restore installation protection/upgrading anchors to the deployment section, and label retained Reporting API design notes as historical. Update existing testing guidance and release versions; add no Markdown files.
+- Database schema remains 2 and configuration version remains 1. Live appsettings.json is unchanged; release template/custom files change only for version 0.18.566-RC3, build 20261119.
+
+## v0.18.565-RC3 — 2026-11-19 (ReportingAPI branch)
+
+- Match the Metadata ordering mockup with outlined MAUI secondary buttons, blue borders and centered 22px SVG arrows. Use 40px-wide, 36px-high controls aligned with Remove, visible disabled states and responsive wrapping.
+- Apply the presentation to existing and newly added fields. Preserve ordering, Tags protection and Save Changes / Discard Changes behavior. Extend the existing light/dark browser checks to verify button dimensions, borders and icon size.
+
+## v0.18.564-RC3 — 2026-11-19 (ReportingAPI branch)
+
+- Add compact up/down controls beside Remove in Configuration > Settings > Metadata, using the existing Grid Definitions button styling. Reorder saved and new fields independently for each resource, disable boundary arrows and retain focus on the moved field.
+- Reuse the ordered field list and existing Save Changes / Discard Changes workflow. Reverting to the saved order clears the dirty state. Lock reorder controls during a save and retain pending order after failure.
+- Allow MAUI-managed Tags to move while keeping its definition and removal protected. Information dialogs, MAUI editor metadata sections and metadata Excel exports follow the saved field order; stable field names preserve value associations. No database or configuration schema change is required.
+- Add a local browser regression for resource isolation, boundaries, managed Tags, focus, add/remove, save/failure/discard and responsive light/dark layouts. Update metadata usage and acceptance guidance; increment release metadata to 0.18.564-RC3, build 20261119.
+
+## v0.18.563-RC3 — 2026-11-19 (ReportingAPI branch)
+
+- Add Tags as an optional Task Run grid column, available in Grid Settings and Configuration > Grid Definitions for existing installations as well as new ones. Preserve default columns and use the existing tag pills, filters, sorting and layout.
+- Read current task Tags from the configured Tags metadata field using distinct Task IDs within the active/background MOVEit environment. Apply the values to regular batches and dashboard drill-downs; missing metadata is blank. No per-run MOVEit metadata calls or historical tag snapshots are introduced.
+- Carry Tags through Fetch Next/All, Refresh Now, CSV/Print, saved and scheduled Reports, and Reporting API generation. Failed metadata reads cannot become successful untagged report results.
+- Add coverage for optional-column compatibility, batched/scoped lookup, refreshed Tags, custom field names, empty/missing metadata, multiple report batches, filters/search/scope, CSV/email/API output and client append/refresh behavior. Update usage and validation documentation. Database schema remains 2 and configuration remains 1.
+
+## v0.18.562-RC3 — 2026-11-19 (ReportingAPI branch)
+
+- Display MOVEit usernames in lowercase in Configuration > Security > MAUI Users, including existing users and new entries. Scope the formatting to that panel's username fields; retain stored values, identity normalization, role handling and existing layouts.
+
+## v0.18.561-RC3 — 2026-11-19 (ReportingAPI branch)
+
+- Suggest `report.csv` for Reporting API CSV responses. Use an explicit inline disposition for the default route and `?download=false`, and an attachment named `report.csv` for `?download=true`.
+- Preserve the public route, UTF-8 `text/csv` media type, CSV bytes, cache, link management and authorization behavior. Document that inline processing follows the browser's CSV handling and can still result in a download.
+- Extend the real HTTP regressions at root and IIS application paths to check disposition, filename, media type and identical cached content across modes. Database schema remains 2 and configuration remains 1.
+
+## v0.18.560-RC3 — 2026-11-19 (ReportingAPI branch)
+
+- Prepare the Report URL as soon as API Access is enabled in Edit Report Information. Enable Copy Link and Regenerate Link before Save, using the existing controls, spinner and status feedback.
+- Activate the exact prepared URL only when Save Report succeeds. Bind the protected draft to the Report and current sharing revision without writing sharing state during preparation. Closing without saving discards the draft; failed saves do not activate it.
+- Keep existing active-link regeneration immediate after confirmation. Preserve saved Report behavior, the public CSV route, API execution and Tasks JSON collection queries. Database schema remains 2 and configuration remains 1.
+- Add HTTP/service and dialog regressions for pre-save copy/regeneration, exact-URL activation, failed Save/retry, discard, tampering, cross-Report/stale drafts, active links, IIS paths and stale modal responses. Update reporting setup and security guidance.
+
+## v0.18.559-RC3 — 2026-11-19 (ReportingAPI branch)
+
+- Add collection-scoped `ANY(collection, conditions)` and `NONE(collection, conditions)` to the Tasks grid's existing `JSON:` search. Conditions inside a function must match the same item; outer AND/OR precedence and existing unscoped query behavior are preserved.
+- Find Tasks without a failure Email Next Action using `JSON:NONE(NextActions.NextAction[*], Type=Email AND DoIfFailure=1)`. Include missing/empty action collections and handle native singleton/array representations without combining flags from separate actions.
+- Reuse the current read-only projected values, bounded definition reads, page cache and native grid feedback. Preserve Host/JSON Editor search syntax, all page controls, saved Report policy and existing Reporting API functionality. Database schema remains 2 and configuration version remains 1.
+- Add collection-matcher, grid-lifecycle and light/dark browser regressions for mixed actions, absence, singleton shape, paths, quoting, validation, cached results, refresh, column filters, counts, Report snapshots and failure safety. Document the supported queries in README and the testing guide.
+
+## v0.18.558-RC3 — 2026-11-19 (ReportingAPI branch)
+
+- Implement anonymous shared CSV access through `/api/reports/{reportGuid}/csv`, with optional `?download=true`. The external GUID resolves an enabled internal share associated with the saved Report.
+- Add API Access to Edit Report Information using MAUI's existing cards, switch, textbox, buttons, feedback, and confirmation dialog. Save Report enables or disables sharing. Copy Link and Regenerate Link manage its saved URL.
+- Reuse stored Data Access Credentials and saved Report columns, filters, scope, sorting, and date macros. Generate CSV independently of SMTP. API runs appear in Report History with zero recipients and preserve the email schedule.
+- Bound generation concurrency and request frequency, cache completed CSV for 30 seconds, and recheck current sharing and definition state before serving data. Record source-limit metadata in response headers.
+- Add database schema 2 with the cumulative 1-to-2 migration for persisted shares. Store a lookup digest and a Data Protection-protected share GUID. Report deletion cascades to sharing, and imported definitions begin without an active link.
+- Add real HTTP, virtual-application, owner access, regeneration, in-flight revocation, CSV, retry, empty-result, and schema-preservation regressions, plus the existing-page link-control checks.
+- Consolidate the Reporting API design into this changelog and remove the standalone design file.
+
+### Reporting API design baseline
+
+The following historical proposal was recorded during 0.18.557, which did not include a working Reporting API or schema 2. Implementation began in 0.18.558. These retained design notes are not the current setup guide; the release entries above, [README](README.md) and [Installation guide](INSTALLATION.md#shared-reporting-api) describe delivered behavior.
+
+MAUI will expose selected saved reports through a shared URL that returns CSV. A person or application possessing the URL can retrieve that report's data without a MOVEit sign-in. Report owners and MAUI administrators manage sharing through the existing Reports workspace.
+
+#### Public endpoint
+
+```http
+GET /api/reports/{reportGuid}/csv
+GET /api/reports/{reportGuid}/csv?download=true
+```
+
+The public `reportGuid` resolves to the internal share identifier. The saved report retains its existing report ID for management, scheduling, and history. Each share record associates the public identifier with one saved report.
+
+Generate URLs relative to the active IIS application. For a deployment under `/MAUI`, the URL becomes `/MAUI/api/reports/{reportGuid}/csv`. Generate absolute copy links from the configured external application origin or the trusted, validated request origin.
+
+The API accepts the share GUID and the optional download flag. The saved definition supplies the environment, source, filters, scope, column order, and sorting. Relative date filters resolve at generation time.
+
+Successful responses use `text/csv; charset=utf-8`. The download option supplies an attachment filename. Both modes return the CSV directly in the response body.
+
+Use these response outcomes.
+
+| Outcome | HTTP status | Response |
+| --- | --- | --- |
+| Report generated or current cached result available | 200 | Complete CSV with column headings and data |
+| Valid report produces zero rows | 200 | CSV headings |
+| Invalid download flag or unsupported query parameter | 400 | Problem details |
+| Invalid, missing, disabled, or revoked share identifier | 404 | Generic problem details |
+| Report is being regenerated or request allowance is exceeded | 429 | Problem details with Retry-After |
+| Required MOVEit source or Resource Group lookup fails | 502 | Generic problem details |
+| Initial Setup, upgrade, or required report data access is unavailable | 503 | Problem details |
+
+The controller should handle malformed GUIDs explicitly so conventional MVC routes cannot supply an alternative response. HEAD requests should resolve share availability without querying MOVEit or exposing CSV content.
+
+Response metadata should include the generation timestamp, report definition revision, result row count, source retrieval limit, and whether that limit was reached. Use response headers for this information.
+
+#### Report management controls
+
+Add an **API Access** section within **Edit Report Information** in both All Reports and My Reports.
+
+Use the existing `details-section`, configuration field, switch, read-only textbox, button, inline feedback, and confirmation patterns. Match the surrounding section spacing, borders, typography, blue accent, and light/dark styles.
+
+The section contains these controls.
+
+| Control | Behavior |
+| --- | --- |
+| Enable API access | Explicitly enables sharing for this report |
+| Report URL | Read-only absolute URL available after sharing is saved |
+| Copy Link | Copies the saved URL and reports success through existing feedback |
+| Regenerate Link | Confirms replacement, saves a new share GUID, and invalidates the old link |
+| Last API access | Shows the latest access timestamp when available |
+
+Show concise explanatory text beside the sharing switch.
+
+> Anyone with this link can retrieve the current report data. API access is controlled separately from the email schedule.
+
+Use the modal's existing Save/Close workflow for enabling and disabling sharing. Stage switch changes until Save succeeds. Regeneration needs a clear confirmation and an atomic server operation. Busy feedback should use the existing inline spinner and disabled-button behavior.
+
+Hide the URL and link actions when API access is disabled. A failed save retains entered values and displays its error inside the modal. Copy Link uses the last successfully saved URL.
+
+Current report enablement controls the email schedule. Keep the API access switch independent so a completed one-time email schedule can still have a working data link. Make both states clear in the modal. Changing the saved columns or filters changes future API output and invalidates cached data.
+
+#### Internal share state
+
+Use a dedicated share record associated with the saved report. The initial design calls for an `OutboundReportApiShares` table in the MAUI metadata database.
+
+| Field | Purpose |
+| --- | --- |
+| ReportId | Unique association with the saved report |
+| Enabled | Current sharing state |
+| ShareGuidHash | Unique lookup digest of the normalized public GUID |
+| ProtectedShareGuid | Share GUID protected using a dedicated Data Protection purpose, for authorized link copying |
+| Revision | Optimistic concurrency value for sharing updates |
+| CreatedUtc / ModifiedUtc | Sharing lifecycle timestamps |
+
+Generate a fresh UUIDv4 for each new link. Normalize it before hashing and lookup. The existing report ID has already been exposed through report management and portability workflows, so shared access uses its own identifier.
+
+Use the existing owner/admin rules to manage sharing. Anonymous requests resolve only through an enabled share record and its associated report. Keep normal Report management authorization and antiforgery validation on management actions.
+
+Disabling, regenerating, or deleting a share invalidates cached results. Recheck the share revision immediately before returning a generated response. A request authorized against an older revision should fail if revocation completes during generation.
+
+Existing reports begin with sharing disabled. Report deletion removes its share association. Importing or copying a report creates a definition whose sharing is disabled. Report export packages omit link identifiers and protected sharing state.
+
+Implement the additive table through MAUI's versioned upgrade framework for SQLite and SQL Server. The persistence milestone includes the cumulative manifest update, fresh installation, existing-database upgrade, backup/restore, and rollback handling. Restored application/database backups can restore previously active links, so document regeneration after a recovery that affects sharing state.
+
+#### Reuse the existing reporting pipeline
+
+Reuse saved report loading, source normalization, current source authorization, background MOVEit sessions, and Data Access Credentials from the report's environment.
+
+Extract generation from `OutboundReportService.ExecuteWithStoredCredentialAsync` into a service returning report data and generation metadata. Existing email execution continues to use that service, then performs SMTP delivery and its existing schedule/history updates. The API calls generation independently of SMTP readiness and email recipients.
+
+Retain `OutboundReportDataSource` as the common implementation for saved columns, scope, filters, sorting, date macros, and Records batching. Preserve the existing failure behavior for Resource Group-dependent reports.
+
+Extract a shared CSV writer from `OutboundReportEmailService`. Preserve the current email attachment format. The API format begins with column headings followed by data rows, with generation metadata supplied in headers. Reuse existing escaping and spreadsheet-cell protection.
+
+For the first implementation, API cells follow the saved report's current column labels and displayed values. Document this contract, including date, duration, and size formatting. Machine-specific typed values can be introduced as an explicitly versioned format.
+
+#### Loading limits and request handling
+
+Records generation currently retrieves up to 10,000 source rows before local saved filters are applied. Carry the source row count and limit information through generation so API clients can see when retrieval reached the ceiling, including when the final filtered result is small.
+
+Generate and validate the complete CSV before committing the successful response. Source failures return an error response. A valid empty result still returns headings.
+
+Proposed initial defaults are a 30-second cache for completed CSV and one generation at a time per report. Cache keys include the report definition revision, environment, and share revision. Check current sharing state and source authorization before serving cached results.
+
+Bound cache memory and global generation concurrency. Concurrent callers should receive the current valid cached result or a 429 response with Retry-After while generation is active. Apply a bounded request allowance to the public route, including invalid identifiers, to limit avoidable processing.
+
+Use request cancellation and a bounded generation timeout. Acquire concurrency slots before MOVEit reads and release them on success, failure, or cancellation. Sharing persistence and revision checks must work across application restarts. Document the cache/concurrency assumptions for a single IIS application instance and evaluate coordination before supporting multiple active MAUI instances.
+
+#### HTTP and application integration
+
+Apply the anonymous access exception to the exact CSV endpoint. Keep the fallback authorization policy and existing management routes active.
+
+Add API-aware handling to Initial Setup and pending-upgrade middleware so this route receives a 503 problem response. Preserve existing browser lifecycle navigation.
+
+Use HTTPS and Cache-Control no-store for client/proxy responses, while MAUI's bounded internal cache observes sharing revisions. Add Referrer-Policy no-referrer. Review IIS, proxy, ASP.NET request logging, application logs, and telemetry so public share GUIDs are redacted at each configured layer.
+
+Return generic public errors with a correlation identifier. Detailed server logs should use the internal report ID, operation category, and correlation identifier. Exclude the shared URL from error messages and audit payloads.
+
+Record API generation success/failure with zero email recipients through the existing report history mechanism without advancing the email schedule. Record cache-hit access through application audit logging, with internal report ID and request metadata. Link-based access provides request information rather than a verified person identity.
+
+#### Implementation sequence
+
+1. Extract reusable generation and CSV formatting, with regressions for existing email behavior.
+2. Add share persistence, provider migrations, owner/admin management endpoints, and atomic disable/regenerate operations.
+3. Add the exact CSV route, lifecycle responses, bounded generation, revision-aware caching, and safe error/log handling.
+4. Add the API Access section using MAUI's existing Edit Report Information controls.
+5. Validate the complete feature and update installation, security, testing, and user guidance.
+
+The first delivery uses existing saved reports. An API-only report creation flow, retained historical CSV results, and background run/download endpoints are later extensions.
+
+#### Acceptance coverage
+
+- Existing Run Now, scheduled email, recipients, attachment format, history, report import/export, and schedule calculations.
+- Opt-in sharing, owner/admin authorization, unauthorized management attempts, malformed identifiers, and normal report IDs supplied to the shared route.
+- Link copy, successful and failed save, regeneration confirmation, busy states, and both MAUI themes.
+- Disable/regenerate during generation and cache access, report edits, deletion, imported definitions, application restart, and recovery.
+- CSV quoting, Unicode, newlines, empty results, cell protection, download headers, current date filters, and Resource Group lookup failures.
+- Missing Data Access Credentials, SMTP independence, setup/upgrade state, IIS application paths, source limits, cancellation, throttling, and timeout recovery.
+- SQLite and SQL Server installation/upgrade, complete Windows Debug and Release builds, packaging checks, and the existing browser regression suite.
+
+## v0.18.557-RC3 — 2026-11-19 (ReportingAPI branch)
+
+- Begin the Reporting API design for shared CSV access through `/api/reports/{reportGuid}/csv`, including report controls, persistence, and implementation coverage.
 
 ## v0.18.556-RC3 — 2026-11-17
 

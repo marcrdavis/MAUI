@@ -19,6 +19,7 @@ public sealed class SmtpOptions
 
 public static class OutboundReportDeliveryModes
 {
+    public const string None = "None";
     public const string Now = "Now";
     public const string Once = "Once";
     public const string Recurring = "Recurring";
@@ -93,6 +94,7 @@ public sealed class ReportScheduleDefinition
 
 public sealed class CreateOutboundReportRequest
 {
+    public ReportApiAccessRequest? ApiAccess { get; set; }
     public string GridKey { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
@@ -103,8 +105,12 @@ public sealed class CreateOutboundReportRequest
     public ReportGridSnapshot? Snapshot { get; set; }
 }
 
+public sealed record CreateOutboundReportResult(bool Sent, bool Saved, string Message,
+    string? Id = null, string Warning = "", DateTimeOffset? NextRunUtc = null, int RowCount = 0);
+
 public sealed class UpdateOutboundReportRequest
 {
+    public ReportApiAccessRequest? ApiAccess { get; set; }
     public string Id { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
@@ -228,7 +234,11 @@ public sealed record OutboundReportHistorySummary(
 
 public sealed record OutboundReportData(
     IReadOnlyList<ReportGridColumnState> Columns,
-    IReadOnlyList<ReportGridSnapshotRow> Rows);
+    IReadOnlyList<ReportGridSnapshotRow> Rows)
+{
+    public int? RetrievalLimit { get; init; }
+    public bool SourceLimitReached { get; init; }
+}
 
 public static class OutboundReportGridRegistry
 {

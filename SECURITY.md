@@ -1,8 +1,8 @@
 # MAUI Security Policy and Engineering Notes
 
-- **Version:** `0.18.556-RC3`
+- **Version:** `0.18.583-RC3`
 - **Release:** Release Candidate 3 (pre-release)
-- **Build:** `20261117`
+- **Build:** `20261124`
 
 > **Release Candidate 3 — not the final release.** This pre-release may contain defects, including security defects. The controls described here document implemented behavior, not a guarantee of security or production readiness.
 
@@ -65,7 +65,9 @@ These findings are treated as false positives rather than replacing the existing
 
 ### Native editor integration assets
 
-**The MOVEit Integration components are not required if using only the MAUI Editors.** The bridge, CSS and logo under `IntegrationAssets/MOVEitWebAdmin` apply to native MOVEit editor launches from MAUI; the locally registered COM API remains a separate prerequisite. For native integration, configure exact trusted MAUI origins and keep the packaged assets/script reference consistent on applicable Web Admin nodes. The existing nonce, expected-origin and popup checks still apply. See [installation instructions](INSTALLATION.md#7-configure-maui-integration-on-moveit-web-admin).
+**The MAUI Integration components for MOVEit Web Admin are not required when using the MAUI Editors exclusively.** The bridge, CSS and logo under `IntegrationAssets/MOVEitWebAdmin` apply to native MOVEit editor launches from MAUI; the locally registered COM API remains a separate prerequisite. For native integration, configure exact trusted MAUI origins and keep the packaged assets/script reference consistent on applicable Web Admin nodes. The existing nonce, expected-origin and popup checks still apply.
+
+**Reinstall the native-editor integration after every MOVEit Automation upgrade**, because the upgrade overwrites the Web Admin Tomcat folder. Reapply the exact trusted-origin allow-list and the script reference in the upgraded `index.html` on every applicable node; do not replace the upgraded HTML with an old backup. See [installation and reinstallation instructions](INSTALLATION.md#install-the-moveit-integration-assets).
 
 ### Client-visible notification logs
 
@@ -165,6 +167,8 @@ The JSON Editor requires the corruption-warning Proceed confirmation before its 
 
 Only a case-insensitive `JSON:` prefix activates element/value search. Shared Task/Host reads use the current native session without edit checkout; searchable projections exclude credentials and secure Parameter values. Bounded temporary page caches and cancellable requests do not become a persisted JSON index. Errors/partial reads are not presented as completed matches. Grid search is independent of the experimental JSON Editor setting and cannot write definitions. Scheduled Task/Host Reports cannot treat a `JSON:` expression as ordinary text; Send Now can use a completed filtered grid snapshot.
 
+Tasks grid `ANY`/`NONE` conditions use the same visible scalar projection and group values by their collection-item paths. They do not fetch additional fields, evaluate code, expose masked values, or turn failed reads into empty collections. Existing read permissions and Report scheduling restrictions apply to collection queries.
+
 ### Experimental environment copy
 
 Copy Between Environments defaults off. Its modal/menu and server endpoints require both MOVEit administrator status and MAUI Admin authorization; Data Access credentials do not grant callers additional MAUI access. Both environment accounts are required and must authenticate as MOVEit administrators. Connections use isolated background sessions and do not replace or clear the browser login.
@@ -196,3 +200,15 @@ The production and test projects should be restored from their declared NuGet pa
 Run SAST against the source tree once. Generated publish/output folders such as `AriDotnetPublish/**`, `bin/**`, and `obj/**` should be excluded from duplicate SAST source analysis when the scanner already analyzes the source files that produced them.
 
 Dependency/SCA scanning should still inspect the resolved dependency graph and/or publish output as appropriate. Excluding generated source copies from SAST is intended only to prevent duplicate findings; it is not a recommendation to omit dependency scanning.
+
+## Shared Reporting API
+
+Shared Reporting API access is explicitly enabled per saved Report. Possession of an enabled shared URL grants retrieval of that Report's current CSV. Owners and MAUI administrators manage links through authenticated, antiforgery-protected Report actions. Normal Report IDs and the shared link identifiers are distinct.
+
+Preparing a URL before Save does not write sharing state or enable public retrieval. A Data Protection-protected draft binds the generated GUID to its Report and current sharing revision. Save validates that draft inside the existing Report/share transaction and activates the exact prepared URL. Invalid, cross-Report and stale drafts are rejected. Closing without saving leaves sharing unchanged; regenerating an already active link retains immediate revocation after confirmation.
+
+The public route is `/api/reports/{reportGuid}/csv`. Shared GUIDs are looked up by digest and protected at rest for authorized copying. Disabling or regenerating a link changes its revision. Every retrieval checks current sharing state and current source authorization, including cached data and completed generation.
+
+Creating an API-enabled Report prepares a protected draft bound to the current MAUI/MOVEit account and environment. Preparation requires an authenticated session and antiforgery token, writes no report or share, and leaves the public URL inactive. Save commits the report definition and sharing state in one database transaction; a saved draft cannot be reused for a second existing report. Existing-report drafts retain their report/revision binding. Email delivery and API enablement remain independent, including Delivery None. Export/import carries the None delivery definition but excludes API links; imported reports remain disabled for review.
+
+MAUI application logs redact shared CSV paths. IIS and upstream request logging need their own URI-redaction settings. Preserve Data Protection keys and the metadata database together. Recovery can restore active link state.

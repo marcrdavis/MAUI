@@ -49,7 +49,12 @@ public sealed class OutboundReportDataSource : IOutboundReportDataSource
         OutboundReportSourcePolicy.EnsureScheduledSearchSupported(report.GridKey, state.SearchText);
         var context = Deserialize<ReportSourceContext>(report.SourceContextJson, "report source context");
         var rows = await LoadSourceRowsAsync(report.GridKey, context, state, cancellationToken);
-        return ApplyViewState(state, rows);
+        var records = report.GridKey.ToLowerInvariant() is "taskruns" or "fileactivity" or "audit";
+        return ApplyViewState(state, rows) with
+        {
+            RetrievalLimit = records ? ReportBehaviorOptions.MaximumEntriesPerReport : null,
+            SourceLimitReached = records && rows.Count >= ReportBehaviorOptions.MaximumEntriesPerReport
+        };
     }
 
     public OutboundReportData NormalizeSnapshot(ReportGridSnapshot snapshot)

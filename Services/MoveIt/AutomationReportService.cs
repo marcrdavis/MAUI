@@ -85,6 +85,7 @@ public sealed record TaskRunReportRecord(
     string QueryType)
 {
     public string Group { get; init; } = string.Empty;
+    public string Tags { get; init; } = string.Empty;
 }
 
 public sealed record FileActivityReportRecord(

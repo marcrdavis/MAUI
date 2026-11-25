@@ -396,6 +396,10 @@ public static class TraditionalTaskHostCapabilities
         return Get(normalized)?.Type ?? (normalized.Length == 0 ? "Unknown Host" : normalized);
     }
 
+    // Progress documents notifications for MOVEit Transfer and local/UNC file systems.
+    public static bool SupportsFileNotifications(string? typeCode)
+        => NormalizeTypeCode(typeCode) is "FileSystem" or "Share" or "siLock";
+
     public static bool CanWrite(string? kind, string? typeCode)
     {
         var capability = Get(typeCode);

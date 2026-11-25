@@ -1,9 +1,9 @@
 # MAUI Testing Guide
 
-- **Version:** `0.18.556-RC3`
+- **Version:** `0.18.583-RC3`
 - **Release:** Release Candidate 3 (pre-release)
-- **Build:** `20261117`
-- **Database schema / configuration version:** `1` / `1`
+- **Build:** `20261124`
+- **Database schema / configuration version:** `2` / `1`
 
 > **Release Candidate 3 — not the final release.** Bugs and regressions may remain. Passing CI validates the covered contracts and fixtures; it does not certify the candidate as bug-free or replace testing against your MOVEit environment.
 
@@ -15,7 +15,26 @@ The development regression suite runs outside IIS. Automated tests use fixtures,
 
 ### Current validation
 
-Use [Windows CI for master](https://github.com/marcrdavis/MAUI-RC2/actions/workflows/maui-build.yml?query=branch%3Amaster) and select the run for the release commit being tested.
+**0.18.583-RC3 validation:** Local compilation passed with zero warnings or errors, all **2,945 xUnit tests** passed, and the focused schedule suite passed **628 checks**. The expanded focused schedule suite checks exact notification-only, notification-plus-polling and polling-only help text in all three editors; heading/footer agreement; full weekday names; one-minute, one-time, overnight, multiple-time, month/date-list and empty-time variants; live polling changes; and light/dark responsive layouts. Existing schedule option, saved-value, Source/Host refresh, Undo and read-only coverage remains included. Use the current commit's Windows workflow for complete Debug/Release, package and editor validation.
+
+**Previous application baseline (0.18.582-RC3):** [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/45309222780) passed for commit `0f9fd6f738257b9f877c92013914c3d0b816914a`. Debug and Release each passed **2,945 xUnit tests**; package and browser checks passed, including **3,672 Task Editor checks**. This is historical validation, not the current release's workflow result.
+
+**Quick Start documentation acceptance:** Follow [README Quick Start](README.md#quick-start-with-visual-studio) on a separate Windows development computer with the compatible COM API. On a fresh checkout, create only the missing `appsettings.json` as `{}`, launch the **https** project profile at `https://localhost:7184`, complete Initial Setup with SQLite, and verify first sign-in, Dashboard, All Tasks and All Hosts. Use MAUI editor preferences without the browser integration for MAUI-only editing. Complete this acceptance check against your development or QA MOVEit server.
+
+Task Run Tags regressions cover optional availability in Grid Settings and Configuration with older grid definitions, environment/Task-ID joins, custom Tags field names, missing metadata, distinct-ID batch reads, refreshed current values, dashboard drill-downs, saved filters/search/scope, multi-batch Reports, CSV/email output and the shared Reporting API generation path. Failed metadata reads must reject the report rather than imply untagged rows. The Records batch checks verify that Fetch Next/All retain Tags and manual refresh reloads them. Run `dotnet test --filter FullyQualifiedName~TaskRunTagsTests` and `node --test MoveItAutomationUI.Tests/Browser/records-batches.cjs`. Live acceptance: show Tags through the existing grid settings, check pills and native filters, Fetch Next/All, change a task's Tags, use Refresh Now, and compare email/API CSV output in the target environment.
+
+CSV response regressions verify `inline; filename="report.csv"` for the default route and `?download=false`, and an attachment named `report.csv` for `?download=true`. The existing root/IIS-path HTTP checks compare identical CSV bodies, UTF-8 media type and cached generation across modes. Browser rendering versus download remains a client decision for `text/csv`.
+
+Report link-preview regressions verify that enabling API Access prepares a copyable URL before Save, and that Regenerate Link works for that draft without changing persisted sharing state. The real HTTP/service checks cover root/IIS application paths, unauthorized preparation, exact-URL activation, failed Save/retry, unsaved/disabled drafts, tampered or cross-Report drafts, and revision conflicts. Dialog checks cover Copy/Regenerate before Save, discard/re-enable, active-link rotation, antiforgery, preparation failure/retry and stale modal responses. Run the existing `ReportApiTests` and `report-api-access.cjs` checks below.
+
+Tasks grid collection regressions cover `ANY` and `NONE` with same-item comparisons, absent/empty Next Actions, mixed success/failure Email and Run Task actions, singleton and array representations, numeric/string/Boolean flags, relative paths, quoted values, AND/OR precedence, malformed expressions, and legacy-query compatibility. Grid checks cover reuse of cached projections, refresh, column filters, counts, Send Now snapshots, existing validation feedback, and failed reads that must never appear as absent notifications. Run `node --test MoveItAutomationUI.Tests/Browser/json-search-collections.cjs`, the existing grid JSON smoke/integration checks, and `node MoveItAutomationUI.Tests/Browser/grid-json-search-browser.cjs` on a host supporting Edge/Chromium. These checks use fixtures, not live MOVEit data.
+
+Reporting API regressions exercise the real anonymous CSV action over HTTP at root and IIS application paths. They cover owner-scoped management lookup, disabled and regenerated links, revocation while generation is pending, cache reuse, source failure and retry, zero-row CSV, clean CSV formatting, and schema-1-to-2 preservation. The existing-page JavaScript checks cover staging, copy URLs, antiforgery, regeneration, stale responses, and failed-load safety.
+
+Run the focused checks with `dotnet test --filter FullyQualifiedName~ReportApiTests` and `node MoveItAutomationUI.Tests/Browser/report-api-access.cjs`. The Windows workflow includes both alongside the existing regression suite.
+
+
+Use [Windows CI for ReportingAPI](https://github.com/marcrdavis/MAUI-RC2/actions/workflows/maui-build.yml?query=branch%3AReportingAPI) and select the run for the release commit being tested.
 
 ### v0.18.549 validation
 
@@ -162,6 +181,7 @@ node MoveItAutomationUI.Tests/Browser/moveit-grid-connection-smoke.cjs
 node MoveItAutomationUI.Tests/Browser/object-access-smoke.cjs
 node MoveItAutomationUI.Tests/Browser/task-json-model-smoke.cjs
 node MoveItAutomationUI.Tests/Browser/grid-json-search-smoke.cjs
+node --test MoveItAutomationUI.Tests/Browser/json-search-collections.cjs
 node MoveItAutomationUI.Tests/Browser/grid-json-search-integration-smoke.cjs
 node MoveItAutomationUI.Tests/Browser/rename-result-smoke.cjs
 node MoveItAutomationUI.Tests/Browser/native-portability-reuse-smoke.cjs
@@ -342,6 +362,7 @@ Use disposable Tasks/Hosts on the actual MOVEit build and both MOVEit administra
 ### Tasks and Hosts JSON grid search acceptance
 
 - On Tasks and Hosts, verify ordinary text searches and textbox hints are unchanged. A case-insensitive `JSON:` prefix alone activates element/value search; try `JSON: DoIfFailure=1` and equivalent fields present in the selected Host type. Test `<`, `<=`, `=`, `>=`, `>`, `!=`, `contains`, numeric/Boolean flags, case-insensitive text and nested paths. Only matching objects should enter the existing column filters, sorting, paging, selection, export and print results.
+- In Tasks, restrict Type to Traditional and search `JSON:NONE(NextActions.NextAction[*], Type=Email AND DoIfFailure=1)`. Include Tasks with no actions, success-only email and success email plus a separate failure Run Task action; exclude Tasks with a failure email, including one enabled for both success and failure. `ANY` must return the complement for the same predicate. Check array and singleton actions, quoted values and outer `AND`/`OR`. Confirm a failed definition read blocks completed results instead of matching `NONE`. Existing `DoIfFailure=0`/`!=1` and unscoped `AND` retain their previous existential behavior. Host/JSON Editor syntax, controls and search hints remain unchanged.
 - Confirm the experimental JSON Editor toggle does not control grid search. Use ordinary/read-only and administrator sessions; credentials and secure Parameter values must not appear in searchable projections, and the reads must not acquire edit checkout or write definitions.
 - Change/clear the query during delayed reads, close/navigate/reopen, and edit or manually refresh while another row refresh is in flight. Obsolete results must not replace current matches, failed/incomplete reads must not look like successful empty results, and forced refresh must invalidate definitions even when a grid refresh is already running.
 - Check invalid-expression, loading and failure feedback in the existing pager. Send Now can use a completed JSON-filtered snapshot; pending/invalid/failed searches must block submission. Scheduled Task/Host Reports and saved Report updates must reject `JSON:` expressions rather than storing them as ordinary text.
@@ -361,7 +382,9 @@ Open New Host from Hosts and from each Quick Transfer panel. Verify matching bra
 
 ### Native editor return acceptance
 
-**The MOVEit Integration components are not required if using only the MAUI Editors.** Run this section only when native MOVEit editor launches from MAUI are used; install the bridge/CSS/logo and configure trusted origins as described in [Installation](INSTALLATION.md#7-configure-maui-integration-on-moveit-web-admin). For a MAUI-only deployment, validate applicable MAUI editor preferences and launches without Web Admin asset changes. COM-backed operations still require the locally registered COM API.
+**The MAUI Integration components for MOVEit Web Admin are not required when using the MAUI Editors exclusively.** Run this section only when native MOVEit editor launches from MAUI are used; install the bridge/CSS/logo and configure trusted origins as described in [Installation](INSTALLATION.md#7-configure-maui-integration-on-moveit-web-admin). For a MAUI-only deployment, validate applicable MAUI editor preferences and launches without Web Admin asset changes. COM-backed operations still require the locally registered COM API.
+
+After **every MOVEit Automation upgrade**, reinstall the native-editor integration on each applicable Web Admin node because the upgrade overwrites the Tomcat folder. Follow [reinstallation](INSTALLATION.md#reinstall-after-a-moveit-automation-upgrade), retain the upgraded `index.html`, restore the exact trusted-origin list and one script reference, refresh the browser cache, and repeat the launch/return checks below. Rechecking without reinstalling does not complete this upgrade step.
 
 From a MAUI Task Editor, use Edit Host while the Host preference selects MOVEit. Verify that the Task modal keeps its layout and draft when returning, with no opening/sign-in/opened banner or toast. Close the native Host window and verify Host properties refresh and Task editing resumes. Also check native Task, Script, Date List and navigation launches; blocked popups, unavailable sessions and login/skin failures must remain visible as errors. Local production-handshake, shared routing, PathBase and modal feedback checks passed.
 
@@ -710,7 +733,7 @@ Before functional Task/Host portability testing, build the full solution in Rele
 
 ### MOVEit whole-configuration import / backup restore regression
 
-Backup Restore lists one unchecked-by-default option for each MOVEit environment included in the selected backup. Test MAUI-only restore, each environment separately, multiple selections and changing/reopening backups. Only checked native configurations may be resolved, authenticated or imported; missing/unavailable/malformed unselected exports must not block the selected subset. Invalid selections must fail before restore writes. Existing local settings/metadata restore, shared write coordination, pre-restore safety copy, Server-Key XML import, complete selected-target preflight, uncertain-outcome handling and restart behavior remain in force. Multi-environment native restore is not atomic. Verify inline failures, frozen selections/no duplicate submission during restore, conditional multi-environment guidance, and bounded scrolling with many environment choices in both themes. The registered `backup-restore-browser.cjs` fixture mocks every restore endpoint; it never restores a live environment.
+Backup Restore defaults to **Restore Scope: MAUI only**, with environment choices hidden and disabled. **MAUI and selected MOVEit configurations** reveals one unchecked option for each environment included in the backup and requires at least one selection. Switching back to MAUI only clears the choices and always submits an empty environment list, even if stale hidden controls are checked. Reopening resets scope and acknowledgement; rejected requests retain the selected scope and environments. Scope controls are locked while restoration is pending. Backups without native exports disable the combined scope and explain why. SQL Server database recovery remains separate. Test MAUI-only restore, each environment separately, multiple selections and changing/reopening backups. Only checked native configurations may be resolved, authenticated or imported; missing/unavailable/malformed unselected exports must not block the selected subset. Invalid selections must fail before restore writes. Existing local settings/metadata restore, shared write coordination, pre-restore safety copy, Server-Key XML import, complete selected-target preflight, uncertain-outcome handling and restart behavior remain in force. Multi-environment native restore is not atomic. Verify inline failures, frozen selections/no duplicate submission during restore, conditional multi-environment guidance, and bounded scrolling with many environment choices in both themes. The registered `backup-restore-browser.cjs` fixture mocks every restore endpoint; it never restores a live environment.
 
 - Export a MOVEit Configuration using **Server Key**, then import that saved XML through Configuration > Settings > MOVEit Configuration. Verify `PUT /api/v1/config` succeeds and MOVEit does not report an `application/json` content-type error.
 - Export/import a **Portable / Passphrase** MOVEit Configuration and verify the existing `POST /api/v1/config/import` JSON flow still succeeds.
@@ -727,6 +750,32 @@ Backup Restore lists one unchecked-by-default option for each MOVEit environment
 - With Portable import selected, confirm the Import Passphrase field is visible, uses `type=password`, and is empty. Select Server Key and confirm the Import Passphrase field disappears and remains unpopulated when switching back.
 
 ## Configuration and operations
+
+### Report environment readiness
+
+Run `dotnet test --filter FullyQualifiedName~ReportEnvironmentReadinessTests` and `node MoveItAutomationUI.Tests/Browser/report-api-access.cjs`. Check that removing/restoring a connection reclassifies retained reports on the next list request, without deleting reports or querying credentials for an unknown environment. Cover normalized environment names, a remaining connection in the same environment, server-key fallback, separate mixed warnings, All Reports/My Reports owner scope and an empty report list. Production renderer checks verify accurate headings/messages, clearing stale text after restoration and unchanged SMTP feedback.
+
+Live acceptance: with QA and Prod reports, remove only the Prod connection and reload Reports. Prod must be identified as no longer configured, not missing credentials; QA must retain its actual readiness. Restore a connection with the same Prod EnvironmentKey and verify the warning changes to its actual credential state. Confirm retained reports and history remain visible and report execution targets are unchanged. Disabled reports remain included in readiness, as before.
+
+### Report delivery and API access
+
+Run `dotnet test --filter FullyQualifiedName~ReportDeliveryNoneTests`, `node MoveItAutomationUI.Tests/Browser/report-api-access.cjs` and `node MoveItAutomationUI.Tests/Browser/report-delivery-browser.cjs`. Coverage includes None with no recipients/SMTP/credentials, no next run, switching delivery modes, normal scheduled-email validation, exact pre-save link activation, account/environment/tampered/reused draft rejection, failure/retry, Send Now plus API, explicit email-failure warnings after a successful save, fresh CSV generation and None report export/import. The rendered fixture uses production markup, styles and scripts with local responses; check light/dark and responsive screenshots in TestResults/ReportDelivery.
+
+In the target environment, create a report with Delivery None and API Access enabled, copy its URL before Save, confirm it becomes usable only after Save, and compare the CSV with the saved grid filters/columns. Reopen Edit Report Information, change between None and email delivery, and confirm recipients/schedule controls and their validation appear only for email. API Access must remain usable with either delivery choice. Check Copy Link, regeneration, cancelled/failed saves, Send Now, One Time and Recurring delivery; retain existing live IIS and credential acceptance checks.
+
+### Report edit save recovery
+
+Run `node MoveItAutomationUI.Tests/Browser/report-api-access.cjs`. Along with shared-link preparation/rotation coverage, the fixture executes the production Report save handler with an event whose `currentTarget` is cleared after dispatch and a deferred save response. A failed request must retain form values, show the existing error and restore Save for retry. Fields, API controls and Close must stay locked during Save; Escape and duplicate submissions must be blocked, and previously disabled controls must retain that state after completion. Repeat the failure/retry flow in the real Report modal after deployment.
+
+`node MoveItAutomationUI.Tests/Browser/rename-result-smoke.cjs` also covers the browser cleanup helper used by rendered tests. An already-exited process is accepted only after verification; a live process that cannot be stopped, or a timed-out stop with the process still running, must fail validation with diagnostics.
+
+### Metadata field ordering
+
+Run `node MoveItAutomationUI.Tests/Browser/configuration-settings-dirty-state-smoke.cjs` and `node MoveItAutomationUI.Tests/Browser/configuration-metadata-ordering.cjs`. The browser fixture runs the production row template and Configuration JavaScript with a local mock save endpoint; it does not access an installed MAUI or MOVEit server. It checks resource isolation, first/last/single-row boundaries, keyboard focus, managed Tags protection, new-field reorder/removal, dirty-state reversion, failed and pending saves, save/discard/reload, definition preservation, and light/dark responsive layouts. During Save, metadata definitions, Add/Remove and reorder controls must all be locked; success or failure must restore their prior states, keeping managed Tags protected. Screenshots wait for the normal theme-color transition to finish.
+
+In the target environment, reorder fields for Tasks, Hosts, Scripts, Date Lists, Global Parameters and Keys & Certificates, then Save Changes and reopen Settings and the corresponding Information dialogs. Check the configured MAUI Task/Host/Script/Date List editors as well. Confirm values, required validation, field types and existing layout remain correct, and Tags can move without permitting definition changes or removal. Discard an unsaved reorder and verify the saved order returns. Export a metadata workbook and verify its columns follow the saved order; an earlier workbook must still match metadata by field name after reordering. Existing grid preferences and Report column selections remain independently configured.
+
+For List fields on Tasks, Hosts, Scripts and Date Lists, check Information dialogs and MAUI editors: the first dropdown option must be blank, followed by the configured choices in order. Confirm an unset value stays blank, a saved choice remains selected, and clearing an optional value survives Save and reopen. Required List fields must still prevent saving a blank selection. Boolean choices and stored possible values must remain unchanged.
 
 ### Optional MOVEit User Management acceptance
 
@@ -904,6 +953,18 @@ The suite targets deterministic application contracts that can be validated with
 
 The browser-side legacy HTML-fragment detector remains part of manual UI smoke testing because that logic is intentionally client-side and is not exported as a standalone JavaScript module.
 
+#### Automatic Backup scheduling
+
+Run `dotnet test MoveItAutomationUI.Tests/MoveItAutomationUI.Tests.csproj --filter FullyQualifiedName~BackupSchedulingTests`. The tests use the real `BackupSystemJob` and `SystemJobService` with controlled completion markers and persisted job state. They reproduce a pause beyond the one-minute scheduler grace period, recreate the service, and verify the advanced due time and subsequent intervals for all supported frequencies (4, 8, 12 and 24 hours). They also check another genuinely missed interval, a successful manual backup, disabled scheduling and completed-at failure/warning retries. No test connects to MOVEit or performs a backup/restore.
+
+Live acceptance in development or QA: with Automatic Backup enabled, complete an upgrade or restart across a due time, then confirm the next advanced run creates a complete backup and later scheduled backups continue. Check informational missed-run messages separately from errors; an intentionally skipped run does not produce a backup failure.
+
+#### Backup lifecycle and inventory
+
+Run `dotnet test MoveItAutomationUI.Tests/MoveItAutomationUI.Tests.csproj --filter "FullyQualifiedName~BackupLifecycleTests|FullyQualifiedName~BackupRestoreSelectionTests"` and `node MoveItAutomationUI.Tests/Browser/backup-restore-browser.cjs` on a host supporting Edge/Chromium. Lifecycle fixtures use temporary files and mocked MOVEit exports. The completion marker must remain absent after cancellation or partial failure; existing completed backups remain restorable and determine the next automatic due time. A temporary completion marker alone must never permit restore. Status-write failures must not fail an otherwise successful backup.
+
+In development or QA, observe **Available Backups** during a manual or automatic backup. Verify the live phase and action locks, then Complete and normal actions. Switch sections or browser tabs to verify polling pauses. During a controlled restart with a backup in progress, verify the retained folder becomes Interrupted, the log identifies the last phase, existing files remain, and only tracked folders with no backup data are removed. Retention rules and SQL Server database backup responsibilities remain unchanged.
+
 #### Backup retention and cleanup
 
 - Supported retention boundaries (1 and 30 days).
@@ -990,3 +1051,18 @@ When a defect is fixed, add a regression test when the failure can be reproduced
 The test project imports `Xunit` globally through its project file, matching the standard xUnit template. Individual test files therefore use `[Fact]`, `[Theory]`, `[InlineData]`, and `Assert` without per-file `using Xunit;` declarations.
 
 
+
+### Task schedule notification interval regression
+
+Generate fixtures with `MAUI_SYNC_EDITOR_FIXTURE_PATH` and `MAUI_HOST_EDITOR_FIXTURE_PATH` set to the existing TestResults JSON paths while running the xUnit suite. Run `node MoveItAutomationUI.Tests/Browser/sync-task-editor-layout.cjs` on Edge/Chromium; set `MAUI_TASK_EDITOR_SCHEDULES_ONLY=1` for the focused schedule cases. The normal Windows workflow runs these cases along with the complete existing editor suite.
+
+Check all-notifying Sources with forced polling off/on, mixed Sources, notification-capable Hosts with notifications disabled, missing Host metadata, nested Advanced Sources, both Sync folders, read-only Tasks, one-time and overnight schedules.
+
+- First-success editability depends on at least one time row in the active schedule having Repeat selected, regardless of source notification state. Actually toggle and save the option with notifying UNC sources; engine documentation about ignoring a value must not become a UI lock.
+- Polling requires Repeat in the active schedule plus a notifying source (or unknown metadata). Disable it without Repeat even if its saved value is checked. Confirmed non-notifying/no sources still disable polling when Repeat is selected.
+- With multiple time rows, one repeating row enables the options; removing the last Repeat disables both. A different schedule's Repeat must not enable a one-time schedule. Verify Repeat changes and Undo immediately update both options, preserve saved checked values, and reject stale events while inactive.
+- Retain the Every (minutes) rule, saved interval, Repeat/End Time notification window and overnight handling. Source edits, inline Host refresh and Undo must update interval and polling dependencies without making first-success read-only for notifying Hosts.
+- Log failure if no files found remains available with notifications. Read-only/busy locks still apply. Disabled explanations appear only as tooltips on the control and its hoverable label; no inline help paragraphs or ignored-interval aside should appear. Clear the tooltip when the option becomes applicable.
+- Check both Task will run summaries use full weekday names and explicit arrival/polling wording. All-notifying sources with forced polling off describe arrivals; with forced polling on they describe arrivals and the minute interval. Mixed sources also describe both. Non-notifying/entirely unknown sources do not claim arrival triggers. One-time rows, multiple times, month/date-list selections and overnight notes retain accurate text. Confirm live polling changes, heading/footer agreement, and 1400/600-pixel light/dark layouts.
+
+Progress references: [Task Schedule](https://docs.progress.com/bundle/moveit-automation-web-admin-help-2026/page/Task-Schedule.html), [File Notifications and Task Schedules](https://docs.progress.com/bundle/moveit-automation-web-admin-help-2025/page/File-Notifications-and-Task-Schedules.html), and [Enabling File Notifications](https://docs.progress.com/bundle/moveit-automation-web-admin-help-2026/page/Enabling-File-Notifications.html). Support alone does not imply that notifications are enabled; with mixed Sources, both scheduled and notification-triggered runs remain applicable.

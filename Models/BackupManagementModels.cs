@@ -15,7 +15,19 @@ public sealed record MauiBackupDescriptor(
     IReadOnlyList<string> MoveItEnvironments,
     long SizeBytes,
     bool CanRestore,
-    string RestoreBlockReason);
+    string RestoreBlockReason,
+    string Status = "",
+    string StatusMessage = "",
+    bool IsRunning = false);
+
+public static class MauiBackupStatuses
+{
+    public const string InProgress = "InProgress";
+    public const string Complete = "Complete";
+    public const string Partial = "Partial";
+    public const string Failed = "Failed";
+    public const string Interrupted = "Interrupted";
+}
 
 public sealed record MauiBackupRestoreResult(
     bool Success,

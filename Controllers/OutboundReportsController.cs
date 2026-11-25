@@ -19,17 +19,23 @@ public sealed class OutboundReportsController : Controller
     private readonly IOutboundReportEmailService _email;
     private readonly IReportConfigurationStore _configuration;
     private readonly ILogger<OutboundReportsController> _logger;
+    private readonly ReportApiSharingService? _apiSharing;
+    private readonly IMoveItSessionService? _sessionService;
 
     public OutboundReportsController(
         IOutboundReportService reports,
         IOutboundReportEmailService email,
         IReportConfigurationStore configuration,
-        ILogger<OutboundReportsController> logger)
+        ILogger<OutboundReportsController> logger,
+        ReportApiSharingService? apiSharing = null,
+        IMoveItSessionService? sessionService = null)
     {
         _reports = reports;
         _email = email;
         _configuration = configuration;
         _logger = logger;
+        _apiSharing = apiSharing;
+        _sessionService = sessionService;
     }
 
     [HttpPost]
@@ -37,7 +43,12 @@ public sealed class OutboundReportsController : Controller
     public async Task<IActionResult> Create([FromBody] CreateOutboundReportRequest? request, CancellationToken cancellationToken)
     {
         if (request is null) return BadRequest(new { message = "Report details are required." });
-        try { return Json(await _reports.CreateAsync(request, cancellationToken)); }
+        try
+        {
+            if (request.ApiAccess?.Enabled != true) return Json(await _reports.CreateAsync(request, cancellationToken));
+            var session = _sessionService?.Get() ?? throw new MoveItAuthenticationException("MOVEit session expired. Please sign in again.");
+            return Json(await _apiSharing!.CreateAsync(request, session.Username, session.GetEnvironmentKey(), cancellationToken));
+        }
         catch (MoveItAuthenticationException ex)
         {
             return StatusCode(StatusCodes.Status401Unauthorized, new { message = ex.Message });
@@ -72,6 +83,16 @@ public sealed class OutboundReportsController : Controller
                 message = $"The report could not be processed because of an unexpected server error. Review the MAUI application log and reference {traceId}."
             });
         }
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public IActionResult PrepareApiLink()
+    {
+        var session = _sessionService?.Get();
+        if (session is null) return Unauthorized(new { message = "MOVEit session expired. Please sign in again." });
+        return Json(new { apiAccess = _apiSharing!.PrepareCreateLink(session.Username, session.GetEnvironmentKey()) });
     }
 
     [HttpGet]

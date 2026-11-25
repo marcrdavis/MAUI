@@ -226,7 +226,7 @@
         }
         if (type === 'boolean' || type === 'list') {
             const select = document.createElement('select'); select.className = 'text-input';
-            const options = type === 'boolean' ? ['false', 'true'] : field.possibleValues || [];
+            const options = type === 'boolean' ? ['false', 'true'] : ['', ...(field.possibleValues || [])];
             options.forEach(option => select.appendChild(new Option(type === 'boolean' ? (option === 'true' ? 'True' : 'False') : option, option)));
             select.value = type === 'boolean' ? (String(value).toLowerCase() === 'true' ? 'true' : 'false') : value; return select;
         }

@@ -443,7 +443,7 @@ public sealed class ConfigurationSettingsViewModelBuilder : IConfigurationSettin
                 var systemColumns = pair.Key switch
                 {
                     "hosts" => new[] { "Health", "LastHealthCheck", "TestResults" },
-                    "taskruns" => new[] { "Group" },
+                    "taskruns" => new[] { "Group", "Tags" },
                     _ => Array.Empty<string>()
                 };
                 IEnumerable<string> metadataAuditColumns = hasMetadataDefinition

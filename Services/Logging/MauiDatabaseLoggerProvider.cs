@@ -129,11 +129,11 @@ public sealed class MauiDatabaseLoggerProvider : ILoggerProvider
                 eventId,
                 username,
                 environmentKey,
-                requestPath,
+                MoveItAutomationUI.Services.Reporting.ReportApiRoutes.Redact(requestPath),
                 traceId,
-                message,
-                exception?.ToString() ?? string.Empty,
-                BuildPropertiesJson(state)));
+                MoveItAutomationUI.Services.Reporting.ReportApiRoutes.Redact(message),
+                MoveItAutomationUI.Services.Reporting.ReportApiRoutes.Redact(exception?.ToString() ?? string.Empty),
+                MoveItAutomationUI.Services.Reporting.ReportApiRoutes.Redact(BuildPropertiesJson(state))));
         }
 
         private string ResolveEnvironmentKey(string serverKey)

@@ -1,9 +1,9 @@
 {
   "ManifestVersion": 1,
-  "Description": "Merge User Management and the reviewed Records improvements into master.",
-  "TargetVersion": "0.18.556-RC3",
+  "Description": "Clarify Task schedule summaries for file notifications and polling.",
+  "TargetVersion": "0.18.583-RC3",
   "MinimumSupportedVersion": "0.16.77-integration",
-  "RequiredSchemaVersion": 1,
+  "RequiredSchemaVersion": 2,
   "RequiredConfigurationVersion": 1,
   "RestartRequired": false,
   "SchemaMigrations": [
@@ -1027,6 +1027,90 @@
             "StartedUtc"
           ],
           "Unique": false
+        }
+      ]
+    },
+    {
+      "FromVersion": 1,
+      "ToVersion": 2,
+      "Description": "Persist optional shared Reporting API access.",
+      "Operations": [
+        {
+          "Operation": "CreateTable",
+          "Table": "OutboundReportApiShares",
+          "Columns": [
+            {
+              "Name": "ReportId",
+              "Type": "String",
+              "Nullable": false,
+              "Length": 36
+            },
+            {
+              "Name": "Enabled",
+              "Type": "Boolean",
+              "Nullable": false
+            },
+            {
+              "Name": "ShareGuidHash",
+              "Type": "String",
+              "Nullable": false,
+              "Length": 64
+            },
+            {
+              "Name": "ProtectedShareGuid",
+              "Type": "String",
+              "Nullable": false
+            },
+            {
+              "Name": "Revision",
+              "Type": "String",
+              "Nullable": false,
+              "Length": 36
+            },
+            {
+              "Name": "CreatedUtc",
+              "Type": "DateTime",
+              "Nullable": false
+            },
+            {
+              "Name": "ModifiedUtc",
+              "Type": "DateTime",
+              "Nullable": false
+            },
+            {
+              "Name": "LastAccessUtc",
+              "Type": "DateTime",
+              "Nullable": true
+            }
+          ],
+          "PrimaryKey": {
+            "Name": "PK_OutboundReportApiShares",
+            "Columns": [
+              "ReportId"
+            ]
+          },
+          "ForeignKeys": [
+            {
+              "Name": "FK_OutboundReportApiShares_OutboundReports_ReportId",
+              "Columns": [
+                "ReportId"
+              ],
+              "PrincipalTable": "OutboundReports",
+              "PrincipalColumns": [
+                "Id"
+              ],
+              "OnDelete": "Cascade"
+            }
+          ]
+        },
+        {
+          "Operation": "CreateIndex",
+          "Table": "OutboundReportApiShares",
+          "Name": "IX_OutboundReportApiShares_ShareGuidHash",
+          "IndexColumns": [
+            "ShareGuidHash"
+          ],
+          "Unique": true
         }
       ]
     }

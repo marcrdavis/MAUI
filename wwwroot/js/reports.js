@@ -28,6 +28,7 @@
     const smtpWarningText = document.querySelector('[data-outbound-report-smtp-warning-text]');
     const dataAccessWarning = document.querySelector('[data-outbound-report-data-access-warning]');
     const dataAccessWarningText = document.querySelector('[data-outbound-report-data-access-warning-text]');
+    const dataAccessWarningTitle = document.querySelector('[data-outbound-report-data-access-warning-title]');
     const editDialog = document.querySelector('[data-report-edit-dialog]');
     const historyDialog = document.querySelector('[data-report-history-dialog]');
     const runDialog = document.querySelector('[data-report-run-dialog]');
@@ -38,6 +39,7 @@
 
     let reportMap = new Map();
     let activeReport = null;
+    let editSaving = false;
     let runQueue = [];
     let runQueueActive = false;
     let runCancelRequested = false;
@@ -86,6 +88,7 @@
 
     function describeSchedule(schedule) {
         if (!schedule) return '—';
+        if (schedule.deliveryMode === 'None') return 'None';
         const time = schedule.timeOfDay || '';
         if (schedule.deliveryMode === 'Once') return `Once: ${(schedule.dates || []).join(', ')} ${time}`.trim();
         if (schedule.frequency === 'Daily') return `Daily ${time}`.trim();
@@ -150,15 +153,24 @@
     function renderReadiness(state) {
         const smtpConfigured = Boolean(state?.smtpConfigured);
         const missing = Array.isArray(state?.missingDataAccessEnvironments) ? state.missingDataAccessEnvironments.filter(Boolean) : [];
+        const unconfigured = Array.isArray(state?.unconfiguredEnvironments) ? state.unconfiguredEnvironments.filter(Boolean) : [];
         if (smtpWarning) {
             smtpWarning.hidden = smtpConfigured;
             if (!smtpConfigured && smtpWarningText) smtpWarningText.textContent = String(state?.smtpMessage || '').trim() || 'Saved Reports cannot be delivered until SMTP Configuration is completed.';
         }
         if (dataAccessWarning) {
-            dataAccessWarning.hidden = missing.length === 0;
-            if (missing.length && dataAccessWarningText) dataAccessWarningText.textContent = `Scheduled Reports for ${missing.join(', ')} cannot run until Data Access Credentials are configured under Configuration > MOVEit Connections.`;
+            dataAccessWarning.hidden = missing.length === 0 && unconfigured.length === 0;
+            if (dataAccessWarningTitle) dataAccessWarningTitle.textContent = missing.length && unconfigured.length
+                ? 'Report environment configuration needs attention.'
+                : unconfigured.length ? 'Report environment no longer configured.' : 'Data Access Credentials are missing.';
+            if (dataAccessWarningText) {
+                const messages = [];
+                if (missing.length) messages.push(`Reports for ${missing.join(', ')} cannot retrieve data until Data Access Credentials are configured under Configuration > MOVEit Connections.`);
+                if (unconfigured.length) messages.push(`No MOVEit connections are configured for ${unconfigured.join(', ')}. Their saved reports and history are retained; restore a connection for the environment to run those reports.`);
+                dataAccessWarningText.textContent = messages.join(' ');
+            }
         }
-        if (readiness) readiness.hidden = smtpConfigured && missing.length === 0;
+        if (readiness) readiness.hidden = smtpConfigured && missing.length === 0 && unconfigured.length === 0;
     }
 
     async function loadReports({ initial = false } = {}) {
@@ -511,6 +523,9 @@
         const once = editDialog?.querySelector('[data-report-edit-once]');
         const weekly = editDialog?.querySelector('[data-report-edit-weekly]');
         const monthly = editDialog?.querySelector('[data-report-edit-monthly]');
+        editDialog?.querySelector('[data-report-edit-recipients-field]')?.toggleAttribute('hidden', delivery === 'None');
+        editDialog?.querySelector('[data-report-edit-time-field]')?.toggleAttribute('hidden', delivery === 'None');
+        editDialog?.querySelector('[data-report-edit-none]')?.toggleAttribute('hidden', delivery !== 'None');
         if (frequencyField) frequencyField.hidden = delivery !== 'Recurring';
         if (once) once.hidden = delivery !== 'Once';
         if (weekly) weekly.hidden = delivery !== 'Recurring' || frequency !== 'Weekly';
@@ -518,7 +533,7 @@
     }
 
     function openEdit(report) {
-        if (!editDialog || !report) return;
+        if (!editDialog || !report || editSaving) return;
         initializeEditPickers();
         activeReport = report;
         const identity = editDialog.querySelector('[data-report-edit-id]'); if (identity) identity.textContent = String(report.id || '—');
@@ -526,7 +541,7 @@
         editDialog.querySelector('[data-report-edit-title]').value = report.title || '';
         editDialog.querySelector('[data-report-edit-description]').value = report.description || '';
         editDialog.querySelector('[data-report-edit-recipients]').value = (report.recipients || []).join('; ');
-        editDialog.querySelector('[data-report-edit-delivery]').value = schedule.deliveryMode === 'Once' ? 'Once' : 'Recurring';
+        editDialog.querySelector('[data-report-edit-delivery]').value = ['None', 'Once'].includes(schedule.deliveryMode) ? schedule.deliveryMode : 'Recurring';
         editDialog.querySelector('[data-report-edit-time]').value = schedule.timeOfDay || '08:00';
         editDialog.querySelector('[data-report-edit-frequency]').value = schedule.frequency || 'Daily';
         editSelectedDates = [...(schedule.dates || [])];
@@ -541,6 +556,7 @@
         const error = editDialog.querySelector('[data-report-edit-error]'); if (error) { error.hidden = true; error.textContent = ''; }
         syncEditSchedule();
         editDialog.showModal();
+        window.MauiReportApiAccess?.open(report);
     }
 
     function isFiveMinuteTime(value) {
@@ -552,7 +568,8 @@
     }
 
     async function saveEdit(event) {
-        if (!activeReport || !editDialog) return;
+        if (!activeReport || !editDialog || editSaving) return;
+        if (window.MauiReportApiAccess && !window.MauiReportApiAccess.ready()) return;
         const deliveryMode = editDialog.querySelector('[data-report-edit-delivery]').value;
         const frequency = editDialog.querySelector('[data-report-edit-frequency]').value;
         if (deliveryMode === 'Once') {
@@ -561,11 +578,11 @@
         }
         const timeOfDay = editDialog.querySelector('[data-report-edit-time]').value;
         const error = editDialog.querySelector('[data-report-edit-error]');
-        if (!isFiveMinuteTime(timeOfDay)) {
+        if (deliveryMode !== 'None' && !isFiveMinuteTime(timeOfDay)) {
             if (error) { error.textContent = 'Report delivery times must use 5-minute increments (00, 05, 10, ... 55).'; error.hidden = false; }
             return;
         }
-        const schedule = {
+        const schedule = deliveryMode === 'None' ? { deliveryMode } : {
             deliveryMode,
             frequency: deliveryMode === 'Recurring' ? frequency : '',
             timeOfDay,
@@ -575,20 +592,32 @@
             daysOfMonth: deliveryMode === 'Recurring' && frequency === 'Monthly' ? [...editDialog.querySelectorAll('[data-report-edit-monthday]:checked')].map(item => Number(item.value)) : []
         };
         if (error) error.hidden = true;
-        event.currentTarget.disabled = true;
+        // Keep one Report/share revision in flight. Restore the exact prior states on failure,
+        // including API controls that were already disabled before Save was selected.
+        const controls = [...editDialog.querySelectorAll('input, select, textarea, button')]
+            .map(control => ({ control, disabled: control.disabled }));
+        const preventCancel = event => event.preventDefault();
+        editSaving = true;
+        controls.forEach(({ control }) => { control.disabled = true; });
+        editDialog.addEventListener('cancel', preventCancel);
         try {
             await request(urls.update, {
                 id: activeReport.id,
                 title: editDialog.querySelector('[data-report-edit-title]').value,
                 description: editDialog.querySelector('[data-report-edit-description]').value,
-                recipients: editDialog.querySelector('[data-report-edit-recipients]').value,
+                recipients: deliveryMode === 'None' ? '' : editDialog.querySelector('[data-report-edit-recipients]').value,
                 enabled: editDialog.querySelector('[data-report-edit-enabled]').checked,
+                apiAccess: window.MauiReportApiAccess?.state(),
                 schedule
             });
             editDialog.close(); toast('Report updated.'); await loadReports();
         } catch (ex) {
             if (error) { error.textContent = ex.message; error.hidden = false; }
-        } finally { event.currentTarget.disabled = false; }
+        } finally {
+            editSaving = false;
+            controls.forEach(({ control, disabled }) => { control.disabled = disabled; });
+            editDialog.removeEventListener('cancel', preventCancel);
+        }
     }
 
     // ------------------------------------------------------------------

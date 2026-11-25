@@ -35,23 +35,24 @@
 
 <dialog class="settings-dialog outbound-report-dialog" data-report-edit-dialog>
     <div class="settings-card outbound-report-shell">
-        <div class="settings-header"><div><h2>Edit Report Information</h2><p>Update Report title, delivery, scheduling, and enabled state without changing the saved grid view.</p></div><button type="button" class="dialog-close" data-report-edit-close aria-label="Close">×</button></div>
+        <div class="settings-header"><div><h2>Edit Report Information</h2><p>Update Report details, delivery and API access without changing the saved grid view.</p></div><button type="button" class="dialog-close" data-report-edit-close aria-label="Close">×</button></div>
         <div class="outbound-report-body">
             <div class="inline-alert error-alert" data-report-edit-error hidden></div>
 
             <section class="maui-property-card">
-                <div class="details-section-heading maui-object-properties-heading"><div class="task-identity-row maui-object-identity" aria-label="Report identity"><div class="task-identity-item"><span>Type</span><strong>Report</strong></div><div class="task-identity-item"><span>Report ID</span><strong data-report-edit-id></strong></div></div><span class="source-badge local-badge">MAUI</span></div>
+                <div class="details-section-heading maui-object-properties-heading"><div class="task-identity-row maui-object-identity" aria-label="Report identity"><div class="task-identity-item"><span>Type</span><strong>Report</strong></div><div class="task-identity-item"><span>Report ID</span><strong data-report-edit-id></strong></div></div></div>
             <div class="configuration-field-grid two-column">
                 <label class="configuration-field full"><span>Report Title</span><input class="text-input" maxlength="200" data-report-edit-title /></label>
                 <label class="configuration-field full"><span>Description</span><textarea class="text-input outbound-report-description" rows="3" maxlength="1000" data-report-edit-description></textarea></label>
             </div>
             </section>
             <section class="maui-property-card">
-                <div class="details-section-heading"><h3>Delivery and Schedule</h3><span class="source-badge local-badge">MAUI</span></div>
+                <div class="details-section-heading"><h3>Delivery and Schedule</h3></div>
             <div class="configuration-field-grid two-column">
-                <label class="configuration-field full"><span>Recipients</span><input class="text-input" data-report-edit-recipients /></label>
-                <label class="configuration-field"><span>Delivery</span><select class="text-input" data-report-edit-delivery><option value="Once">One Time</option><option value="Recurring">Recurring</option></select></label>
-                <label class="configuration-field"><span>Time</span><select class="text-input" data-report-edit-time></select><small>5-minute increments.</small></label>
+                <label class="configuration-field full"><span>Delivery</span><select class="text-input" data-report-edit-delivery><option value="None">None</option><option value="Once">One Time</option><option value="Recurring">Recurring</option></select></label>
+                <p class="field-help full" data-report-edit-none hidden>No email delivery or schedule.</p>
+                <label class="configuration-field full" data-report-edit-recipients-field><span>Email Recipients</span><input class="text-input" data-report-edit-recipients /></label>
+                <label class="configuration-field" data-report-edit-time-field><span>Time</span><select class="text-input" data-report-edit-time></select><small>5-minute increments.</small></label>
                 <label class="configuration-field" data-report-edit-frequency-field><span>Repeat</span><select class="text-input" data-report-edit-frequency><option value="Daily">Daily</option><option value="Weekly">Weekly</option><option value="Monthly">Monthly</option></select></label>
             </div>
             <div data-report-edit-once>
@@ -64,8 +65,10 @@
 
             </section>
 
+            <partial name="_ReportApiAccess" />
+
             <section class="maui-property-card">
-                <div class="details-section-heading"><h3>Report Metadata</h3><span class="source-badge local-badge">MAUI</span></div>
+                <div class="details-section-heading"><h3>Report Metadata</h3></div>
             <div class="configuration-field-grid three-column outbound-report-audit-fields">
                 <label class="configuration-field"><span>Owner</span><input class="text-input" readonly data-report-edit-owner /></label>
                 <label class="configuration-field"><span>Created Date</span><input class="text-input" readonly data-report-edit-created /></label>

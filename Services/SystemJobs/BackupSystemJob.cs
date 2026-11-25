@@ -49,10 +49,11 @@ public sealed class BackupSystemJob : IBackupSystemJob
         }
         else if (calculatedNextRunUtc <= utcNow
                  && state.NextRunUtc.HasValue
-                 && state.NextRunUtc.Value > utcNow)
+                 && state.NextRunUtc.Value > calculatedNextRunUtc)
         {
             // The common scheduler may have intentionally skipped an overdue Backup run after MAUI
-            // startup/resume. Preserve that future cadence instead of reintroducing the stale due time.
+            // startup/resume. Keep that advanced time when it becomes due as well; replacing it with
+            // the original overdue time would make every following interval look missed again.
             nextRunUtc = state.NextRunUtc.Value;
         }
 

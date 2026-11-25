@@ -1048,6 +1048,7 @@
             defaults = defaults || {};
             return {
                 retryCount: nullableNumber(defaults.retryCount),
+                fileNotificationsEnabled: nullableBoolean(defaults.fileNotificationsEnabled),
                 retryTimeoutSeconds: nullableNumber(defaults.retryTimeoutSeconds),
                 rescanSeconds: nullableNumber(defaults.rescanSeconds),
                 maxFiles: nullableNumber(defaults.maxFiles),
@@ -1717,7 +1718,7 @@
             const weekdayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
             const dayMap = { Monday: 'Mon', Tuesday: 'Tue', Wednesday: 'Wed', Thursday: 'Thu', Friday: 'Fri', Saturday: 'Sat', Sunday: 'Sun' };
             const selectedWeekdays = weekdayOrder.filter(day => (schedule?.daysOfWeek || []).some(value => String(value).toLowerCase() === day.toLowerCase()));
-            if (selectedWeekdays.length) labels.push(selectedWeekdays.map(day => dayMap[day]).join(', '));
+            if (selectedWeekdays.length) labels.push(selectedWeekdays.map(day => compact ? dayMap[day] : day).join(', '));
 
             const monthDays = [...(schedule?.daysOfMonth || [])].sort((a, b) => a - b);
             if (monthDays.length) labels.push(compact ? `Month: ${monthDays.join(', ')}` : `days ${monthDays.join(', ')} of each month`);
@@ -1732,18 +1733,40 @@
             return labels.join(compact ? ' + ' : '; ');
         }
 
+        function scheduleNotificationState(schedule) {
+            // Advanced Sources are already flattened by the shared read contract;
+            // Sync Folder A/B are both represented as Source steps. Unknown state stays editable.
+            const states = taskSteps.filter(step => step.kind === 'Source').map(step => step.source?.hostDefaults?.fileNotificationsEnabled);
+            const allSourcesNotifying = states.length > 0 && states.every(state => state === true);
+            return {
+                hasNotifications: states.some(state => state === true),
+                pollingApplies: states.length > 0 && states.some(state => state !== false),
+                notificationsOnly: allSourcesNotifying && !schedule?.runEvenIfNotifications,
+                hasRepeat: (schedule?.intervals || []).some(interval => interval.repeat)
+            };
+        }
+
+        function scheduleControlsLocked(schedule) {
+            return isScheduleReadOnly(schedule) || !canAlterTask || saving || syncActionBusy || runAsOfBusy || saveOutcomeUncertain;
+        }
+
         function scheduleTimeSummary(schedule, compact = false) {
             const intervals = schedule?.intervals || [];
             if (!intervals.length) return compact ? 'No time' : 'no scheduled time is defined';
+            const { hasNotifications, notificationsOnly } = scheduleNotificationState(schedule);
             const values = intervals.map(interval => {
                 const start = formatScheduleTime(interval.startTime);
                 if (!interval.repeat) return compact ? (start || 'Time not set') : `once at ${start || 'a time that is not set'}`;
                 const minutes = Number(interval.everyMinutes || 0);
                 const end = formatScheduleTime(interval.endTime);
-                const cadence = minutes > 0 ? `every ${minutes} min` : 'with repeat interval not set';
-                return compact
-                    ? `${start || 'Time not set'} ${cadence}${end ? ` until ${end}` : ''}`
-                    : `starting at ${start || 'a time that is not set'}, ${cadence}${end ? ` until ${end}` : ''}`;
+                if (notificationsOnly)
+                    return compact ? `${start}–${end} · notifications`
+                        : `when files arrive between ${start || 'a start time that is not set'} and ${end || 'an end time that is not set'}`;
+                const cadence = minutes > 0 ? `every ${minutes} ${compact ? 'min' : minutes === 1 ? 'minute' : 'minutes'}` : 'with repeat interval not set';
+                if (compact) return hasNotifications
+                    ? `${start}–${end} · files + ${cadence}`
+                    : `${start || 'Time not set'} ${cadence}${end ? ` until ${end}` : ''}`;
+                return `${hasNotifications ? 'when files arrive and ' : ''}${cadence} between ${start || 'a start time that is not set'} and ${end || 'an end time that is not set'}`;
             });
             return values.join(compact ? ', ' : '; and ');
         }
@@ -2141,10 +2164,50 @@
             scheduleDayPanels.forEach(panel => { panel.hidden = panel.dataset.traditionalTaskEditorScheduleDayPanel !== scheduleDayMode; });
         }
 
+        function setScheduleDisabledTooltip(control, reason) {
+            control.title = reason;
+            // The label remains hoverable when the browser suppresses events on a disabled input.
+            const label = control.closest('label');
+            if (label) {
+                label.title = reason;
+                label.classList.toggle('is-disabled-value', control.disabled || control.readOnly);
+            }
+        }
+
         function refreshScheduleDependencies(schedule) {
-            const hasRepeat = (schedule?.intervals || []).some(interval => interval.repeat);
+            const { hasRepeat, pollingApplies, notificationsOnly } = scheduleNotificationState(schedule);
+            const locked = scheduleControlsLocked(schedule);
             const firstSuccess = dialog.querySelector('[data-schedule-field="onlyUntilFirstSuccess"]');
-            if (firstSuccess) firstSuccess.disabled = isScheduleReadOnly(schedule) || !hasRepeat;
+            if (firstSuccess) {
+                // Availability follows Repeat. Notification-related execution semantics
+                // do not make this option read-only in the MOVEit editor.
+                firstSuccess.disabled = locked || !hasRepeat;
+                setScheduleDisabledTooltip(firstSuccess, !hasRepeat ? 'Requires a repeating schedule time.' : '');
+            }
+            const pollingOption = dialog.querySelector('[data-schedule-field="runEvenIfNotifications"]');
+            if (pollingOption) {
+                pollingOption.disabled = locked || !hasRepeat || !pollingApplies;
+                setScheduleDisabledTooltip(pollingOption, !hasRepeat ? 'Requires a repeating schedule time.'
+                    : !pollingApplies ? 'No source has file notifications enabled, so this option does not apply.' : '');
+            }
+            scheduleIntervals?.querySelectorAll('[data-schedule-interval-key]').forEach(card => {
+                const interval = schedule?.intervals.find(item => item.key === card.dataset.scheduleIntervalKey);
+                const every = card.querySelector('[data-schedule-interval-field="everyMinutes"]');
+                if (!interval || !every) return;
+                every.disabled = locked || !interval.repeat || notificationsOnly;
+                setScheduleDisabledTooltip(every, !interval.repeat ? 'Requires a repeating schedule time.'
+                    : notificationsOnly ? 'The minute interval is ignored because all sources use file notifications. To also poll at this interval, enable "Poll for files even though file notifications are also enabled" in Options.' : '');
+            });
+        }
+
+        function refreshScheduleNotificationPresentation() {
+            const schedule = activeSchedule();
+            if (schedule) { refreshScheduleDependencies(schedule); updateScheduleSummaries(schedule); }
+            scheduleItems?.querySelectorAll('[data-traditional-task-editor-schedule-key]').forEach(button => {
+                const item = schedules.find(value => value.key === button.dataset.traditionalTaskEditorScheduleKey);
+                const detail = button.querySelector('small');
+                if (item && detail) detail.textContent = scheduleRailDetail(item);
+            });
         }
 
         function addSchedule() {
@@ -2356,7 +2419,14 @@
             const card = control.closest?.('[data-schedule-interval-key]');
             const interval = schedule?.intervals.find(item => item.key === card?.dataset.scheduleIntervalKey);
             const field = control.dataset.scheduleIntervalField || '';
-            if (!schedule || isScheduleReadOnly(schedule) || !interval || !field) return;
+            if (!schedule || !interval || !field) return;
+            if (scheduleControlsLocked(schedule) || control.disabled || control.readOnly
+                || (field === 'everyMinutes' && (!interval.repeat || scheduleNotificationState(schedule).notificationsOnly))
+                || (field === 'endTime' && !interval.repeat)) {
+                if (field === 'repeat') control.checked = Boolean(interval.repeat);
+                else control.value = field === 'everyMinutes' ? (interval.everyMinutes > 0 ? String(interval.everyMinutes) : '') : interval[field];
+                return;
+            }
             const before = deepClone(schedule);
 
             if (field === 'repeat') {
@@ -2384,7 +2454,14 @@
         function applyScheduleOptionControl(control) {
             const schedule = activeSchedule();
             const field = control.dataset.scheduleField || '';
-            if (!schedule || isScheduleReadOnly(schedule) || !field) return;
+            if (!schedule || !field) return;
+            const state = scheduleNotificationState(schedule);
+            if (scheduleControlsLocked(schedule) || control.disabled
+                || (field === 'runEvenIfNotifications' && (!state.hasRepeat || !state.pollingApplies))
+                || (field === 'onlyUntilFirstSuccess' && !state.hasRepeat)) {
+                control.checked = Boolean(schedule[field]);
+                return;
+            }
             const before = deepClone(schedule);
             schedule[field] = control instanceof HTMLInputElement && control.type === 'checkbox' ? control.checked : control.value;
             commitScheduleSnapshot(schedule, before, scheduleOptionFieldLabel(field));
@@ -3374,6 +3451,7 @@
             if (type === 'list') {
                 const select = document.createElement('select');
                 select.className = 'text-input';
+                select.appendChild(new Option('', ''));
                 (field.possibleValues || []).forEach(optionValue => select.appendChild(new Option(optionValue, optionValue)));
                 if (![...select.options].some(option => option.value === String(value)) && String(value)) select.appendChild(new Option(String(value), String(value)));
                 select.value = String(value);
@@ -3886,6 +3964,7 @@
             if (step?.source) renderSource(step);
             else if (step?.destination) renderDestination(step);
             if (isAdvancedTask()) advancedEditor?.refresh();
+            refreshScheduleNotificationPresentation();
         }
 
         async function editSelectedHost(kind, button) {
@@ -7895,6 +7974,7 @@
             if (reloadButton) { reloadButton.hidden = !saveOutcomeUncertain && !checkout?.lost; reloadButton.disabled = saving || syncActionBusy; }
             if (overrideButton) { overrideButton.hidden = !(checkoutConflict || checkout?.lost || saveOutcomeUncertain) || document.documentElement.dataset.moveitAdmin !== 'true'; overrideButton.disabled = saving || syncActionBusy || runAsOfBusy; }
             if (isAdvancedTask()) advancedEditor?.refresh();
+            refreshScheduleNotificationPresentation();
             const taskFieldsDirty = editorFields().some(control => baseline.has(control.dataset.editorField)
                 && baseline.get(control.dataset.editorField) !== readControl(control));
             const stepsDirty = stepsBaseline !== stepsComparable();

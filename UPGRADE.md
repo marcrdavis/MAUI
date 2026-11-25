@@ -1,34 +1,41 @@
 # MAUI Upgrade Guide
 
-- **Target release:** `0.18.556-RC3`
+- **Target release:** `0.18.583-RC3`
 - **Release:** Release Candidate 3 (pre-release)
-- **Build:** `20261117`
-- **Database schema:** `1`
+- **Build:** `20261124`
+- **Database schema:** `2`
 - **Configuration version:** `1`
 
 > **Release Candidate 3 — not the final release.** This candidate may contain bugs or regressions. Test the upgrade and rollback procedure on a non-production instance, preserve installation-owned configuration/data, and complete live acceptance before relying on it in production.
 
 MAUI upgrades are driven by the cumulative `upgrade.json` manifest included with each release. The live `appsettings.json` and MAUI metadata database are installation-owned and must be preserved when application files are replaced. Source-built RC3 packages should satisfy the validation gate in [`TESTING.md`](TESTING.md) before deployment.
 
-**In this guide:** [RC3 upgrade state](#rc3-upgrade-state) · [Before upgrading](#before-upgrading) · [Recommended deployment procedure](#recommended-deployment-procedure) · [After-upgrade checks](#after-upgrade-checks) · [Upgrade implementation reference](#upgrade-implementation-reference)
+**In this guide:** [RC3 upgrade state](#rc3-upgrade-state) · [Before upgrading](#before-upgrading) · [Recommended deployment procedure](#recommended-deployment-procedure) · [MOVEit Automation upgrades](#after-upgrading-moveit-automation) · [After-upgrade checks](#after-upgrade-checks) · [Upgrade implementation reference](#upgrade-implementation-reference)
 
 ## RC3 upgrade state
 
 | Item | Current package |
 | --- | --- |
-| Application / build | `0.18.556-RC3` / `20261117` |
+| Application / build | `0.18.583-RC3` / `20261124` |
 | Minimum directly supported application version | `0.16.77-integration` |
-| Database schema / configuration version | `1` / `1` |
+| Database schema / configuration version | `2` / `1` |
 | Manifest RestartRequired | `false`; startup-sensitive changes can still require restart. |
 | Editor defaults | Tasks on; Hosts, Scripts, Date Lists, Groups & Permissions and MOVEit Settings off. Existing choices are preserved. |
 
 Live appsettings.json and Data remain installation-owned. Release templates/manifest/binaries must match. Application releases can advance without schema/configuration migrations; missing editable Settings definitions are added from the template when saved, preserving existing values.
 
+Version **0.18.583-RC3** clarifies the Task schedule help text across Traditional, Advanced and Synchronization editors. It states when files arrive, when periodic polling occurs, or both, with explicit start/end times and full weekday names. Heading/footer text stays synchronized; one-time rows, multiple times, month/date-list selections and overnight notes retain their distinct wording. Existing option editability, disabled tooltips, saved values and native schedule persistence remain compatible. Database schema **2** and configuration version **1** are unchanged; no migration is added.
+
 ## Before upgrading
+
+Database schema 2 adds `OutboundReportApiShares` through an additive migration. Back up the metadata database and Data Protection keys before applying the normal MAUI upgrade. Existing Reports begin with API access disabled. Restore a matching database backup when rolling back to a build that supports schema 1.
+
+Schema 2 was introduced in **0.18.558-RC3**. An installation on **0.18.557-RC3 / schema 1** can upgrade directly to this release: deploy the complete matching package, preserve live `appsettings.json` and the database, sign in as a MAUI Admin and complete **Begin Upgrade**. The cumulative manifest applies `1 -> 2`; installing intermediate builds or running manual SQL is not required. SQLite takes an automatic pre-upgrade snapshot; SQL Server database backup remains administrator-managed. The current release retains database schema **2** and configuration version **1**.
+
 
 RC3 includes optional MAUI editors for Traditional, Advanced and Synchronization Tasks, mapped Hosts, Scripts, Date Lists and Groups & Permissions. Review existing editor preferences under Configuration > Settings > Editors after upgrade and retain the compatible COM API. New Host and empty Advanced/Sync creation use captured REST v0, but Host spreadsheet creation/updates, native clone/restore and other native configuration operations still require COM. Validate these paths, both checkout modes and conflict/partial-save recovery using [TESTING.md](TESTING.md#rc3-editor-and-crud-acceptance).
 
-**The MOVEit Integration components are not required if using only the MAUI Editors.** Retain/deploy the browser bridge, CSS/logo and Tomcat script reference when launching native MOVEit editors from MAUI. MAUI-only editor use can skip the Web Admin asset steps; it still requires the compatible COM API for retained native operations.
+**The MAUI Integration components for MOVEit Web Admin are not required when using the MAUI Editors exclusively.** Retain/deploy the browser bridge, CSS/logo and Tomcat script reference when launching native MOVEit editors from MAUI. MAUI-only editor use can skip the Web Admin asset steps; it still requires the compatible COM API for retained native operations. When native integration is used, it **must be reinstalled after every MOVEit Automation upgrade**, because that upgrade overwrites the Tomcat folder; see [MOVEit Automation upgrade steps](#after-upgrading-moveit-automation).
 
 Close Task/Host/Script/Date List editors before deployment so their checkouts can release normally. Preserve `Data/ObjectEditLeases` and `Data/DataProtection-Keys`; the cleanup worker can recover abandoned records after restart, but unavailable MOVEit authentication may require a fresh owner login or administrator inspection.
 
@@ -42,7 +49,7 @@ Before stopping/replacing the MAUI application, confirm no operator is actively 
    - SQL Server: use normal SQL Server backup procedures.
 5. Back up the current application directory or retain a known-good deployment package for rollback.
 6. Confirm the IIS application pool uses **Maximum Worker Processes = 1**; RC3 supports only one active MAUI application instance/worker.
-7. If MAUI Integration assets will change, back up MOVEit Web Admin Tomcat ROOT `index.html` and existing MAUI integration assets.
+7. If native-editor integration is used, retain the MAUI Integration assets, trusted-origin configuration and a reference copy of Tomcat ROOT `index.html` **outside Tomcat** before replacing the assets or upgrading MOVEit Automation.
 
 ## Protect installation-owned content
 
@@ -72,7 +79,13 @@ Data\
     - **Before deploying or replacing `maui-integration.js`, configure its `LAUNCHER_ORIGINS` allow-list with every trusted browser-visible MAUI origin that uses this MOVEit Web Admin instance.** Use exact origins only; wildcards are not supported.
     - The current package's `maui-integration.js` advertises `MAUI_INTEGRATION_ASSET_REVISION = 0.16.206-RC1` (the bundled integration asset revision, independent of the RC3 application version). Deploy this script to every applicable Web Admin/Tomcat node, keep the trusted-origin allow-list consistent across nodes, and retain the package CSS/logo alongside it.
 
-For installations using native editor integration, MOVEit Automation upgrades may replace Tomcat `index.html`. Recheck that integration after a MOVEit upgrade even when the MAUI release itself did not change the integration assets.
+## After upgrading MOVEit Automation
+
+**If native MOVEit editor integration is used, reinstall the MAUI Integration components after every MOVEit Automation upgrade.** The upgrade overwrites the Web Admin Tomcat folder. Reinstall even when MAUI itself was not upgraded and the integration asset revision is unchanged.
+
+Follow [Integration reinstallation](INSTALLATION.md#reinstall-after-a-moveit-automation-upgrade) on each applicable Web Admin node: restore the bridge, CSS and logo, reapply the exact `LAUNCHER_ORIGINS`, and add the script reference to the upgraded `index.html`. Do not replace MOVEit's upgraded HTML with the pre-upgrade backup. Refresh the browser cache, sign in to MAUI again to refresh MOVEit capabilities, and verify a native editor launches and returns correctly.
+
+The browser integration and these reinstallation steps are **not required when using the MAUI Editors exclusively**. Keep the compatible COM API installed for MAUI operations that require it.
 
 ## After-upgrade checks
 
@@ -84,7 +97,7 @@ Rename logging now preserves the underlying local database error when MOVEit sav
 
 After upgrading, validate the editors and Browse combinations against your MOVEit build, including credentials and supported proxy modes. Confirm non-admin actions match their existing Resource Group grants, read-only object views remain read-only, Task folders remain administrator-managed, and template-saving access follows the configured roles. Loading existing templates is available under normal access rules.
 
-Editor Undo reverses one local change in the current opening; grid saved-history restore is separate. No database-schema or configuration-version migration is required for this release. Release-by-release changes and earlier validation records are in [CHANGELOG.md](CHANGELOG.md).
+Editor Undo reverses one local change in the current opening; grid saved-history restore is separate. Those editor features do not add migrations. This package includes the Reporting API schema `1 -> 2` migration described above; configuration version remains 1. Release-by-release changes and earlier validation records are in [CHANGELOG.md](CHANGELOG.md).
 
 Audit View Changes becomes available automatically for native rows with comparison data on MOVEit Automation 2026 / engine 18 or later. Sign in again after a MOVEit server upgrade to refresh version capabilities. Existing Audit behavior is unchanged on older or unknown versions; no MAUI schema/configuration migration is required.
 
@@ -185,6 +198,8 @@ When no upgrade is pending, `/Upgrade` returns HTTP 404.
 
 If an upgrade fails, processing stops at the failing step. Already committed schema-version transactions remain recorded so a retry resumes from the database's actual version.
 
+Automatic Backup scheduling is paused while the upgrade gate is active. After a successful upgrade (and any required restart), a run missed beyond the one-minute scheduler grace period is advanced to the next configured interval. Version **0.18.574-RC3** fixes repeated skipping of that advanced run; existing Backup enablement, frequency and retention settings are preserved. No Backup schedule reset or new schema migration is required. Confirm that later backups continue after upgrading.
+
 #### Restart policy
 
 An application restart is required when the upgraded `appsettings.json` changes settings that are bound at process startup, or when the release manifest sets `RestartRequired` to `true`. The flag defaults to `false` when omitted; the current manifest sets it to `false` so routine upgrades do not force an additional restart. The current restart-sensitive policy includes:
@@ -198,7 +213,7 @@ MOVEit server definitions use the live catalog and do not require restart. Chang
 
 The policy is implemented by the same `ConfigurationRestartDetector` used by Configuration > Settings so normal configuration saves and upgrade migrations do not diverge. When a restart is required, the completed `/Upgrade` page replaces **Return to MAUI** with **Restart MAUI** and uses the existing controlled restart flow; the MAUI administrator does not need IIS Manager or application-pool recycle permission.
 
-Checkout changes do not require a database-schema or configuration-schema migration; both remain at version 1. Preserve `Data/ObjectEditLeases` and Data Protection keys. Existing cleanup records remain readable and do not supply the displayed lock owner/time. After upgrade, reopening an object uses normal native checkout; a MOVEit administrator can explicitly override a reported checkout in MAUI. In edit-duration editors, cancelled or superseded confirmations must not acquire checkout. See [checkout acceptance](TESTING.md#native-checkout-response-and-retry-consistency).
+Checkout changes do not add a database-schema or configuration-schema migration. The current package requires database schema 2 for Reporting API shares and configuration version 1. Preserve `Data/ObjectEditLeases` and Data Protection keys. Existing cleanup records remain readable and do not supply the displayed lock owner/time. After upgrade, reopening an object uses normal native checkout; a MOVEit administrator can explicitly override a reported checkout in MAUI. In edit-duration editors, cancelled or superseded confirmations must not acquire checkout. See [checkout acceptance](TESTING.md#native-checkout-response-and-retry-consistency).
 
 ### Initial Setup is a separate in-process transition
 
@@ -206,7 +221,7 @@ For a fresh installation, `/Setup` activates the saved configuration and databas
 
 ### Initial database provisioning
 
-Schema version `0` means no MAUI schema exists. Initial Setup provisions a new database through the same migration engine used for upgrades. The `0 -> 1` migration defines the complete initial MAUI schema and creates `MauiSchemaVersion`.
+Schema version `0` means no MAUI schema exists. Initial Setup provisions a new database through the same migration engine used for upgrades. The `0 -> 1` migration defines the initial MAUI schema and creates `MauiSchemaVersion`; the current package then applies `1 -> 2` to add Reporting API shares.
 
 A non-empty database without a valid `MauiSchemaVersion` table/record is treated as unversioned/invalid rather than inferred as a MAUI database. This prevents unrelated databases from being adopted silently.
 
@@ -259,6 +274,6 @@ For a release that changes database or configuration shape:
 8. Validate the resulting database against the EF Core runtime model after provisioning/migration.
 9. If a new configuration setting is consumed only at application startup, add it to `ConfigurationRestartDetector` so both Configuration > Settings and `/Upgrade` classify its changes as restart-required.
 
-During prerelease RC3 development, keep database schema and configuration versions at 1 unless an explicitly approved persistent migration requires otherwise; do not add sequential migrations for individual interim builds. The upgrade framework intentionally allows application releases to advance independently from schema/configuration versions when persistent configuration/database shape does not change.
+Database schema 2 adds persisted Reporting API shares through the cumulative 1-to-2 migration. Configuration version is 1. Add future database migrations when persistent storage changes require them. The upgrade framework intentionally allows application releases to advance independently from schema/configuration versions when persistent configuration/database shape does not change.
 
 RC3 feedback changes require no database/configuration migration. Toasts now stay in an open modal, including labelled page-origin notices, and signed-in messages feed the existing application log. Verify the normal log-retention policy and the five-row import preview after deployment; import batch/page limits are unchanged.

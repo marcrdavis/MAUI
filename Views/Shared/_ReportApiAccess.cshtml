@@ -1,0 +1,19 @@
+@* Shared API Access controls for Create and Edit Report dialogs. *@
+<section class="maui-property-card" data-report-api-section>
+    <div class="details-section-heading"><h3>API Access</h3></div>
+    <div class="outbound-report-enabled-toggle">
+        <label class="configuration-switch"><input type="checkbox" aria-label="Enable API access" data-report-api-enabled disabled /><span></span></label>
+        <span>Enable API access</span>
+        <span class="inline-spinner button-spinner" data-report-api-spinner aria-hidden="true"></span>
+    </div>
+    <p class="field-help">Anyone with an active link can retrieve the current report data. New links become active when you save the Report. API access is controlled separately from the email schedule.</p>
+    <div data-report-api-link-fields hidden>
+        <label class="configuration-field full"><span>Report URL</span><input class="text-input" readonly data-report-api-url /></label>
+        <div class="report-api-link-actions">
+            <button type="button" class="secondary-button" data-report-api-copy>Copy Link</button>
+            <button type="button" class="secondary-button" data-report-api-regenerate>Regenerate Link</button>
+        </div>
+        <p class="field-help" data-report-api-last-access></p>
+    </div>
+    <p class="field-help" data-report-api-status role="status"></p>
+</section>

@@ -688,7 +688,10 @@ public sealed class TraditionalTaskEditorService : ITraditionalTaskEditorService
             isEmail ? Read(host, "OAuthScope") : string.Empty,
             isEmail ? Read(host, "OAuthTokenURL") : string.Empty,
             isEmail ? Hosts.HostMailOAuthSettings.Tenant(host ?? new JsonObject()) : string.Empty,
-            Read(host, "DefDLInteg"));
+            Read(host, "DefDLInteg"),
+            TraditionalTaskHostCapabilities.SupportsFileNotifications(normalizedType)
+                ? ReadNullableFlag(host, "UseNotif")
+                : TraditionalTaskHostCapabilities.Get(normalizedType) is not null ? false : null);
     }
 
     private static IReadOnlyList<TraditionalTaskEditorHostOption> BuildHostOptions(

@@ -13,6 +13,7 @@ using MoveItAutomationUI.Services.Reporting;
 using MoveItAutomationUI.Services.Lifecycle;
 using MoveItAutomationUI.Services.Security;
 using MoveItAutomationUI.Services.MoveIt;
+using MoveItAutomationUI.Services.Configuration;
 
 namespace MoveItAutomationUI.Controllers;
 
@@ -28,6 +29,8 @@ public sealed class ReportsController : Controller
     private readonly IMauiSecurityService _security;
     private readonly UiOptions _uiOptions;
     private readonly GridBehaviorOptions _gridBehavior;
+    private readonly IMoveItServerCatalog _servers;
+    private readonly ReportApiSharingService? _apiSharing;
 
     public ReportsController(
         IOutboundReportService reports,
@@ -36,7 +39,9 @@ public sealed class ReportsController : Controller
         IDataAccessCredentialService dataAccessCredentials,
         IMauiSecurityService security,
         IOptionsSnapshot<UiOptions> uiOptions,
-        IOptionsSnapshot<GridBehaviorOptions> gridBehavior)
+        IOptionsSnapshot<GridBehaviorOptions> gridBehavior,
+        IMoveItServerCatalog servers,
+        ReportApiSharingService? apiSharing = null)
     {
         _reports = reports;
         _portability = portability;
@@ -45,6 +50,8 @@ public sealed class ReportsController : Controller
         _security = security;
         _uiOptions = uiOptions.Value;
         _gridBehavior = gridBehavior.Value;
+        _servers = servers;
+        _apiSharing = apiSharing;
     }
 
     [HttpGet]
@@ -69,12 +76,23 @@ public sealed class ReportsController : Controller
         var mineOnly = string.Equals(scope, "mine", StringComparison.OrdinalIgnoreCase);
         var reports = await _reports.ListAsync(actor.Username, actor.IsAdmin && !mineOnly, cancellationToken);
         var emailStatus = _email.GetConfigurationStatus();
-        var missingDataAccessEnvironments = reports
+        var reportEnvironments = reports
             .Select(report => MoveItEnvironmentKey.Normalize(report.EnvironmentKey))
             .Where(environment => !string.IsNullOrWhiteSpace(environment))
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Where(environment => !_dataAccessCredentials.IsEnvironmentConfigured(environment))
             .OrderBy(environment => environment, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        // Resolve from the reloadable catalog on every List request. A retained Report can
+        // outlive its connection; that is different from missing credentials on a known environment.
+        var configuredEnvironments = _servers.GetServers()
+            .Select(MoveItEnvironmentKey.Resolve)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var unconfiguredEnvironments = reportEnvironments
+            .Where(environment => !configuredEnvironments.Contains(environment))
+            .ToArray();
+        var missingDataAccessEnvironments = reportEnvironments
+            .Where(environment => configuredEnvironments.Contains(environment)
+                && !_dataAccessCredentials.IsEnvironmentConfigured(environment))
             .ToArray();
 
         return Json(new
@@ -84,7 +102,8 @@ public sealed class ReportsController : Controller
             {
                 smtpConfigured = emailStatus.IsConfigured,
                 smtpMessage = emailStatus.Message,
-                missingDataAccessEnvironments
+                missingDataAccessEnvironments,
+                unconfiguredEnvironments
             }
         });
     }
@@ -104,7 +123,46 @@ public sealed class ReportsController : Controller
     {
         if (request is null) return BadRequest(new { message = "Report details are required." });
         var actor = CurrentActor();
-        try { return Json(new { success = true, report = await _reports.UpdateAsync(request, actor.Username, actor.IsAdmin, cancellationToken) }); }
+        try
+        {
+            var report = request.ApiAccess is null
+                ? await _reports.UpdateAsync(request, actor.Username, actor.IsAdmin, cancellationToken)
+                : await _apiSharing!.UpdateAsync(request, actor.Username, actor.IsAdmin, cancellationToken);
+            return Json(new { success = true, report });
+        }
+        catch (ReportApiConflictException ex) { return Conflict(new { message = ex.Message }); }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    [HttpGet]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<IActionResult> ApiAccess(string id, CancellationToken cancellationToken)
+    {
+        var actor = CurrentActor();
+        try { return Json(new { apiAccess = await _apiSharing!.GetAsync(id, actor.Username, actor.IsAdmin, cancellationToken) }); }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<IActionResult> PrepareApiLink([FromBody] RegenerateReportApiRequest? request, CancellationToken cancellationToken)
+    {
+        if (request is null) return BadRequest(new { message = "Report identifier is required." });
+        var actor = CurrentActor();
+        try { return Json(new { apiAccess = await _apiSharing!.PrepareLinkAsync(request, actor.Username, actor.IsAdmin, cancellationToken) }); }
+        catch (ReportApiConflictException ex) { return Conflict(new { message = ex.Message }); }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RegenerateApiLink([FromBody] RegenerateReportApiRequest? request, CancellationToken cancellationToken)
+    {
+        if (request is null) return BadRequest(new { message = "Report identifier is required." });
+        var actor = CurrentActor();
+        try { return Json(new { apiAccess = await _apiSharing!.RegenerateAsync(request, actor.Username, actor.IsAdmin, cancellationToken) }); }
+        catch (ReportApiConflictException ex) { return Conflict(new { message = ex.Message }); }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException) { return BadRequest(new { message = ex.Message }); }
     }
 

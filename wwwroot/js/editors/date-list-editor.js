@@ -108,7 +108,7 @@
             const type = String(definition.type || '').toLowerCase(); let control;
             if (['boolean','list'].includes(type)) {
                 control = document.createElement('select');
-                (type === 'boolean' ? ['false','true'] : definition.possibleValues || []).forEach(value => control.add(new Option(type === 'boolean' ? value === 'true' ? 'True' : 'False' : value, value)));
+                (type === 'boolean' ? ['false','true'] : ['', ...(definition.possibleValues || [])]).forEach(value => control.add(new Option(type === 'boolean' ? value === 'true' ? 'True' : 'False' : value, value)));
             } else if (type.includes('multiline')) { control = document.createElement('textarea'); control.rows = 3; }
             else { control = document.createElement('input'); control.type = ['number','numeric'].includes(type) ? 'number' : type === 'date' ? 'date' : 'text'; }
             control.className = 'text-input' + (type.includes('multiline') ? ' textarea-input' : ''); control.value = type === 'boolean' ? String(values[definition.name]).toLowerCase() === 'true' ? 'true' : 'false' : values[definition.name] ?? ''; control.required = !readOnly && Boolean(definition.required);

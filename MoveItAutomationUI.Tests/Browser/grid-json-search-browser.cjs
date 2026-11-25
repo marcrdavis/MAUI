@@ -129,6 +129,33 @@ async function screenshot(name) {
      await evaluate(`type('hosts','Alpha')`);await check(`visible('hosts')`,['1'],'ordinary host search still works after JSON');
      await evaluate(`g('tasks').querySelector('[data-sort-button]').click();type('tasks','');type('hosts','')`);await check(`visible('tasks')`,['1','2','3']);await check(`visible('hosts')`,['1','2','3']);
     }
+    // Exercise collection queries through the real grid in both themes, including
+    // mixed success/failure actions, singleton native shape, empty actions and reports.
+    await evaluate(`window.originalTaskDocs=structuredClone(docs.Task);docs.Task={
+     '1':[{path:['NextActions','NextAction','0','Type'],value:'Email'},{path:['NextActions','NextAction','0','DoIfFailure'],value:0},{path:['NextActions','NextAction','1','Type'],value:'Email'},{path:['NextActions','NextAction','1','DoIfFailure'],value:1}],
+     '2':[{path:['NextActions','NextAction','0','Type'],value:'Email'},{path:['NextActions','NextAction','0','DoIfFailure'],value:0},{path:['NextActions','NextAction','1','Type'],value:'Task'},{path:['NextActions','NextAction','1','DoIfFailure'],value:1}],
+     '3':[]};g('tasks').dispatchEvent(new CustomEvent('maui:json-search-invalidated'));`);
+    for(const theme of ['light','dark']){
+     await evaluate(`document.documentElement.dataset.theme='${theme}';type('tasks','JSON:NONE(NextActions.NextAction[*], Type=Email AND DoIfFailure=1)')`);
+     await until(`visible('tasks').join(',')==='2,3'`,'NONE finds missing failure emails');
+     await check(`g('tasks').querySelector('[data-filtered-count]').textContent`,'2','collection result count');
+     await evaluate(`g('tasks').querySelector('[data-grid-create-report]').click()`);
+     await check(`reportApis.tasks.captureSnapshot().rows.map(row=>row.id)`,['2','3'],'Send Now captures collection-filtered rows');
+     await evaluate(`window.scopeRequestCount=requests.length;type('tasks','JSON:ANY(NextActions.NextAction[*], Type=Email AND DoIfFailure=1)')`);
+     await until(`visible('tasks').join(',')==='1'`,'ANY requires a failure Email in one action');
+     await evaluate(`type('tasks','JSON:NONE(NextActions.NextAction[*], Type=Email AND DoIfFailure=1)');const input=g('tasks').querySelector('[data-column-filter="Name"]');input.value='Beta';input.dispatchEvent(new Event('input',{bubbles:true}));`);
+     await until(`visible('tasks').join(',')==='2'`,'column filters intersect NONE');
+     await evaluate(`g('tasks').querySelector('[data-clear-filters]').click();type('tasks','JSON:NONE(NextActions.NextAction[*], Type=Email AND DoIfFailure=1')`);
+     await check(`visible('tasks')`,[],'invalid collection condition hides rows');
+     await check(`g('tasks').querySelector('[data-pager-summary]').textContent.includes('parenthesis')`,true,'collection validation uses existing pager');
+     await check(`requests.length===scopeRequestCount`,true,'collection changes reuse cached definitions');
+    }
+    await evaluate(`docs.Task['3']=[{path:['NextActions','NextAction','Type'],value:'Email'},{path:['NextActions','NextAction','DoIfFailure'],value:true}];type('tasks','JSON:NONE(NextActions.NextAction[*], Type=Email AND DoIfFailure=1)');g('tasks').dispatchEvent(new CustomEvent('maui:json-search-invalidated'))`);
+    await until(`visible('tasks').join(',')==='2'`,'Refresh invalidates NONE and handles singleton actions');
+    await evaluate(`fail=true;g('tasks').dispatchEvent(new CustomEvent('maui:json-search-invalidated'))`);
+    await until(`g('tasks').querySelector('[data-pager-summary]').textContent.includes('could not be completed')`,'NONE source failure');
+    await check(`visible('tasks')`,[],'failed NONE never reports absent notifications');
+    await evaluate(`fail=false;docs.Task=originalTaskDocs;type('tasks','');g('tasks').dispatchEvent(new CustomEvent('maui:json-search-invalidated'))`);
     await evaluate(`fail=true;type('hosts','JSON:Port=22');g('hosts').dispatchEvent(new CustomEvent('maui:json-search-invalidated'));`);
     await until(`g('hosts').querySelector('[data-pager-summary]').textContent.includes('could not be completed')`,'failure feedback');await check(`visible('hosts')`,[],'failed search cannot imply no-match/partial success');
     await evaluate(`fail=false;g('hosts').dispatchEvent(new CustomEvent('maui:json-search-invalidated'))`);await until(`visible('hosts').join(',')==='1'`,'manual refresh retry');

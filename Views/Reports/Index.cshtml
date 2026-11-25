@@ -22,17 +22,21 @@
         <strong>Outbound email is not ready.</strong> <span data-outbound-report-smtp-warning-text>Saved Reports cannot be delivered until SMTP Configuration is completed.</span>
     </div>
     <div class="inline-alert warning-alert" data-outbound-report-data-access-warning hidden>
-        <strong>Data Access Credentials are missing.</strong> <span data-outbound-report-data-access-warning-text></span>
+        <strong data-outbound-report-data-access-warning-title>Data Access Credentials are missing.</strong> <span data-outbound-report-data-access-warning-text></span>
     </div>
 </div>
 
 <partial name="_DataGrid" model="Model.Grid" />
 
 <div data-reports-page-config
+     data-app-base="@Url.Content("~/")"
      data-list-url="@Url.Action("List", "Reports", new { scope = reportScope })"
      data-report-scope="@reportScope"
      data-history-url="@Url.Action("History", "Reports")"
      data-update-url="@Url.Action("Update", "Reports")"
+     data-api-access-url="@Url.Action("ApiAccess", "Reports")"
+     data-api-prepare-url="@Url.Action("PrepareApiLink", "Reports")"
+     data-api-regenerate-url="@Url.Action("RegenerateApiLink", "Reports")"
      data-edit-view-url="@Url.Action("EditView", "Reports")"
      data-enabled-url="@Url.Action("SetEnabled", "Reports")"
      data-run-url="@Url.Action("RunNow", "Reports")"

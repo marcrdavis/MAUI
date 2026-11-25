@@ -11,6 +11,9 @@
     const updateViewUrl = String(root.dataset.outboundReportUpdateViewUrl || '');
     let dialog;
     let currentApi;
+    let apiAccess;
+    let creating = false;
+    let emailCheck = 0;
     let selectedDates = [];
     let updatingView = false;
 
@@ -66,27 +69,31 @@
         dialog.innerHTML = `
             <div class="settings-card outbound-report-shell">
                 <div class="settings-header">
-                    <div><h2>Create Report</h2><p>Send or schedule the current grid view.</p></div>
+                    <div><h2>Create Report</h2><p>Save the current grid view as a report.</p></div>
                     <button type="button" class="dialog-close" data-report-close aria-label="Close">×</button>
                 </div>
                 <div class="outbound-report-body">
                     <div class="inline-alert warning-alert outbound-report-smtp-warning" data-report-smtp-warning hidden></div>
                     <div class="inline-alert error-alert" data-report-error hidden></div>
-                    <div class="configuration-field-grid two-column">
-                        <label class="configuration-field full"><span>Report Title</span><input class="text-input" maxlength="200" data-report-title /></label>
-                        <label class="configuration-field full"><span>Description <em>optional</em></span><textarea class="text-input outbound-report-description" maxlength="1000" rows="3" data-report-description></textarea></label>
-                        <label class="configuration-field full"><span>Email Recipients</span><input class="text-input" placeholder="user@example.com; team@example.com" data-report-recipients /><small>Separate multiple addresses with commas or semicolons.</small></label>
-                        <label class="configuration-field"><span>Delivery</span><select class="text-input" data-report-delivery><option value="Now">Send Now</option><option value="Once">One Time</option><option value="Recurring">Recurring</option></select></label>
-                        <label class="configuration-field" data-report-time-field hidden><span>Time</span><select class="text-input" data-report-time></select><small>MOVEit server time; 5-minute increments.</small></label>
-                    </div>
-                    <div data-report-once hidden>
-                        <div class="configuration-card-heading"><h3>Delivery Date(s)</h3><p>Add one or more specific dates.</p></div>
-                        <div class="outbound-report-date-entry"><input class="text-input" type="date" data-report-date /><button type="button" class="secondary-button" data-report-add-date>Add Date</button></div>
-                        <div class="outbound-report-date-chips" data-report-date-chips></div>
-                    </div>
-                    <div data-report-recurring hidden>
+                    <section class="maui-property-card">
                         <div class="configuration-field-grid two-column">
-                            <label class="configuration-field"><span>Repeat</span><select class="text-input" data-report-frequency><option value="Daily">Daily</option><option value="Weekly">Weekly</option><option value="Monthly">Monthly</option></select></label>
+                            <label class="configuration-field full"><span>Report Title</span><input class="text-input" maxlength="200" data-report-title /></label>
+                            <label class="configuration-field full"><span>Description <em>optional</em></span><textarea class="text-input outbound-report-description" maxlength="1000" rows="3" data-report-description></textarea></label>
+                        </div>
+                    </section>
+                    <section class="maui-property-card">
+                        <div class="details-section-heading"><h3>Delivery and Schedule</h3></div>
+                        <div class="configuration-field-grid two-column">
+                            <label class="configuration-field full"><span>Delivery</span><select class="text-input" data-report-delivery><option value="None">None</option><option value="Now">Send Now</option><option value="Once">One Time</option><option value="Recurring">Recurring</option></select></label>
+                            <p class="field-help full" data-report-none hidden>No email delivery or schedule.</p>
+                            <label class="configuration-field full" data-report-recipients-field><span>Email Recipients</span><input class="text-input" placeholder="user@example.com; team@example.com" data-report-recipients /><small>Separate multiple addresses with commas or semicolons.</small></label>
+                            <label class="configuration-field" data-report-time-field hidden><span>Time</span><select class="text-input" data-report-time></select><small>MOVEit server time; 5-minute increments.</small></label>
+                            <label class="configuration-field" data-report-recurring hidden><span>Repeat</span><select class="text-input" data-report-frequency><option value="Daily">Daily</option><option value="Weekly">Weekly</option><option value="Monthly">Monthly</option></select></label>
+                        </div>
+                        <div data-report-once hidden>
+                            <div class="configuration-card-heading"><h3>Delivery Date(s)</h3><p>Add one or more specific dates.</p></div>
+                            <div class="outbound-report-date-entry"><input class="text-input" type="date" data-report-date /><button type="button" class="secondary-button" data-report-add-date>Add Date</button></div>
+                            <div class="outbound-report-date-chips" data-report-date-chips></div>
                         </div>
                         <div data-report-weekly hidden>
                             <div class="configuration-card-heading"><h3>Days of Week</h3><p>Select one or more days.</p></div>
@@ -96,7 +103,7 @@
                             <div class="configuration-card-heading"><h3>Days of Month</h3><p>Select one or more calendar days.</p></div>
                             <div class="outbound-report-monthday-picker" data-report-monthdays></div>
                         </div>
-                    </div>
+                    </section>
                     <div class="configuration-security-note">The report uses the grid's current visible columns, filters, search, ordering, and page context. Scheduled reports regenerate fresh data when they run.</div>
                 </div>
                 <div class="settings-footer">
@@ -104,7 +111,13 @@
                     <button type="button" class="primary-button" data-report-submit>Send Report</button>
                 </div>
             </div>`;
+        const apiTemplate = document.querySelector('[data-report-api-template]');
+        if (apiTemplate) dialog.querySelector('.configuration-security-note').before(apiTemplate.content.cloneNode(true));
         document.body.appendChild(dialog);
+        apiAccess = window.MauiReportApiAccess?.create(dialog, { dataset: {
+            appBase: root.dataset.appBaseUrl || '/', apiPrepareUrl: root.dataset.outboundReportApiPrepareUrl || ''
+        } }, true);
+        dialog.addEventListener('cancel', event => { if (creating) event.preventDefault(); });
         populateFiveMinuteTimes(dialog.querySelector('[data-report-time]'));
 
         const weekdayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -135,8 +148,8 @@
             monthdays.appendChild(label);
         }
 
-        dialog.querySelectorAll('[data-report-close],[data-report-cancel]').forEach(button => button.addEventListener('click', () => dialog.close()));
-        dialog.querySelector('[data-report-delivery]').addEventListener('change', syncScheduleUi);
+        dialog.querySelectorAll('[data-report-close],[data-report-cancel]').forEach(button => button.addEventListener('click', () => { if (!creating) dialog.close(); }));
+        dialog.querySelector('[data-report-delivery]').addEventListener('change', () => { syncScheduleUi(); refreshEmailStatus(); });
         dialog.querySelector('[data-report-frequency]').addEventListener('change', () => {
             syncScheduleUi();
             if (dialog.querySelector('[data-report-delivery]').value === 'Recurring' &&
@@ -188,7 +201,10 @@
     function syncScheduleUi() {
         const mode = dialog.querySelector('[data-report-delivery]').value;
         const frequency = dialog.querySelector('[data-report-frequency]').value;
-        dialog.querySelector('[data-report-time-field]').hidden = mode === 'Now';
+        dialog.querySelector('[data-report-none]').hidden = mode !== 'None';
+        dialog.querySelector('[data-report-recipients-field]').hidden = mode === 'None';
+        dialog.querySelector('[data-report-time-field]').hidden = mode === 'Now' || mode === 'None';
+        if (mode === 'None') dialog.querySelector('[data-report-smtp-warning]').hidden = true;
         dialog.querySelector('[data-report-once]').hidden = mode !== 'Once';
         dialog.querySelector('[data-report-recurring]').hidden = mode !== 'Recurring';
         dialog.querySelector('[data-report-weekly]').hidden = mode !== 'Recurring' || frequency !== 'Weekly';
@@ -198,8 +214,10 @@
 
     async function refreshEmailStatus() {
         const warning = dialog?.querySelector('[data-report-smtp-warning]');
+        const current = ++emailCheck;
         if (!warning) return;
         warning.hidden = true;
+        if (dialog.querySelector('[data-report-delivery]').value === 'None') return;
         warning.textContent = '';
         if (!emailStatusUrl) {
             warning.textContent = 'Unable to verify outbound email configuration. Scheduled reports can still be saved, but delivery may be unavailable.';
@@ -208,10 +226,11 @@
         }
         try {
             const status = await getJson(emailStatusUrl);
-            if (status?.configured) return;
+            if (current !== emailCheck || dialog.querySelector('[data-report-delivery]').value === 'None' || status?.configured) return;
             warning.textContent = 'SMTP has not been configured. You can still save a scheduled report, but it cannot be delivered until SMTP Configuration is completed.';
             warning.hidden = false;
         } catch (ex) {
+            if (current !== emailCheck || dialog.querySelector('[data-report-delivery]').value === 'None') return;
             warning.textContent = ex?.message || 'Unable to verify outbound email configuration. Scheduled reports can still be saved, but delivery may be unavailable.';
             warning.hidden = false;
         }
@@ -219,6 +238,8 @@
 
     function reset(api) {
         currentApi = api;
+        emailCheck++;
+        apiAccess?.open();
         selectedDates = [];
         dialog.querySelector('[data-report-title]').value = '';
         dialog.querySelector('[data-report-description]').value = '';
@@ -245,7 +266,7 @@
     function buildSchedule() {
         const deliveryMode = dialog.querySelector('[data-report-delivery]').value;
         const schedule = { deliveryMode };
-        if (deliveryMode === 'Now') return schedule;
+        if (deliveryMode === 'Now' || deliveryMode === 'None') return schedule;
         schedule.timeOfDay = dialog.querySelector('[data-report-time]').value;
         if (deliveryMode === 'Once') {
             const pendingDate = String(dialog.querySelector('[data-report-date]')?.value || '');
@@ -260,11 +281,11 @@
     }
 
     async function submit() {
+        if (creating || (apiAccess && !apiAccess.ready())) return;
         const error = dialog.querySelector('[data-report-error]');
-        const button = dialog.querySelector('[data-report-submit]');
         error.hidden = true;
         const schedule = buildSchedule();
-        if (schedule.deliveryMode !== 'Now' && !isFiveMinuteTime(schedule.timeOfDay)) {
+        if (['Once', 'Recurring'].includes(schedule.deliveryMode) && !isFiveMinuteTime(schedule.timeOfDay)) {
             error.textContent = 'Report delivery times must use 5-minute increments (00, 05, 10, ... 55).';
             error.hidden = false;
             return;
@@ -275,13 +296,17 @@
             gridKey: currentApi?.gridKey || '',
             title: dialog.querySelector('[data-report-title]').value,
             description: dialog.querySelector('[data-report-description]').value,
-            recipients: dialog.querySelector('[data-report-recipients]').value,
+            recipients: schedule.deliveryMode === 'None' ? '' : dialog.querySelector('[data-report-recipients]').value,
+            apiAccess: apiAccess?.state(),
             viewState: currentApi?.captureViewState?.(),
             sourceContext: currentApi?.captureSourceContext?.(),
             schedule,
             snapshot: schedule.deliveryMode === 'Now' ? currentApi?.captureSnapshot?.() : null
         };
-        button.disabled = true;
+        creating = true;
+        const controls = [...dialog.querySelectorAll('input, select, textarea, button')];
+        const disabled = controls.map(control => control.disabled);
+        controls.forEach(control => { control.disabled = true; });
         try {
             const result = await postJson(createUrl, payload);
             dialog.close();
@@ -293,11 +318,13 @@
             error.textContent = ex?.message || 'The report could not be processed.';
             error.hidden = false;
         } finally {
-            button.disabled = false;
+            creating = false;
+            controls.forEach((control, index) => { control.disabled = disabled[index]; });
         }
     }
 
     function openCreate(api) {
+        if (creating) return;
         if (!api || !createUrl) {
             window.mauiShowToast?.('Report creation is unavailable.', 'error');
             return;

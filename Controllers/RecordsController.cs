@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using MoveItAutomationUI.Models;
 using MoveItAutomationUI.Services.MoveIt;
 using MoveItAutomationUI.Services.Lifecycle;
+using MoveItAutomationUI.Services.Metadata;
 
 namespace MoveItAutomationUI.Controllers;
 
@@ -24,6 +25,9 @@ public sealed class RecordsController : Controller
     private readonly GridBehaviorOptions _gridBehavior;
     private readonly ReportBehaviorOptions _reportBehavior;
     private readonly ILogger<RecordsController> _logger;
+    private readonly IMetadataRepository? _metadata;
+    private readonly IMoveItSessionService? _sessions;
+    private readonly MetadataUiOptions _metadataOptions;
 
     // Purpose: Initializes the Records controller with the MOVEit report APIs and UI behavior it requires.
     public RecordsController(
@@ -31,13 +35,19 @@ public sealed class RecordsController : Controller
         IOptionsSnapshot<UiOptions> uiOptions,
         IOptionsSnapshot<GridBehaviorOptions> gridBehavior,
         IOptionsSnapshot<ReportBehaviorOptions> reportBehavior,
-        ILogger<RecordsController> logger)
+        ILogger<RecordsController> logger,
+        IMetadataRepository? metadata = null,
+        IMoveItSessionService? sessions = null,
+        IOptionsSnapshot<MetadataUiOptions>? metadataOptions = null)
     {
         _reportService = reportService;
         _uiOptions = uiOptions.Value;
         _gridBehavior = gridBehavior.Value;
         _reportBehavior = reportBehavior.Value;
         _logger = logger;
+        _metadata = metadata;
+        _sessions = sessions;
+        _metadataOptions = metadataOptions?.Value ?? new MetadataUiOptions();
     }
 
     // Purpose: Renders the Task Run Records page shell. The first record batch is loaded asynchronously
@@ -155,7 +165,8 @@ public sealed class RecordsController : Controller
             try
             {
                 var preset = await _reportService.GetTaskRunDashboardViewAsync(normalizedDashboardView, requireResourceGroups, cancellationToken);
-                var rows = BuildTaskRunGrid(preset.Items, preset.Items.Count, false, preset.MaximumRows).Rows;
+                var records = await WithCurrentTaskTagsAsync(preset.Items, cancellationToken);
+                var rows = BuildTaskRunGrid(records, records.Count, false, preset.MaximumRows).Rows;
                 return Json(new
                 {
                     rows = rows.Select(ToClientGridRow),
@@ -184,7 +195,8 @@ public sealed class RecordsController : Controller
             async remaining =>
             {
                 var batch = await _reportService.GetTaskRunsAsync(taskId, behavior.BatchSize, cursor, remaining, requireResourceGroups, cancellationToken);
-                return (BuildTaskRunGrid(batch.Items, BuildTotalCount(offset, batch.Items.Count, batch.HasMore), batch.HasMore, behavior.BatchSize).Rows, batch.HasMore && !string.IsNullOrWhiteSpace(batch.NextCursor), batch.NextCursor);
+                var records = await WithCurrentTaskTagsAsync(batch.Items, cancellationToken);
+                return (BuildTaskRunGrid(records, BuildTotalCount(offset, records.Count, batch.HasMore), batch.HasMore, behavior.BatchSize).Rows, batch.HasMore && !string.IsNullOrWhiteSpace(batch.NextCursor), batch.NextCursor);
             });
     }
 
@@ -355,6 +367,30 @@ public sealed class RecordsController : Controller
         return candidate.Length > 80 ? candidate[..80] : candidate;
     }
 
+    // Current task Tags are MAUI metadata, not a historical value in MOVEit run logs.
+    // Read once per batch for distinct Task IDs, scoped to the active/background environment.
+    private async Task<IReadOnlyList<TaskRunReportRecord>> WithCurrentTaskTagsAsync(
+        IReadOnlyList<TaskRunReportRecord> records, CancellationToken cancellationToken)
+    {
+        var field = _metadataOptions.Tasks.Fields.FirstOrDefault(candidate => !string.IsNullOrWhiteSpace(candidate.Name)
+            && string.Equals(candidate.Type, "Tags", StringComparison.OrdinalIgnoreCase));
+        if (records.Count == 0 || field is null) return records;
+        var ids = records.Select(record => record.TaskId).Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        if (ids.Length == 0) return records;
+        var session = _sessions?.Get() ?? throw new MoveItAuthenticationException("MOVEit session expired. Please sign in again.");
+        var metadata = _metadata ?? throw new InvalidOperationException("Task Tags metadata is unavailable.");
+        IReadOnlyDictionary<string, ObjectMetadataSnapshot> values;
+        try { values = await metadata.GetObjectMetadataBatchAsync(session.GetEnvironmentKey(), "Task", ids, cancellationToken); }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        { throw new InvalidOperationException("Unable to load current task Tags metadata.", ex); }
+        return records.Select(record => record with
+        {
+            Tags = values.TryGetValue(record.TaskId, out var snapshot)
+                && snapshot.Values.TryGetValue(field.Name.Trim(), out var tags) ? tags : string.Empty
+        }).ToArray();
+    }
+
     // Purpose: Builds task run grid.
     private GridViewModel BuildTaskRunGrid(IReadOnlyList<TaskRunReportRecord> records, int totalCount, bool hasMore, int batchSize)
     {
@@ -365,6 +401,7 @@ public sealed class RecordsController : Controller
             new() { Key="TaskID", Label="Task ID" }, new() { Key="EndTime", Label="End Time", Type="datetime" }, new() { Key="ScheduledTime", Label="Scheduled Time", Type="datetime" }, new() { Key="RunID", Label="Run ID", Type="number" },
             new() { Key="Node", Label="Node", Type="number" }, new() { Key="NominalStart", Label="Nominal Start" }, new() { Key="StatusCode", Label="Status Code", Type="number" }, new() { Key="StatusMessage", Label="Status Message" }, new() { Key="LogStamp", Label="Log Time", Type="datetime" },
             new() { Key="Group", Label="Resource Group" },
+            new() { Key="Tags", Label="Tags", Type="tags" },
             new() { Key="RecordType", Label="Record Type" }, new() { Key="QueryType", Label="Query Type" }
         };
         var rows = records.Select(record => new GridRow
@@ -375,13 +412,13 @@ public sealed class RecordsController : Controller
                 ["StartTime"]=FormatDate(record.StartTime), ["TaskName"]=record.TaskName, ["Duration"]=FormatDuration(record.DurationSeconds), ["Status"]=record.Status, ["FilesSent"]=record.FilesSent?.ToString(CultureInfo.InvariantCulture)??string.Empty,
                 ["TotalBytesSent"]=FormatByteSize(record.TotalBytesSent), ["StartedBy"]=record.StartedBy, ["TaskID"]=record.TaskId, ["EndTime"]=FormatDate(record.EndTime), ["ScheduledTime"]=FormatDate(record.ScheduledTime), ["RunID"]=record.RunId,
                 ["Node"]=record.Node, ["NominalStart"]=record.NominalStart, ["StatusCode"]=record.StatusCode, ["StatusMessage"]=record.StatusMessage, ["LogStamp"]=FormatDate(record.LogStamp), ["RecordType"]=record.RecordType, ["QueryType"]=record.QueryType,
-                ["Group"]=record.Group
+                ["Group"]=record.Group, ["Tags"]=record.Tags
             },
             RawValues = new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["Selectable"]="0", ["TaskID"]=record.TaskId, ["StartTime"]=record.StartTime?.ToString("O")??string.Empty, ["Duration"]=record.DurationSeconds?.ToString(CultureInfo.InvariantCulture)??string.Empty,
                 ["FilesSent"]=record.FilesSent?.ToString(CultureInfo.InvariantCulture)??string.Empty, ["TotalBytesSent"]=record.TotalBytesSent?.ToString("R",CultureInfo.InvariantCulture)??string.Empty, ["EndTime"]=record.EndTime?.ToString("O")??string.Empty,
-                ["ScheduledTime"]=record.ScheduledTime?.ToString("O")??string.Empty, ["LogStamp"]=record.LogStamp?.ToString("O")??string.Empty
+                ["ScheduledTime"]=record.ScheduledTime?.ToString("O")??string.Empty, ["LogStamp"]=record.LogStamp?.ToString("O")??string.Empty, ["Tags"]=record.Tags
             }
         }).ToArray();
         return BuildRecordGrid("taskruns", "Task Runs", "Search task runs", columns, rows,
@@ -476,12 +513,13 @@ public sealed class RecordsController : Controller
             AvailableColumns = columns.Select(column => column.Key).ToList(),
             SearchColumns = fallbackSearchColumns.ToList()
         };
-        if (gridId == "taskruns" && !options.AvailableColumns.Contains("Group", StringComparer.OrdinalIgnoreCase))
+        if (gridId == "taskruns" && (!options.AvailableColumns.Contains("Group", StringComparer.OrdinalIgnoreCase)
+            || !options.AvailableColumns.Contains("Tags", StringComparer.OrdinalIgnoreCase)))
         {
             options = new GridOptions
             {
                 DefaultColumns = options.DefaultColumns,
-                AvailableColumns = options.AvailableColumns.Append("Group").ToList(),
+                AvailableColumns = options.AvailableColumns.Concat(new[] { "Group", "Tags" }).Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
                 SearchColumns = options.SearchColumns,
                 AddActions = options.AddActions,
                 BulkActions = options.BulkActions

@@ -237,34 +237,7 @@ public sealed class OutboundReportEmailService : IOutboundReportEmailService
     }
 
     private static string BuildCsv(string title, string description, OutboundReportData data)
-    {
-        var lines = new List<string>
-        {
-            EscapeCsv(ProtectCsvCell(title, "text")),
-            EscapeCsv(ProtectCsvCell(description, "text")),
-            EscapeCsv($"Generated: {DateTimeOffset.Now:O}"),
-            string.Empty,
-            string.Join(',', data.Columns.Select(column => EscapeCsv(ProtectCsvCell(column.Label, "text"))))
-        };
-        foreach (var row in data.Rows)
-        {
-            lines.Add(string.Join(',', data.Columns.Select(column =>
-            {
-                var value = row.Values.TryGetValue(column.Key, out var text) ? text ?? string.Empty : string.Empty;
-                return EscapeCsv(ProtectCsvCell(value, column.Type));
-            })));
-        }
-        return string.Join("\r\n", lines);
-    }
-
-    private static string ProtectCsvCell(string value, string type)
-        => !type.Equals("number", StringComparison.OrdinalIgnoreCase) && value.Length > 0 && "=+-@".Contains(value[0]) ? $"'{value}" : value;
-
-    private static string EscapeCsv(string value)
-    {
-        value ??= string.Empty;
-        return value.IndexOfAny(new[] { ',', '"', '\r', '\n' }) >= 0 ? $"\"{value.Replace("\"", "\"\"")}\"" : value;
-    }
+        => ReportCsvWriter.WriteEmail(title, description, data);
 
     private static string BuildAttachmentName(string title)
     {

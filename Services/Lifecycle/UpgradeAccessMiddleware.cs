@@ -48,6 +48,11 @@ public sealed class UpgradeAccessMiddleware
         var isSessionExpiredPath = MauiLifecyclePaths.IsSessionExpired(context.Request.Path)
             || IsControllerAction(endpointController, endpointAction, "Account", "SessionExpired");
         var hasUpgradeClaim = MauiUpgradeAuthorization.HasUpgradeClaim(context.User);
+        if (upgradeState.IsPending && MoveItAutomationUI.Services.Reporting.ReportApiRoutes.IsCsvRequest(context.Request.Path))
+        {
+            await MoveItAutomationUI.Services.Reporting.ReportApiRoutes.UnavailableAsync(context);
+            return;
+        }
         var hasCurrentUpgradeAuthorization = MauiUpgradeAuthorization.HasCurrentAuthorization(context.User, upgradeState.TargetVersion);
         var isRestartStatus = IsControllerAction(endpointController, endpointAction, "Upgrade", "RestartStatus");
 

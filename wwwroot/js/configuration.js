@@ -72,6 +72,7 @@
         categoryButtons.forEach(button => button.classList.toggle('active', button.dataset.configSectionTarget === key));
         sections.forEach(section => section.classList.toggle('active', section.dataset.configSection === key));
         if (openingBackup) void window.MauiConfigurationOperations?.refreshBackups?.();
+        window.MauiConfigurationOperations?.setBackupSectionActive?.(key === 'backup');
         if (key === 'security') window.MauiLocalGroupSettings?.open();
     }
 
@@ -166,8 +167,45 @@
         });
     }
 
+    // Keep boundary controls and accessible field labels in sync with each resource's pending order.
+    function refreshMetadataOrderButtons() {
+        workspace.querySelectorAll('[data-metadata-resource]').forEach(panel => {
+            const rows = [...panel.querySelectorAll('[data-metadata-row]')];
+            rows.forEach((row, index) => {
+                const label = String(row.querySelector('[data-metadata-field="label"]')?.value || '').trim()
+                    || String(row.querySelector('[data-metadata-field="name"]')?.value || '').trim() || 'metadata field';
+                const up = row.querySelector('[data-metadata-up]');
+                const down = row.querySelector('[data-metadata-down]');
+                if (up) {
+                    up.disabled = saving || index === 0;
+                    up.setAttribute('aria-label', `Move ${label} up`);
+                }
+                if (down) {
+                    down.disabled = saving || index === rows.length - 1;
+                    down.setAttribute('aria-label', `Move ${label} down`);
+                }
+            });
+        });
+    }
+
+    // Move the existing row so values, managed-field protection and DOM-order serialization stay together.
+    function moveMetadataRow(row, direction) {
+        if (saving) return;
+        const adjacent = direction < 0 ? row.previousElementSibling : row.nextElementSibling;
+        if (!adjacent?.matches('[data-metadata-row]')) return;
+        if (direction < 0) row.parentElement.insertBefore(row, adjacent);
+        else row.parentElement.insertBefore(adjacent, row);
+        refreshDirtyState();
+        const button = row.querySelector(direction < 0 ? '[data-metadata-up]' : '[data-metadata-down]');
+        const fallback = row.querySelector(direction < 0 ? '[data-metadata-down]' : '[data-metadata-up]');
+        (button?.disabled ? fallback : button)?.focus();
+    }
+
     // Purpose: Wires metadata row.
     function wireMetadataRow(row) {
+        // Managed fields may move even though their definitions and removal remain locked.
+        row.querySelector('[data-metadata-up]')?.addEventListener('click', () => moveMetadataRow(row, -1));
+        row.querySelector('[data-metadata-down]')?.addEventListener('click', () => moveMetadataRow(row, 1));
         const resourcePanel = row.closest('[data-metadata-resource]');
         const allowedTypes = new Set(String(resourcePanel?.dataset.metadataAllowedTypes || '')
             .split(',')
@@ -639,6 +677,7 @@
 
     // Purpose: Updates the Configuration page dirty/restart state after edits.
     function refreshDirtyState() {
+        refreshMetadataOrderButtons();
         syncCopyAvailability();
         const keepAliveInterval = workspace.querySelector('[data-setting="keepAliveIntervalMinutes"]');
         if (keepAliveInterval) keepAliveInterval.disabled = !checked('keepAliveEnabled');
@@ -805,7 +844,12 @@
             return;
         }
 
+        const metadataControls = [...workspace.querySelectorAll('[data-metadata-field], [data-remove-metadata-field], [data-add-metadata-field]')]
+            .map(control => ({ control, disabled: control.disabled }));
         saving = true;
+        // A definition edited during the request must not be mistaken for the saved baseline.
+        metadataControls.forEach(({ control }) => { control.disabled = true; });
+        refreshMetadataOrderButtons();
         window.MauiSshAlgorithmSettings?.setBusy(true);
         saveBar?.classList.add('is-saving');
         if (saveButton) saveButton.disabled = true;
@@ -868,6 +912,8 @@
             if (saveState) saveState.textContent = 'Save failed';
         } finally {
             saving = false;
+            metadataControls.forEach(({ control, disabled }) => { control.disabled = disabled; });
+            refreshMetadataOrderButtons();
             window.MauiSshAlgorithmSettings?.setBusy(false);
             saveBar?.classList.remove('is-saving');
             window.setTimeout(refreshDirtyState, 0);

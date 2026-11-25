@@ -39,24 +39,115 @@
             return operator==='<'?actualNumber<expectedNumber:operator==='<='?actualNumber<=expectedNumber:operator==='>'?actualNumber>expectedNumber:actualNumber>=expectedNumber;
         };
     }
-    function compileTaskSearch(input) {
-        const query = input.trim();
-        // Skip quoted strings and treat a join as syntax only between comparisons.
-        const joins = [...query.matchAll(/"(?:[^"\\]|\\[\s\S])*"|\s+(AND|OR)(?=\s)/gi)].filter(match => match[1]);
+    function collectionEnd(query, opening) {
+        let depth = 1, quoted = false;
+        for (let i = opening + 1; i < query.length; i++) {
+            const character = query[i];
+            if (quoted && character === '\\') { i++; continue; }
+            if (character === '"') { quoted = !quoted; continue; }
+            if (quoted) continue;
+            if (character === '(') depth++;
+            if (character === ')' && --depth === 0) return i + 1;
+        }
+        throw new Error('Close the ANY or NONE condition with a parenthesis.');
+    }
+    function collectionCalls(query) {
+        const calls = [], tokens = /"(?:[^"\\]|\\[\s\S])*"|\b(ANY|NONE)\s*\(/gi;
+        let token;
+        while ((token = tokens.exec(query))) {
+            if (!token[1] || token.index !== 0 && !/\s+(?:AND|OR)\s+$/i.test(query.slice(0, token.index))) continue;
+            const end = collectionEnd(query, tokens.lastIndex - 1);
+            calls.push({ start: token.index, end });
+            tokens.lastIndex = end;
+        }
+        return calls;
+    }
+    function collectionPath(selector) {
+        // Parse path segments without evaluating code. A wildcard consumes one array
+        // index, or no index for MOVEit's single-object collection representation.
+        const tokens = [], pattern = /(?:^|\.)([A-Za-z_$][\w$]*)|\[\s*(\*|\d+|"(?:[^"\\]|\\[\s\S])*")\s*\]/g;
+        let offset = 0, token;
+        while ((token = pattern.exec(selector))) {
+            if (token.index !== offset) break;
+            const part = token[1] ?? token[2];
+            tokens.push(token[1] ? part : part === '*' ? null : part.startsWith('"') ? JSON.parse(part) : part);
+            offset = pattern.lastIndex;
+        }
+        if (!tokens.length || offset !== selector.length) throw new Error('Enter a collection path, for example NextActions.NextAction[*].');
+        if (tokens[0]?.toLowerCase() === 'task') tokens.shift();
+        if (!tokens.length) throw new Error('Select a collection inside the Task.');
+        if (tokens.at(-1) !== null) tokens.push(null);
+        return tokens;
+    }
+    function compileCollection(query) {
+        const call = query.match(/^(ANY|NONE)\s*\(/i), opening = call[0].length - 1;
+        const end = collectionEnd(query, opening);
+        if (query.slice(end).trim()) throw new Error('Join ANY or NONE conditions with AND or OR.');
+        let comma = -1, quoted = false, brackets = 0;
+        for (let i = opening + 1; i < end - 1; i++) {
+            const character = query[i];
+            if (quoted && character === '\\') { i++; continue; }
+            if (character === '"') { quoted = !quoted; continue; }
+            if (quoted) continue;
+            if (character === '[') brackets++;
+            if (character === ']') brackets--;
+            if (character === ',' && brackets === 0) { comma = i; break; }
+        }
+        if (comma < 0) throw new Error('Separate the collection and its conditions with a comma.');
+        const selector = collectionPath(query.slice(opening + 1, comma).trim());
+        const condition = query.slice(comma + 1, end - 1).trim();
+        if (!condition) throw new Error('Enter an element/value comparison inside ANY or NONE.');
+        const matchesItem = compileTaskSearch(condition, true), none = call[1].toUpperCase() === 'NONE';
+        return leaves => {
+            const items = new Map();
+            for (const leaf of leaves) {
+                const path = leaf.path;
+                if (!Array.isArray(path)) continue;
+                let position = 0, matched = true;
+                for (const token of selector) {
+                    if (token === null) { if (/^\d+$/.test(path[position] ?? '')) position++; }
+                    else if (path[position]?.toLowerCase() === token.toLowerCase()) position++;
+                    else { matched = false; break; }
+                }
+                if (!matched || position >= path.length) continue;
+                const key = JSON.stringify(path.slice(0, position)), relative = path.slice(position);
+                if (!items.has(key)) items.set(key, []);
+                items.get(key).push({ ...leaf, path: relative, pathText: pathText(relative) });
+            }
+            const any = [...items.values()].some(matchesItem);
+            return none ? !any : any;
+        };
+    }
+    function compileTaskSearch(input, withinCollection = false) {
+        const query = input.trim(), calls = collectionCalls(query);
+        if (withinCollection && calls.length) throw new Error('Use comparisons inside ANY or NONE; combine collection conditions outside the function.');
+        if (withinCollection && [...query.matchAll(/"(?:[^"\\]|\\[\s\S])*"|\s+(AND|OR)$/gi)].some(match => match[1]))
+            throw new Error('Enter a comparison after AND or OR.');
+        // Preserve existing AND/OR precedence and literal-value handling. Joins
+        // inside a collection condition belong to that item, not to the Task.
+        const joins = [...query.matchAll(/"(?:[^"\\]|\\[\s\S])*"|\s+(AND|OR)(?=\s)/gi)]
+            .filter(match => match[1] && !calls.some(call => match.index >= call.start && match.index < call.end));
+        const isClause = text => comparisonPattern.test(text) || /^(ANY|NONE)\s*\(/i.test(text);
+        const compileClause = text => {
+            if (/^(ANY|NONE)\s*\(/i.test(text)) return compileCollection(text);
+            if (withinCollection && !comparisonPattern.test(text)) throw new Error('Use element/value comparisons inside ANY or NONE.');
+            const matchesLeaf = compileTreeSearch(text);
+            return leaves => leaves.some(leaf => matchesLeaf(leaf, leaf.value));
+        };
         const alternatives = [[]];
         let start = 0;
         for (const [index, join] of joins.entries()) {
             const after = join.index + join[0].length;
             const next = query.slice(after, joins[index + 1]?.index).trim();
             const clause = query.slice(start, join.index).trim();
-            if (!comparisonPattern.test(next) || !comparisonPattern.test(clause)) continue;
-            alternatives.at(-1).push(compileTreeSearch(clause));
+            if (!isClause(next) || !isClause(clause)) continue;
+            alternatives.at(-1).push(compileClause(clause));
             if (join[1].toUpperCase() === 'OR') alternatives.push([]);
             start = after;
         }
-        alternatives.at(-1).push(compileTreeSearch(query.slice(start)));
+        alternatives.at(-1).push(compileClause(query.slice(start).trim()));
         // Each AND clause can match a different leaf of the same task.
-        return leaves => alternatives.some(group => group.every(matchesLeaf => leaves.some(leaf => matchesLeaf(leaf, leaf.value))));
+        return leaves => alternatives.some(group => group.every(matchesDocument => matchesDocument(leaves)));
     }
     const pathText = (path, root = 'Task') => root + path.map(part => /^\d+$/.test(part) ? '[' + part + ']' : /^[A-Za-z_$][\w$]*$/.test(part) ? '.' + part : '[' + JSON.stringify(part) + ']').join('');
     window.MauiJsonSearch = { pathPattern, compileTreeSearch, compileTaskSearch, pathText };

@@ -65,6 +65,19 @@ test('All uses the actual count at the end of a short source', async () => {
     assert.equal(latest().hasMore, false);
 });
 
+test('Task tags survive append and Fetch All, and refresh uses the newly loaded values', async () => {
+    const source = history(6).map(row => ({ ...row, values: { ...row.values, Tags: 'Operations; Finance' } }));
+    const { state, batches, latest } = fixture(source);
+    await batches.refreshNewest();
+    await batches.fetchOlder(false);
+    await batches.fetchOlder(true);
+    assert.equal(latest().rows.length, 6);
+    assert.ok(latest().rows.every(row => row.values.Tags === 'Operations; Finance'));
+    state.source = source.map(row => ({ ...row, values: { ...row.values, Tags: 'Updated' } }));
+    await batches.refreshAllLoaded();
+    assert.ok(latest().rows.every(row => row.values.Tags === 'Updated'));
+});
+
 test('All keeps completed pages and resumes from the failed cursor', async () => {
     const { state, batches, latest, ids } = fixture(history(7));
     await batches.refreshNewest();

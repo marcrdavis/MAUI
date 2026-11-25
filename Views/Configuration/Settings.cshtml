@@ -602,7 +602,7 @@
                 <div class="configuration-card-heading row-heading">
                     <div>
                         <h3>Available Backups</h3>
-                        <p>Completed and partial backup folders under <code>Data\Backups</code>. Only completed, validated backups can be restored.</p>
+                        <p>Backups under <code>Data\Backups</code>, including active and interrupted runs. This list refreshes automatically while this section is visible. Only completed, validated backups can be restored.</p>
                     </div>
                     <button type="button" class="secondary-button" data-backup-refresh>Refresh</button>
                 </div>
@@ -1096,9 +1096,21 @@
             <div class="inline-alert warning-alert" data-backup-restore-sql-warning hidden>
                 <strong>SQL Server metadata will not be restored.</strong> The SQL Server connection settings from this backup will be restored in <code>appsettings.json</code>, but the SQL Server database itself is unchanged.
             </div>
-            <div class="backup-restore-environments">
+            <fieldset class="new-task-type-fieldset task-import-mode-fieldset">
+                <legend>Restore Scope</legend>
+                <label class="new-task-type-card">
+                    <input type="radio" name="backupRestoreScope" value="MauiOnly" data-backup-restore-scope checked />
+                    <span class="new-task-type-copy"><strong>MAUI only</strong><span>Restore appsettings.json and, for SQLite backups, the MAUI database. MOVEit Automation configuration is unchanged.</span></span>
+                </label>
+                <label class="new-task-type-card">
+                    <input type="radio" name="backupRestoreScope" value="MauiAndMoveIt" data-backup-restore-scope />
+                    <span class="new-task-type-copy"><strong>MAUI and selected MOVEit configurations</strong><span>Restore MAUI and the MOVEit Automation environments you select below.</span></span>
+                </label>
+            </fieldset>
+            <p class="field-help" data-backup-restore-no-moveit hidden>No MOVEit Automation configurations are included in this backup. Only MAUI can be restored.</p>
+            <div class="backup-restore-environments" data-backup-restore-moveit-section hidden>
                 <strong id="backup-restore-environments-title">Restore MOVEit Automation configurations</strong>
-                <p class="field-help">Select the configurations to restore from this backup. All are off by default. Each uses its Server-Key-protected export. Leave all unchecked to restore MAUI only.</p>
+                <p class="field-help">Select at least one environment to restore. Only checked environments are restored, using their Server-Key-protected exports.</p>
                 <div class="backup-restore-environment-options" data-backup-restore-moveit-options role="group" aria-labelledby="backup-restore-environments-title"></div>
                 <p class="field-help" data-backup-restore-multi-warning hidden>Restoring multiple MOVEit environments is not atomic. If a later restore fails, an earlier environment may already have been restored.</p>
             </div>
@@ -1278,7 +1290,11 @@
         <label class="configuration-metadata-control"><span>Type</span><select class="text-input" data-metadata-field="type"><option>String</option><option>MultilineString</option><option>Email</option><option>List</option><option>Boolean</option><option>Numeric</option><option>Date</option></select></label>
         <label class="configuration-metadata-control"><span>Possible Values</span><input class="text-input" data-metadata-field="possibleValues" /></label>
         <label class="configuration-required-check configuration-metadata-required"><span>Required</span><input type="checkbox" data-metadata-field="required" /></label>
-        <button type="button" class="configuration-remove-button configuration-metadata-remove" data-remove-metadata-field>Remove</button>
+        <div class="configuration-metadata-actions">
+            <button type="button" class="secondary-button configuration-metadata-order-button" data-metadata-up title="Move up" aria-label="Move metadata field up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 19V5M5 12l7-7 7 7" /></svg></button>
+            <button type="button" class="secondary-button configuration-metadata-order-button" data-metadata-down title="Move down" aria-label="Move metadata field down"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12l7 7 7-7" /></svg></button>
+            <button type="button" class="configuration-remove-button configuration-metadata-remove" data-remove-metadata-field>Remove</button>
+        </div>
         <label class="configuration-metadata-control configuration-metadata-description"><span>Description</span><input class="text-input" data-metadata-field="description" /></label>
     </div>
 </template>

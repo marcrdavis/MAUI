@@ -22,6 +22,7 @@ public sealed class MetadataDbContext : DbContext
     public DbSet<SavedViewEntity> SavedViews => Set<SavedViewEntity>();
     public DbSet<OutboundReportEntity> OutboundReports => Set<OutboundReportEntity>();
     public DbSet<OutboundReportHistoryEntity> OutboundReportHistory => Set<OutboundReportHistoryEntity>();
+    public DbSet<OutboundReportApiShareEntity> OutboundReportApiShares => Set<OutboundReportApiShareEntity>();
     public DbSet<ApplicationLogEntity> ApplicationLogs => Set<ApplicationLogEntity>();
     public DbSet<SecurityUserEntity> SecurityUsers => Set<SecurityUserEntity>();
 
@@ -148,6 +149,18 @@ public sealed class MetadataDbContext : DbContext
             entity.Property(item => item.LastMessage).HasMaxLength(2000);
             entity.HasIndex(item => new { item.EnvironmentKey, item.Enabled, item.NextRunUtc });
             entity.HasIndex(item => new { item.EnvironmentKey, item.OwnerUsernameKey, item.Title });
+        });
+
+        modelBuilder.Entity<OutboundReportApiShareEntity>(entity =>
+        {
+            entity.HasKey(item => item.ReportId);
+            entity.Property(item => item.ReportId).HasMaxLength(36);
+            entity.Property(item => item.ShareGuidHash).HasMaxLength(64).IsRequired();
+            entity.Property(item => item.ProtectedShareGuid).IsRequired();
+            entity.Property(item => item.Revision).HasMaxLength(36).IsConcurrencyToken();
+            entity.HasIndex(item => item.ShareGuidHash).IsUnique();
+            entity.HasOne<OutboundReportEntity>().WithOne().HasForeignKey<OutboundReportApiShareEntity>(item => item.ReportId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<OutboundReportHistoryEntity>(entity =>
@@ -351,5 +364,17 @@ public sealed class OutboundReportHistoryEntity
     public int RowCount { get; set; }
     public int RecipientCount { get; set; }
     public string Message { get; set; } = string.Empty;
+}
+
+public sealed class OutboundReportApiShareEntity
+{
+    public string ReportId { get; set; } = string.Empty;
+    public bool Enabled { get; set; }
+    public string ShareGuidHash { get; set; } = string.Empty;
+    public string ProtectedShareGuid { get; set; } = string.Empty;
+    public string Revision { get; set; } = string.Empty;
+    public DateTimeOffset CreatedUtc { get; set; }
+    public DateTimeOffset ModifiedUtc { get; set; }
+    public DateTimeOffset? LastAccessUtc { get; set; }
 }
 

@@ -249,6 +249,250 @@ async function check(name) {
     assert.equal(await evaluate('Boolean(window.editor)'), true, 'Editor did not initialize');
     let checks = 0;
     await command('Emulation.setDeviceMetricsOverride',{width:1920,height:1000,deviceScaleFactor:1,mobile:false});
+    // The production shared schedule controls must follow effective notification settings in every editor.
+    await evaluate(`window.scheduleField=name=>document.querySelector('[data-schedule-interval-field="'+name+'"]');window.pollOption=()=>document.querySelector('[data-schedule-field="runEvenIfNotifications"]');window.showSchedules=()=>{document.querySelector('[data-traditional-task-editor-section-button="schedules"]').click();document.querySelector('[data-traditional-task-editor-schedule-key]').click();document.querySelector('[data-traditional-task-editor-schedule-tab="times"]').click();};`);
+    await evaluate(`window.firstSuccessOption=()=>document.querySelector('[data-schedule-field="onlyUntilFirstSuccess"]');`);
+    await evaluate(`window.showFirstSource=()=>{document.querySelector('[data-traditional-task-editor-section-button="steps"]').click();const source=fixture.task.steps.find(step=>step.kind==='Source');if(fixture.task.type==='Advanced')document.querySelector('[data-flow-key="source:'+source.id+'"] > .advanced-task-flow-row').click();};`);
+    for(const name of ['Traditional','AdvancedBranches','Sync-Share']) {
+        for(const scenario of ['notifications','forced-poll','mixed','unknown','once','once-checked','overnight','read-only','unsupported','notifications-disabled','unsupported-checked','unknown-only','no-sources']) {
+            const model=structuredClone(fixtures[name]);
+            const once=scenario==='once'||scenario==='once-checked';
+            const sources=model.task.steps.filter(step=>step.kind==='Source');
+            assert.ok(sources.length>0,name+' has projected Sources');
+            for(const source of sources)source.source.hostDefaults.fileNotificationsEnabled=true;
+            if(scenario==='mixed')sources[0].source.hostDefaults.fileNotificationsEnabled=false;
+            if(scenario==='unknown')sources[0].source.hostDefaults.fileNotificationsEnabled=null;
+            if(scenario==='unknown-only')for(const source of sources)source.source.hostDefaults.fileNotificationsEnabled=null;
+            if(['unsupported','notifications-disabled','unsupported-checked'].includes(scenario))
+                for(const source of sources)source.source.hostDefaults.fileNotificationsEnabled=false;
+            if(scenario.startsWith('unsupported'))for(const source of sources)
+                Object.assign(source.source,{hostId:'host-FTP',hostName:'FTP host',hostTypeCode:'FTP',serverHostTypeCode:'FTP',hostType:'FTP/FTPS'});
+            if(scenario==='no-sources'){model.task.steps=[];if(model.task.advancedFlow)model.task.advancedFlow=[];}
+            if(scenario==='read-only')model.task.canAlter=false;
+            const interval={id:'501',index:0,serverIndex:0,startTime:scenario==='overnight'?'22:00':'09:00',endTime:once?'09:00':scenario==='overnight'?'02:00':'17:00',everyMinutes:once?0:17};
+            model.task.schedules=[{id:'401',index:0,serverIndex:0,multi:0,daysOfWeek:['Monday'],daysOfMonth:[],dateLists:[],intervals:[interval],onlyUntilFirstSuccess:true,runEvenIfNotifications:scenario==='forced-poll'||scenario==='unsupported-checked'||scenario==='once-checked'}];
+            await evaluate(`loadFixture(${JSON.stringify(model)});`);
+            await evaluate(`showSchedules()`);
+            const summaryText=once?'Task will run: Monday once at 9:00 AM.'
+                : scenario==='overnight'?'Task will run: Monday when files arrive between 10:00 PM and 2:00 AM. This schedule spans midnight.'
+                : ['notifications','read-only'].includes(scenario)?'Task will run: Monday when files arrive between 9:00 AM and 5:00 PM.'
+                : scenario==='forced-poll'||(['mixed','unknown'].includes(scenario)&&sources.length>1)?'Task will run: Monday when files arrive and every 17 minutes between 9:00 AM and 5:00 PM.'
+                : 'Task will run: Monday every 17 minutes between 9:00 AM and 5:00 PM.';
+            assert.deepEqual(await evaluate(`[document.querySelector('[data-traditional-task-editor-schedule-heading-summary]').textContent,document.querySelector('[data-traditional-task-editor-schedule-summary]').textContent]`),[summaryText,summaryText],name+'/'+scenario+' matching heading and footer describe the actual trigger');checks++;
+            const disabled=!['forced-poll','mixed','unknown','unsupported','notifications-disabled','unsupported-checked','unknown-only','no-sources'].includes(scenario);
+            const intervalReason=once?'Requires a repeating schedule time.':disabled?'The minute interval is ignored because all sources use file notifications. To also poll at this interval, enable "Poll for files even though file notifications are also enabled" in Options.':'';
+            assert.deepEqual(await evaluate(`[scheduleField('everyMinutes').disabled||scheduleField('everyMinutes').readOnly,scheduleField('everyMinutes').title,scheduleField('everyMinutes').closest('label').title,Boolean(document.querySelector('[data-schedule-notification-hint]'))]`),[disabled,intervalReason,intervalReason,false],name+'/'+scenario+' interval eligibility and tooltip-only explanation');checks++;
+            assert.equal(await evaluate(`scheduleField('endTime').disabled||scheduleField('endTime').readOnly`),(once||scenario==='read-only'),name+'/'+scenario+' End Time still defines the notification window');checks++;
+            assert.equal(await evaluate(`scheduleField('repeat').disabled`),scenario==='read-only',name+'/'+scenario+' Repeat remains available');checks++;
+            const pollingDisabled=once||['unsupported','notifications-disabled','unsupported-checked','no-sources','read-only'].includes(scenario)||(scenario==='mixed'&&sources.length===1);
+            const pollingReason=once?'Requires a repeating schedule time.':['unsupported','notifications-disabled','unsupported-checked','no-sources'].includes(scenario)||(scenario==='mixed'&&sources.length===1)?'No source has file notifications enabled, so this option does not apply.':'';
+            assert.deepEqual(await evaluate(`[pollOption().disabled,pollOption().title,pollOption().closest('label').title,Boolean(document.querySelector('[data-schedule-poll-hint]'))]`),[pollingDisabled,pollingReason,pollingReason,false],name+'/'+scenario+' forced-poll eligibility and tooltip-only explanation');checks++;
+            const firstSuccessDisabled=once||scenario==='read-only';
+            assert.equal(await evaluate(`firstSuccessOption().disabled`),firstSuccessDisabled,name+'/'+scenario+' first-success editability follows Repeat independently of notifications');checks++;
+            assert.equal(await evaluate(`firstSuccessOption().checked`),true,name+'/'+scenario+' saved first-success value retained');checks++;
+            const firstSuccessReason=once?'Requires a repeating schedule time.':'';
+            assert.deepEqual(await evaluate(`[firstSuccessOption().title,firstSuccessOption().closest('label').title,Boolean(document.querySelector('[data-schedule-first-success-hint]'))]`),[firstSuccessReason,firstSuccessReason,false],name+'/'+scenario+' first-success explanation is tooltip-only');checks++;
+            assert.equal(await evaluate(`document.querySelector('[data-schedule-field="failIfNoSuccessInSchedule"]').disabled`),scenario==='read-only',name+'/'+scenario+' no-files failure remains applicable with notifications');checks++;
+            if(firstSuccessDisabled) {
+                await evaluate(`firstSuccessOption().checked=false;firstSuccessOption().dispatchEvent(new Event('change',{bubbles:true}));`);
+                assert.equal(await evaluate(`firstSuccessOption().checked`),true,name+'/'+scenario+' stale event cannot clear inactive first-success value');checks++;
+            }
+            if(scenario==='notifications'||scenario==='forced-poll') {
+                await evaluate(`firstSuccessOption().checked=false;firstSuccessOption().dispatchEvent(new Event('change',{bubbles:true}));`);
+                assert.equal(await evaluate(`firstSuccessOption().checked`),false,name+'/'+scenario+' first success can be edited with notifying sources');checks++;
+                await evaluate(`firstSuccessOption().checked=true;firstSuccessOption().dispatchEvent(new Event('change',{bubbles:true}));`);
+                assert.equal(await evaluate(`firstSuccessOption().checked`),true,name+'/'+scenario+' first success can be reselected with notifying sources');checks++;
+            }
+            if(once) {
+                const stored=scenario==='once-checked';
+                await evaluate(`pollOption().checked=${!stored};pollOption().dispatchEvent(new Event('change',{bubbles:true}));`);
+                assert.equal(await evaluate(`pollOption().checked`),stored,name+'/'+scenario+' one-time polling option rejects stale events without clearing its saved value');checks++;
+            }
+            if(once||scenario==='read-only') {
+                const stored=await evaluate(`scheduleField('everyMinutes').value`);
+                await evaluate(`scheduleField('everyMinutes').value='99';scheduleField('everyMinutes').dispatchEvent(new Event('change',{bubbles:true}));`);
+                assert.equal(await evaluate(`scheduleField('everyMinutes').value`),stored,name+'/'+scenario+' inactive interval rejects stale input');checks++;
+            }
+            if(['unsupported','notifications-disabled','unsupported-checked','no-sources'].includes(scenario)) {
+                const stored=scenario==='unsupported-checked';
+                assert.match(await evaluate(`pollOption().closest('label').title`),/No source has file notifications enabled/,name+'/'+scenario+' inactive option explained by hoverable label');checks++;
+                await evaluate(`pollOption().checked=${!stored};pollOption().dispatchEvent(new Event('change',{bubbles:true}));`);
+                assert.equal(await evaluate(`pollOption().checked`),stored,name+'/'+scenario+' stale event cannot change saved option');checks++;
+                if(name==='Traditional'&&scenario==='unsupported-checked') {
+                    for(const theme of ['light','dark']) {
+                        await evaluate(`document.documentElement.dataset.theme=${JSON.stringify(theme)};document.querySelector('[data-traditional-task-editor-schedule-tab="options"]').click();`);
+                        assert.deepEqual(await evaluate('inspectLayout()'),[],theme+' inactive polling option layout');checks++;
+                        await screenshot('schedule-poll-option-'+theme);
+                    }
+                    await evaluate(`document.documentElement.dataset.theme='light';showSchedules();const control=scheduleField('startTime');control.value='09:05';control.dispatchEvent(new Event('change',{bubbles:true}));document.querySelector('[data-traditional-task-editor-save]').click();`);
+                    for(let i=0;i<100&&!await evaluate('saveCalls.length');i++)await pause(20);
+                    assert.equal(await evaluate(`saveCalls[0]?.payload.schedules[0]?.runEvenIfNotifications`),true,'Inactive saved polling value is preserved in save payload');checks++;
+                }
+            }
+            if(!once) {
+                assert.equal(await evaluate(`scheduleField('everyMinutes').value`),'17',name+'/'+scenario+' saved interval retained');checks++;
+            }
+            if(scenario==='notifications'||scenario==='overnight') {
+                assert.match(await evaluate(`scheduleField('everyMinutes').closest('label').title`),/minute interval is ignored/,name+'/'+scenario+' interval explanation is a tooltip');checks++;
+                assert.match(await evaluate(`document.querySelector('[data-traditional-task-editor-schedule-summary]').textContent`),/when files arrive between/,name+'/'+scenario+' summary describes file arrival');checks++;
+                await evaluate(`pollOption().checked=true;pollOption().dispatchEvent(new Event('change',{bubbles:true}));`);
+                assert.equal(await evaluate(`scheduleField('everyMinutes').disabled`),false,name+'/'+scenario+' enabling forced polling enables interval');checks++;
+                assert.match(await evaluate(`document.querySelector('[data-traditional-task-editor-schedule-summary]').textContent`),/when files arrive and every 17 minutes between/,name+'/'+scenario+' summary immediately includes enabled polling');checks++;
+                assert.equal(await evaluate(`!firstSuccessOption().disabled&&firstSuccessOption().checked`),true,name+'/'+scenario+' first success stays editable with forced polling');checks++;
+                await evaluate(`pollOption().checked=false;pollOption().dispatchEvent(new Event('change',{bubbles:true}));`);
+                assert.equal(await evaluate(`scheduleField('everyMinutes').disabled&&scheduleField('everyMinutes').value==='17'`),true,name+'/'+scenario+' disabling polling keeps dormant value');checks++;
+                assert.match(await evaluate(`document.querySelector('[data-traditional-task-editor-schedule-summary]').textContent`),/Monday when files arrive between/,name+'/'+scenario+' summary returns to file arrivals without the inactive cadence');checks++;
+                await evaluate(`scheduleField('everyMinutes').value='99';scheduleField('everyMinutes').dispatchEvent(new Event('change',{bubbles:true}));`);
+                assert.equal(await evaluate(`scheduleField('everyMinutes').value`),'17',name+'/'+scenario+' inactive interval cannot be changed by a stale event');checks++;
+                if(name==='Traditional'&&scenario==='notifications') {
+                    for(const theme of ['light','dark']) {
+                        await evaluate(`document.documentElement.dataset.theme=${JSON.stringify(theme)}`);
+                        assert.deepEqual(await evaluate('inspectLayout()'),[],theme+' notification schedule layout');checks++;
+                        await screenshot('schedule-notifications-'+theme);
+                        await evaluate(`document.querySelector('[data-traditional-task-editor-schedule-tab="options"]').click()`);
+                        assert.deepEqual(await evaluate('inspectLayout()'),[],theme+' editable first-success option layout');checks++;
+                        await screenshot('schedule-first-success-'+theme);
+                        await evaluate(`document.querySelector('[data-traditional-task-editor-schedule-tab="times"]').click()`);
+                    }
+                    await evaluate(`document.documentElement.dataset.theme='light';firstSuccessOption().checked=false;firstSuccessOption().dispatchEvent(new Event('change',{bubbles:true}));`);
+                    await evaluate(`const control=scheduleField('startTime');control.value='09:05';control.dispatchEvent(new Event('change',{bubbles:true}));document.querySelector('[data-traditional-task-editor-save]').click();`);
+                    for(let i=0;i<100&&!await evaluate('saveCalls.length');i++)await pause(20);
+                    assert.equal(await evaluate(`saveCalls[0]?.payload.schedules[0]?.intervals[0]?.everyMinutes`),17,'Saving a notification window preserves dormant interval');checks++;
+                    assert.equal(await evaluate(`saveCalls[0]?.payload.schedules[0]?.runEvenIfNotifications`),false,'Saving does not force polling on');checks++;
+                    assert.equal(await evaluate(`saveCalls[0]?.payload.schedules[0]?.onlyUntilFirstSuccess`),false,'Saving sends the edited first-success value for notifying sources');checks++;
+                }
+            }
+        }
+    }
+    // Source changes and Undo must refresh inactive options even while the Schedule panel is hidden.
+    for(const name of ['Traditional','AdvancedBranches','Sync-Share']) {
+        const model=structuredClone(fixtures[name]);
+        for(const step of model.task.steps.filter(step=>step.kind==='Source'))step.source.hostDefaults.fileNotificationsEnabled=true;
+        for(const host of model.sourceHosts)host.defaults.fileNotificationsEnabled=true;
+        const pollingHost=structuredClone(model.sourceHosts.find(host=>host.typeCode==='Share'));
+        pollingHost.id='host-Share-polling';pollingHost.name='Share without notifications';pollingHost.defaults.fileNotificationsEnabled=false;
+        model.sourceHosts.push(pollingHost);
+        model.task.schedules=[{id:'401',index:0,serverIndex:0,multi:0,daysOfWeek:['Monday'],daysOfMonth:[],dateLists:[],onlyUntilFirstSuccess:true,intervals:[{id:'501',index:0,serverIndex:0,startTime:'09:00',endTime:'17:00',everyMinutes:17}]}];
+        await evaluate(`loadFixture(${JSON.stringify(model)});`);
+        await evaluate(`showSchedules();showFirstSource();change('[data-source-field="hostId"]','host-Share-polling');`);
+        await pause(50);
+        assert.equal(await evaluate(`firstSuccessOption().disabled`),false,name+' Source change refreshes first-success eligibility without reopening Schedule');checks++;
+        assert.equal(await evaluate(`scheduleField('everyMinutes').disabled`),false,name+' Source change refreshes interval eligibility');checks++;
+        await evaluate(`document.querySelector('[data-traditional-task-editor-undo]').click();`);
+        assert.equal(await evaluate(`!firstSuccessOption().disabled&&firstSuccessOption().checked`),true,name+' Undo preserves first-success editability and saved value for notifying sources');checks++;
+        assert.equal(await evaluate(`scheduleField('everyMinutes').disabled`),true,name+' Undo restores notification-only interval');checks++;
+
+        // Both options use Repeat in any time row of this Schedule, not just the first row.
+        model.task.schedules[0].runEvenIfNotifications=true;
+        model.task.schedules[0].intervals.unshift({id:'500',index:0,serverIndex:1,startTime:'08:00',endTime:'08:00',everyMinutes:0});
+        await evaluate(`loadFixture(${JSON.stringify(model)});`);
+        await evaluate(`showSchedules()`);
+        assert.equal(await evaluate(`firstSuccessOption().disabled`),false,name+' a one-time row does not hide another repeating row');checks++;
+        assert.equal(await evaluate(`pollOption().disabled`),false,name+' polling remains editable when another time row repeats');checks++;
+        await evaluate(`const repeat=document.querySelectorAll('[data-schedule-interval-field="repeat"]')[1];repeat.checked=false;repeat.dispatchEvent(new Event('change',{bubbles:true}));`);
+        assert.equal(await evaluate(`firstSuccessOption().disabled&&firstSuccessOption().checked`),true,name+' removing the last Repeat retains inactive first-success value');checks++;
+        assert.equal(await evaluate(`pollOption().disabled&&pollOption().checked`),true,name+' removing the last Repeat retains inactive polling value');checks++;
+        await evaluate(`document.querySelector('[data-traditional-task-editor-undo]').click();`);
+        assert.equal(await evaluate(`firstSuccessOption().disabled`),false,name+' Undo restores first-success applicability');checks++;
+        assert.equal(await evaluate(`!pollOption().disabled&&pollOption().checked`),true,name+' Undo restores polling applicability and its saved value');checks++;
+
+        // Each Schedule is independent, including when a saved polling flag is checked on a one-time Schedule.
+        model.task.schedules[0].intervals.shift();
+        const onceSchedule=structuredClone(model.task.schedules[0]);
+        onceSchedule.id='402';onceSchedule.index=1;onceSchedule.serverIndex=1;
+        Object.assign(onceSchedule.intervals[0],{id:'502',startTime:'18:00',endTime:'18:00',everyMinutes:0});
+        model.task.schedules.push(onceSchedule);
+        await evaluate(`loadFixture(${JSON.stringify(model)});`);
+        await evaluate(`showSchedules();document.querySelectorAll('[data-traditional-task-editor-schedule-key]')[1].click();`);
+        assert.equal(await evaluate(`firstSuccessOption().disabled&&pollOption().disabled`),true,name+' another Schedule\'s Repeat does not enable one-time options');checks++;
+        await evaluate(`const repeat=scheduleField('repeat');repeat.checked=true;repeat.dispatchEvent(new Event('change',{bubbles:true}));`);
+        assert.equal(await evaluate(`!firstSuccessOption().disabled&&!pollOption().disabled&&pollOption().checked`),true,name+' enabling Repeat immediately unlocks both options and retains saved polling');checks++;
+        await evaluate(`document.querySelector('[data-traditional-task-editor-undo]').click();`);
+        assert.equal(await evaluate(`firstSuccessOption().disabled&&pollOption().disabled&&pollOption().checked`),true,name+' Undo restores one-time locks and retains saved polling');checks++;
+        await evaluate(`document.querySelectorAll('[data-traditional-task-editor-schedule-key]')[0].click();`);
+        assert.equal(await evaluate(`!firstSuccessOption().disabled&&!pollOption().disabled`),true,name+' returning to the repeating Schedule restores its own option state');checks++;
+    }
+    await evaluate(`window.hostFixture=${JSON.stringify(hostFixtures['SSHFTP-basic'])}`);
+    // Re-read Host presentation without discarding parent edits or adopting a new Task revision.
+    for(const name of ['Traditional','Advanced','Sync-Share']) {
+        const model=structuredClone(fixtures[name]);model.task.steps[0].source.useDefaultRetryCount=true;
+        for(const step of model.task.steps.filter(step=>step.kind==='Source'))step.source.hostDefaults.fileNotificationsEnabled=true;
+        model.task.schedules=[{id:'401',index:0,serverIndex:0,multi:0,daysOfWeek:['Monday'],daysOfMonth:[],dateLists:[],onlyUntilFirstSuccess:true,intervals:[{id:'501',index:0,serverIndex:0,startTime:'09:00',endTime:'17:00',everyMinutes:17}]}];
+        // Captured Advanced Steps refer to real IDs; the mock Host catalog uses synthetic IDs.
+        const selected=model.task.steps[0].source;
+        for(const options of [model.sourceHosts,model.destinationHosts])if(!options.some(h=>h.id===selected.hostId)) {
+            const host=structuredClone(options.find(h=>h.typeCode===selected.hostTypeCode));
+            host.id=selected.hostId;host.name=selected.hostName;options.push(host);
+        }
+        for(const host of model.sourceHosts)host.defaults.fileNotificationsEnabled=true;
+        await evaluate(`loadFixture(${JSON.stringify(model)})`);
+        await evaluate(`showSchedules();showFirstSource()`);
+        assert.equal(await evaluate(`firstSuccessOption().disabled`),false,name+' first success stays editable for notifying Hosts');checks++;
+        await evaluate(`change('[data-source-field="path"]','/parent-draft');window.parentSelection=document.querySelector('[data-traditional-task-editor-step-items] .selected')?.dataset.traditionalTaskEditorStepKey;window.parentRevision=fixture.editVersion;document.querySelector('[data-traditional-task-editor-edit-host="Source"]').click()`);
+        for(let i=0;i<100&&!await evaluate(`Boolean(document.querySelector('[data-host-editor-dialog][open]'))`);i++)await pause(20);
+        assert.equal(await evaluate(`document.querySelector('[data-traditional-task-editor-dialog]').open`),true);
+        await evaluate(`const id=document.querySelector('[data-source-field="hostId"]').value;for(const option of [...fixture.sourceHosts,...fixture.destinationHosts])if(option.id===id){option.name='Refreshed Host';option.defaults.retryCount=42;option.defaults.fileNotificationsEnabled=false;}fixture.editVersion='concurrently-changed-task';fixture.task.name='Do not replace my Task draft';document.querySelector('[data-host-editor-cancel]').click()`);
+        for(let i=0;i<100&&await evaluate(`document.querySelector('[data-traditional-task-editor-edit-host="Source"]').disabled`);i++)await pause(20);
+        assert.equal(await evaluate(`Boolean(document.querySelector('[data-host-editor-dialog][open]'))`),false);
+        assert.equal(await evaluate(`document.querySelector('[data-source-field="path"]').value`),'/parent-draft');
+        assert.equal(await evaluate(`document.querySelector('[data-source-field="hostId"]').selectedOptions[0].textContent`),'Refreshed Host');
+        assert.equal(await evaluate(`document.querySelector('[data-source-field="retryCount"]').value`),'42');
+        assert.equal(await evaluate(`firstSuccessOption().disabled`),false,name+' Host refresh updates first-success eligibility');checks++;
+        assert.equal(await evaluate(`scheduleField('everyMinutes').disabled`),false,name+' Host refresh restores polling interval access');checks++;
+        assert.equal(await evaluate(`document.querySelector('[data-traditional-task-editor-step-items] .selected')?.dataset.traditionalTaskEditorStepKey===parentSelection`),true);
+        assert.notEqual(await evaluate(`document.querySelector('[data-editor-field="name"]').value`),'Do not replace my Task draft');
+        await evaluate(`change('[data-source-field="overrideRetryCount"]',true);change('[data-source-field="retryCount"]','7');document.querySelector('[data-traditional-task-editor-edit-host="Source"]').click()`);
+        for(let i=0;i<100&&!await evaluate(`Boolean(document.querySelector('[data-host-editor-dialog][open]'))`);i++)await pause(20);
+        await evaluate(`const id=document.querySelector('[data-source-field="hostId"]').value;for(const option of [...fixture.sourceHosts,...fixture.destinationHosts])if(option.id===id){option.defaults.retryCount=99;option.defaults.fileNotificationsEnabled=true;}document.querySelector('[data-host-editor-cancel]').click()`);
+        for(let i=0;i<100&&await evaluate(`document.querySelector('[data-traditional-task-editor-edit-host="Source"]').disabled`);i++)await pause(20);
+        assert.equal(await evaluate(`document.querySelector('[data-source-field="retryCount"]').value`),'7','Explicit overrides survive Host refresh');
+        assert.equal(await evaluate(`!firstSuccessOption().disabled&&firstSuccessOption().checked`),true,name+' Host refresh retains first-success editability for notifying Hosts');checks++;
+        await evaluate(`document.querySelector('[data-traditional-task-editor-save]').click()`);
+        for(let i=0;i<100&&!await evaluate('saveCalls.length');i++)await pause(20);
+        assert.equal(await evaluate('saveCalls[0].payload.editVersion'),await evaluate('parentRevision'),'Host refresh cannot acknowledge an external Task edit');
+        assert.equal(await evaluate('saveCalls[0].payload.steps[0].patch.RetryCount'),7);
+        checks+=10;
+    }
+    const summaryCases=[
+        {name:'notifications',notify:true,expected:'Task will run: Monday, Wednesday, Friday when files arrive between 12:00 AM and 11:59 PM.'},
+        {name:'notifications-and-polling',notify:true,poll:true,expected:'Task will run: Monday, Wednesday, Friday when files arrive and every 5 minutes between 12:00 AM and 11:59 PM.'},
+        {name:'polling',notify:false,expected:'Task will run: Monday, Wednesday, Friday every 5 minutes between 12:00 AM and 11:59 PM.'},
+        {name:'one-minute',notify:false,minutes:1,expected:'Task will run: Monday, Wednesday, Friday every 1 minute between 12:00 AM and 11:59 PM.'},
+        {name:'multiple-times',notify:true,anotherTime:true,expected:'Task will run: Monday, Wednesday, Friday when files arrive between 12:00 AM and 11:59 PM; and once at 6:00 PM.'},
+        {name:'month-days',notify:false,days:[],monthDays:[1,15],expected:'Task will run: days 1, 15 of each month every 5 minutes between 12:00 AM and 11:59 PM.'},
+        {name:'date-list',notify:false,days:[],dates:[{id:'701',run:true}],expected:'Task will run: Include Company holidays every 5 minutes between 12:00 AM and 11:59 PM.'},
+        {name:'overnight-polling',notify:false,start:'22:00',end:'02:00',expected:'Task will run: Monday, Wednesday, Friday every 5 minutes between 10:00 PM and 2:00 AM. This schedule spans midnight.'},
+        {name:'once',notify:false,minutes:0,expected:'Task will run: Monday, Wednesday, Friday once at 12:00 AM.'},
+        {name:'empty-times',notify:false,empty:true,expected:'Task will run: Monday, Wednesday, Friday no scheduled time is defined.'}
+    ];
+    for(const name of ['Traditional','AdvancedBranches','Sync-Share'])for(const example of summaryCases) {
+        const model=structuredClone(fixtures[name]);
+        for(const step of model.task.steps.filter(step=>step.kind==='Source'))step.source.hostDefaults.fileNotificationsEnabled=example.notify;
+        model.dateListOptions=[{id:'701',name:'Company holidays'}];
+        const interval={id:'501',index:0,serverIndex:0,startTime:example.start||'00:00',endTime:example.end||'23:59',everyMinutes:example.minutes??5};
+        const intervals=example.empty?[]:[interval];
+        if(example.anotherTime)intervals.push({id:'502',index:1,serverIndex:1,startTime:'18:00',endTime:'18:00',everyMinutes:0});
+        model.task.schedules=[{id:'401',index:0,serverIndex:0,multi:0,daysOfWeek:example.days||['Monday','Wednesday','Friday'],daysOfMonth:example.monthDays||[],dateLists:example.dates||[],intervals,runEvenIfNotifications:Boolean(example.poll)}];
+        await evaluate(`loadFixture(${JSON.stringify(model)});`);
+        await evaluate(`showSchedules()`);
+        assert.deepEqual(await evaluate(`[document.querySelector('[data-traditional-task-editor-schedule-heading-summary]').textContent,document.querySelector('[data-traditional-task-editor-schedule-summary]').textContent]`),[example.expected,example.expected],name+'/'+example.name+' matching full schedule summaries');checks++;
+        if(name==='Traditional'&&['notifications','notifications-and-polling','polling'].includes(example.name)) {
+            for(const width of [1400,600])for(const theme of ['light','dark']) {
+                await command('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:false});
+                await evaluate(`document.documentElement.dataset.theme=${JSON.stringify(theme)}`);
+                assert.deepEqual(await evaluate('inspectLayout()'),[],example.name+'/'+width+'/'+theme+' summary layout');checks++;
+                await screenshot('schedule-summary-'+example.name+'-'+width+'-'+theme);
+            }
+            await command('Emulation.setDeviceMetricsOverride',{width:1920,height:1000,deviceScaleFactor:1,mobile:false});
+            await evaluate(`document.documentElement.dataset.theme='light'`);
+        }
+    }
+    // Optional focused run still uses the complete production modal, read-service fixtures and runtime.
+    if(process.env.MAUI_TASK_EDITOR_SCHEDULES_ONLY==='1') {
+        const errors=await evaluate('window.layoutErrors');assert.deepEqual(errors,[]);
+        console.log('Task schedule notification checks: '+JSON.stringify({result:'PASS',checks,editors:['Traditional','Advanced','Synchronization']}));return;
+    }
+
     for(const previous of [fixtures.Traditional,fixtures['Sync-Share']]) {
         await evaluate(`loadFixture(${JSON.stringify(previous)});`);
         await evaluate(`document.querySelector('[data-traditional-task-editor-cancel]').click()`);
@@ -976,38 +1220,6 @@ async function check(name) {
         assert.equal(await evaluate('fixture.editVersion'),model.editVersion);checks+=4;
     }
     await evaluate(`window.hostFixture=${JSON.stringify(hostFixtures['SSHFTP-basic'])}`);
-    // Re-read Host presentation without discarding parent edits or adopting a new Task revision.
-    for(const name of ['Traditional','Advanced','Sync-Share']) {
-        const model=structuredClone(fixtures[name]);model.task.steps[0].source.useDefaultRetryCount=true;
-        // Captured Advanced Steps refer to real IDs; the mock Host catalog uses synthetic IDs.
-        const selected=model.task.steps[0].source;
-        for(const options of [model.sourceHosts,model.destinationHosts])if(!options.some(h=>h.id===selected.hostId)) {
-            const host=structuredClone(options.find(h=>h.typeCode===selected.hostTypeCode));
-            host.id=selected.hostId;host.name=selected.hostName;options.push(host);
-        }
-        await evaluate(`loadFixture(${JSON.stringify(model)})`);
-        await evaluate(`change('[data-source-field="path"]','/parent-draft');window.parentSelection=document.querySelector('[data-traditional-task-editor-step-items] .selected')?.dataset.traditionalTaskEditorStepKey;window.parentRevision=fixture.editVersion;document.querySelector('[data-traditional-task-editor-edit-host="Source"]').click()`);
-        for(let i=0;i<100&&!await evaluate(`Boolean(document.querySelector('[data-host-editor-dialog][open]'))`);i++)await pause(20);
-        assert.equal(await evaluate(`document.querySelector('[data-traditional-task-editor-dialog]').open`),true);
-        await evaluate(`const id=document.querySelector('[data-source-field="hostId"]').value;for(const option of [...fixture.sourceHosts,...fixture.destinationHosts])if(option.id===id){option.name='Refreshed Host';option.defaults.retryCount=42;}fixture.editVersion='concurrently-changed-task';fixture.task.name='Do not replace my Task draft';document.querySelector('[data-host-editor-cancel]').click()`);
-        for(let i=0;i<100&&await evaluate(`document.querySelector('[data-traditional-task-editor-edit-host="Source"]').disabled`);i++)await pause(20);
-        assert.equal(await evaluate(`Boolean(document.querySelector('[data-host-editor-dialog][open]'))`),false);
-        assert.equal(await evaluate(`document.querySelector('[data-source-field="path"]').value`),'/parent-draft');
-        assert.equal(await evaluate(`document.querySelector('[data-source-field="hostId"]').selectedOptions[0].textContent`),'Refreshed Host');
-        assert.equal(await evaluate(`document.querySelector('[data-source-field="retryCount"]').value`),'42');
-        assert.equal(await evaluate(`document.querySelector('[data-traditional-task-editor-step-items] .selected')?.dataset.traditionalTaskEditorStepKey===parentSelection`),true);
-        assert.notEqual(await evaluate(`document.querySelector('[data-editor-field="name"]').value`),'Do not replace my Task draft');
-        await evaluate(`change('[data-source-field="overrideRetryCount"]',true);change('[data-source-field="retryCount"]','7');document.querySelector('[data-traditional-task-editor-edit-host="Source"]').click()`);
-        for(let i=0;i<100&&!await evaluate(`Boolean(document.querySelector('[data-host-editor-dialog][open]'))`);i++)await pause(20);
-        await evaluate(`const id=document.querySelector('[data-source-field="hostId"]').value;for(const option of [...fixture.sourceHosts,...fixture.destinationHosts])if(option.id===id)option.defaults.retryCount=99;document.querySelector('[data-host-editor-cancel]').click()`);
-        for(let i=0;i<100&&await evaluate(`document.querySelector('[data-traditional-task-editor-edit-host="Source"]').disabled`);i++)await pause(20);
-        assert.equal(await evaluate(`document.querySelector('[data-source-field="retryCount"]').value`),'7','Explicit overrides survive Host refresh');
-        await evaluate(`document.querySelector('[data-traditional-task-editor-save]').click()`);
-        for(let i=0;i<100&&!await evaluate('saveCalls.length');i++)await pause(20);
-        assert.equal(await evaluate('saveCalls[0].payload.editVersion'),await evaluate('parentRevision'),'Host refresh cannot acknowledge an external Task edit');
-        assert.equal(await evaluate('saveCalls[0].payload.steps[0].patch.RetryCount'),7);
-        checks+=10;
-    }
     // A clean Auto Save draft stays clean when only inherited Host properties change.
     await evaluate(`loadFixture(${JSON.stringify({...fixtures.Traditional,preferences:{autoSave:true}})})`);
     await evaluate(`document.querySelector('[data-traditional-task-editor-edit-host="Source"]').click()`);

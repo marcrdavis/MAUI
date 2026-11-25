@@ -1,8 +1,8 @@
 # MAUI Installation Guide
 
-**0.18.556-RC3** · Build **20261117** · .NET 8 · Database and configuration schema **1**
+**0.18.583-RC3** · Build **20261124** · .NET 8 · Database schema **2** / configuration **1**
 
-Test this release candidate against a non-production MOVEit environment before deploying it for operators.
+Test this release candidate against a non-production MOVEit environment before deploying it for operators. For the shortest local setup, start with the [Visual Studio Quick Start](README.md#quick-start-with-visual-studio).
 
 [Requirements](#basic-requirements) · [Integration assets](#install-the-moveit-integration-assets) · [Build](#build-with-visual-studio) · [Local testing](#test-within-visual-studio) · [IIS](#deploy-to-iis) · [Initial Setup](#run-initial-setup) · [First sign-in](#sign-in-for-the-first-time) · [Smoke test](#check-basic-functionality) · [Post-setup checklist](#post-setup-checklist) · [Experimental features](#experimental-features) · [Troubleshooting](#troubleshooting)
 
@@ -24,7 +24,7 @@ Test this release candidate against a non-production MOVEit environment before d
 
 ## Install the MOVEit Integration Assets
 
-**The MOVEit Integration components are not required if using only the MAUI Editors.** Skip to [Build with Visual Studio](#build-with-visual-studio) if you will only use MAUI Editors. The local COM API is still required.
+**The MAUI Integration components for MOVEit Web Admin are not required when using the MAUI Editors exclusively.** Skip to [Build with Visual Studio](#build-with-visual-studio) if you will only use MAUI Editors, and enable the applicable preferences under **Configuration > Settings > Editors** after setup. The local COM API is still required; it is separate from these browser integration assets.
 
 Install these assets on **MOVEit Web Admin** when MAUI will launch native MOVEit editors.
 
@@ -45,7 +45,15 @@ Install these assets on **MOVEit Web Admin** when MAUI will launch native MOVEit
    <script src="maui-integration.js" type="text/javascript"></script>
    ```
 
-5. For HA or failover, repeat on each Web Admin node users can reach. Keep the origin list consistent across nodes. After a MOVEit upgrade or repair, check that the script reference and assets are still in place.
+5. For HA or failover, repeat on each Web Admin node users can reach. Keep the origin list consistent across nodes, then verify a native editor launches from MAUI and returns correctly.
+
+### Reinstall after a MOVEit Automation upgrade
+
+**When native-editor integration is used, reinstall the MAUI Integration components after every MOVEit Automation upgrade.** The Automation upgrade overwrites the Web Admin Tomcat folder, removing the deployed integration files and the `index.html` script reference. This applies even when the MAUI application version has not changed.
+
+Retain the integration files and your `LAUNCHER_ORIGINS` settings outside Tomcat before the upgrade. After the upgrade, repeat steps 2–5 above on **every applicable Web Admin node**: copy `maui-integration.js`, `maui-native-editor.css` and `automation-mark.svg` into the new Tomcat ROOT, restore the exact trusted MAUI origins, and add the script entry once to the **upgraded** `index.html`. Do not restore the old `index.html` over MOVEit's upgraded file. Refresh the browser cache and verify native editor launch and return. After a MOVEit repair, check the assets and reinstall them if they were replaced.
+
+Installations using the MAUI Editors exclusively can skip this browser integration and its reinstallation steps. The compatible COM API remains a separate requirement.
 
 <a id="4-build-maui"></a>
 
@@ -59,9 +67,10 @@ For command-line builds and the full regression suite, see [Testing](TESTING.md#
 
 ## Test within Visual Studio
 
-1. Select the **https** launch profile and press **F5** or **Ctrl+F5**. Open `https://localhost:7184` and trust the local ASP.NET Core development certificate if prompted.
-2. On a fresh checkout, complete [Initial Setup](#run-initial-setup) against a development or QA MOVEit server. Choose SQLite for a quick local setup. Initial Setup writes the source-folder `appsettings.json`. Keep it with the local test instance.
-3. Follow [First sign-in](#sign-in-for-the-first-time) and [Check basic functionality](#check-basic-functionality). If testing a native editor, include `https://localhost:7184` in the target Web Admin's `LAUNCHER_ORIGINS` first, then verify that a supported object opens in the native editor window.
+1. Use a writable project folder. For a fresh checkout, create `appsettings.json` containing `{}` beside `MoveItAutomationUI.csproj` **only if that file is absent**. Preserve any existing configuration and `Data` directory.
+2. Select the **https** project launch profile and press **F5** or **Ctrl+F5**. Open `https://localhost:7184` and trust the local ASP.NET Core development certificate if prompted. IIS is not required for this project profile.
+3. Complete [Initial Setup](#run-initial-setup) against a development or QA MOVEit server. Choose SQLite and keep `Data\maui.db` for a quick local setup. Initial Setup saves the source-folder `appsettings.json`; keep it with the local test instance.
+4. Follow [First sign-in](#sign-in-for-the-first-time) and [Check basic functionality](#check-basic-functionality). For MAUI-only editing, enable the applicable MAUI editor preferences; the Web Admin Integration components are not required. If testing a native editor, install the [optional integration](#install-the-moveit-integration-assets), include `https://localhost:7184` in the target Web Admin's `LAUNCHER_ORIGINS`, and verify launch and return. Reinstall that integration after every MOVEit Automation upgrade as described above.
 
 <a id="5-prepare-the-iis-application"></a>
 <a id="6-install-the-moveit-automation-com-api-on-the-maui-server"></a>
@@ -103,6 +112,8 @@ Select the **Automation server**, enter your MOVEit Automation username and pass
 
 If a page reports a connection error, follow [Troubleshooting](#troubleshooting). For broader acceptance, use the [RC3 smoke test](TESTING.md#manual-rc3-smoke-test).
 
+For **Records > Task Run**, use **Grid Settings** to show the optional **Tags** column, or set it as a default through **Configuration > Settings > Grid Definitions > Task Run**. The column uses current task Tags from MAUI metadata in the selected MOVEit environment. It supports the existing filters and Report output; it does not represent the Tags that existed at the historical run time. No database schema change is needed for this column.
+
 <a id="9-after-setup---first-steps"></a>
 
 ## Post-setup checklist
@@ -114,8 +125,8 @@ Open **Configuration > Settings** and complete the items you plan to use.
 | **MOVEit Connections** | Add any other Automation servers. For scheduled reports, automatic backups, or Host Health Check, configure and test administrator **Data Access Credentials** on an active server in each applicable environment. |
 | **SMTP Configuration** | For outbound mail, set the SMTP connection and From details, then use **Send Test Email**. |
 | **Scheduler > System Jobs** | Review schedules and enable the jobs you need. For example, run **Host Health Check** once after configuring Data Access Credentials. For unattended operation on IIS, [keep MAUI running](#keep-maui-running-for-scheduled-jobs). |
-| **Backup** | Review the backup schedule and retention. Run **Backup Now** and verify the result appears in **Available Backups**. MAUI can snapshot SQLite. Back up SQL Server through your normal database process. [Backup and restore checks](TESTING.md#moveit-whole-configuration-import--backup-restore-regression) |
-| **Editors** | Choose which editors open in MAUI and which open in MOVEit Web Admin, then **Save Configuration** and reload. For MAUI-only editing, enable the relevant MAUI preferences. To use a native editor, install the [integration assets](#install-the-moveit-integration-assets) and test a launch. |
+| **Backup** | Review the backup schedule and retention. Run **Backup Now** and verify it reaches **Complete** in **Available Backups**. The visible list refreshes automatically and shows progress or interruption details; incomplete backups cannot be restored. Restore defaults to **MAUI only**; select the combined scope and intended environments to include MOVEit configuration. MAUI can snapshot SQLite. Back up SQL Server through your normal database process. [Backup and restore checks](TESTING.md#moveit-whole-configuration-import--backup-restore-regression) |
+| **Editors** | Choose which editors open in MAUI and which open in MOVEit Web Admin, then **Save Configuration** and reload. The Integration components are not required for exclusive MAUI Editor use. Native editors require the [integration assets](#install-the-moveit-integration-assets), reinstalled after every MOVEit Automation upgrade. |
 | **General > Quick Transfer** | Enable it if needed, **Save Configuration**, and reload. In **Transfers > Quick Transfer**, select known test Hosts, run **Preflight**, and transfer a small non-production file. [Quick Transfer checks](TESTING.md#quick-transfer-validation) |
 
 ### Keep MAUI running for scheduled jobs
@@ -235,14 +246,72 @@ For local development, the Visual Studio **https** project profile uses Kestrel 
 
 For a functional check, use a disposable custom group. Default Windows groups are protected. MAUI disables deletion while a group has members or MOVEit Resource Group assignments. In **Add Users or Groups**, use `.\name` for local matches or `DOMAIN\prefix` to search by account prefix within a domain. After an uncertain write, reload and inspect the group before trying another change. Preserve `Data\LocalGroupsBroker` with the rest of the MAUI application data. See [live acceptance checks](TESTING.md#optional-moveit-user-management-acceptance).
 
+## Shared Reporting API
+
+**Report environment readiness:** Removing a MOVEit connection does not delete its saved Reports or history. All Reports/My Reports check the current connection catalog: environments with configured connections but no Data Access Credentials receive the credential warning; retained Reports for removed environments receive a separate explanation in the same warning area that the environment is no longer configured. Restoring a connection with the same EnvironmentKey updates readiness on the next list load. Reports remain tied to their original environment and are never reassigned automatically.
+
+In **Create Report**, Delivery appears directly below Description. Choose **None** to save the current grid view without email recipients or scheduling. API Access is available for None, Send Now, One Time and Recurring delivery. Enabling it prepares the URL before Save; Copy Link and Regenerate Link work immediately, and Save activates the exact prepared URL. A new draft stays inactive if you cancel or the save fails. Existing Reports can switch to **None** in **Edit Report Information**, clearing email recipients and the next scheduled run without disabling API access.
+
+**Send Now with API Access** saves an unscheduled report for the API and sends the current grid snapshot once. If email delivery fails after the report is saved, MAUI reports that failure explicitly while retaining the saved report and API link. **None** does not require SMTP or a future delivery time. API generation still requires the environment's Data Access Credentials; scheduled email delivery retains its existing requirements.
+
+### IIS permissions for reports
+
+IIS must allow anonymous requests to **`api/reports`** so MAUI can serve `/api/reports/{reportGuid}/csv` without a Windows credentials prompt. The CSV endpoint already allows anonymous access in MAUI; normal MAUI pages retain their application login requirements. If the following settings are already inherited by this path, no additional override is needed.
+
+| IIS setting at the report API path | Required value |
+| --- | --- |
+| Anonymous Authentication | Enabled; **Edit > Application pool identity** |
+| Windows Authentication | Disabled |
+| Require SSL | Enabled |
+| Client certificates | Ignore |
+
+For a scoped override, add this `<location>` directly inside `<configuration>` in the **published MAUI application's** `web.config`, alongside its existing `<location>` block. Keep the ASP.NET Core handler/hosting block intact. The path is relative to MAUI: use `api/reports` even when the public URL starts with `/MAUI/api/reports`. This is an application route, so it needs no physical folder, virtual directory or separate IIS application.
+
+```xml
+<location path="api/reports">
+  <system.webServer>
+    <security>
+      <access sslFlags="Ssl" />
+      <authentication>
+        <anonymousAuthentication enabled="true" userName="" />
+        <windowsAuthentication enabled="false" />
+      </authentication>
+    </security>
+  </system.webServer>
+</location>
+```
+
+If IIS URL Authorization rules restrict this path, configure it to allow anonymous users, including overriding any inherited deny rule. If these configuration sections are locked (`500.19`, `0x80070021`), have the IIS administrator apply the same settings in `applicationHost.config` at the full site/application/report path. Disable Basic Authentication at this path if it is enabled. Continue using the existing app-pool file permissions from [Deploy to IIS](#deploy-to-iis); anonymous report access needs no additional NTFS grants. The Local Groups agent retains its separate client-certificate configuration.
+
+After saving API access for a Report, test its copied URL in a private browser window without a MAUI session. [IIS anonymous authentication](https://learn.microsoft.com/en-us/iis/configuration/system.webserver/security/authentication/anonymousauthentication/) · [IIS SSL settings](https://learn.microsoft.com/en-us/iis/configuration/system.webserver/security/access) · [IIS authorization rules](https://learn.microsoft.com/en-us/iis/configuration/system.webserver/security/authorization/)
+
+### Enable and use a report link
+
+1. Apply the normal MAUI upgrade after deploying this build. Database schema 2 adds persisted shared Report links. Initial Setup includes this migration for a new installation.
+2. Configure Data Access Credentials for the Report's MOVEit environment.
+3. Open **Reports > All Reports** or **Reports > My Reports**. Choose **Edit Report Information** for a saved Report.
+4. Under **API Access**, turn on **Enable API access**. The Report URL is prepared immediately; **Copy Link** and **Regenerate Link** are available before saving.
+5. Copy the URL as needed, then select **Save Report** to activate that exact link. The URL has the form `/api/reports/{reportGuid}/csv` and includes the IIS application path when applicable. Reopening the Report is not required to copy its link.
+
+Anyone with the link can retrieve current CSV data without a MOVEit account. Add `?download=true` to request a file attachment named `report.csv`. The default response (also `?download=false`) uses an inline disposition with the same suggested filename. Both modes return `text/csv; charset=utf-8` and the same CSV body. Inline follows the browser's handling of CSV; it does not guarantee on-screen display, and a browser may still download the response. The CSV starts with its column headings and uses the saved Report's displayed values. The link follows subsequent edits to the saved Report definition.
+
+API access has its own switch, independently of the email schedule. A newly prepared link remains inactive until Save succeeds; closing without saving discards it. Before the first Save, **Regenerate Link** replaces only the prepared URL. For an already active link, **Regenerate Link** retains its immediate replacement after confirmation. To revoke access, turn the switch off and save. Share the active URL with its consumers.
+
+The API uses a 30-second cache, up to two concurrent generations per MAUI instance, and a limit of 60 requests per minute per source IP. A busy response includes Retry-After. This implementation targets a single active MAUI application instance.
+
+Records retrieval has a 10,000-source-row ceiling before saved filters. Response headers include generation time, row count, definition revision, and source-limit information. API generation appears in Report History with zero email recipients.
+
+Preserve the metadata database and Data Protection keys with backups. Restore operations can reinstate previously active links. Regenerate links affected by a recovery. IIS and reverse-proxy access logs may contain the shared URL, so treat those logs as sensitive and configure URI redaction or logging exclusions where available.
+
 <a id="10-protect-installation-owned-files"></a>
 <a id="11-upgrading-maui"></a>
 
 ## Protect data and deploy updates
 
+
 Back up and preserve the live `appsettings.json` and the entire `Data` directory, including the default SQLite database, backups, Data Protection keys and runtime recovery files. Preserve any database stored outside `Data` separately. Keep these files outside `wwwroot`. Avoid deployment options that delete the destination before copying a release.
 
-Deploy the binaries, `appsettings.template.json` and `upgrade.json` from one matching publish. If you customized the deployed `web.config` for User Management, carry forward the path-specific settings. See the [Upgrade guide](UPGRADE.md) for verification, upgrade and rollback. On Windows, MAUI's Data Protection keys under `Data\DataProtection-Keys` use machine-level DPAPI. [Security guidance](SECURITY.md#restricted-iis-application-pool-permissions)
+Deploy the binaries, `appsettings.template.json` and `upgrade.json` from one matching publish. If you customized the deployed `web.config` for User Management or shared Reporting API access, carry forward the path-specific settings. See the [Upgrade guide](UPGRADE.md) for verification, upgrade and rollback. On Windows, MAUI's Data Protection keys under `Data\DataProtection-Keys` use machine-level DPAPI. [Security guidance](SECURITY.md#restricted-iis-application-pool-permissions)
 
 <a id="12-troubleshooting-checklist"></a>
 
@@ -255,5 +324,5 @@ Deploy the binaries, `appsettings.template.json` and `upgrade.json` from one mat
 | **Test Connection** fails | From the machine running MAUI, verify the Web Admin URL and TLS trust, the licensed MOVEit API and local COM registration. On IIS, verify the app-pool identity can activate `MICentralAPICOM.MICentralAPI`. |
 | **Test Database** fails | Check Modify access on the SQLite directory, or SQL Server connectivity and the database permissions for the account MAUI is using. |
 | Sign-in or grid access fails | Verify the selected Automation server, MOVEit account and permissions. For **MOVEit Unreachable**, check DNS and HTTPS from the MAUI host, then use **Refresh Now** to confirm a live read. Review **Configuration > Logs** after signing in. |
-| Native editor launch fails | Check the exact MAUI origin, the script reference and assets on the Web Admin node, then refresh the browser cache and launch again. |
+| Native editor launch fails | If MOVEit Automation was upgraded, [reinstall the optional integration](#reinstall-after-a-moveit-automation-upgrade) in the overwritten Tomcat folder. Check the exact MAUI origin and script reference on every applicable node, refresh the browser cache and launch again. These assets are not needed for exclusive MAUI Editor use. |
 | User Management agent cannot connect | See [Verify connectivity](#4-verify-connectivity) for IIS authentication, certificate and service log checks. |

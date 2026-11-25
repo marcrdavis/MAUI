@@ -1,16 +1,28 @@
 # MAUI — MOVEit Automation User Interface
 
-- **Version:** `0.18.556-RC3`
+- **Version:** `0.18.583-RC3`
 - **Release:** Release Candidate 3 (RC3) — **not the final release**
-- **Build:** `20261117`
+- **Build:** `20261124`
 - **Target framework:** .NET 8
-- **Database schema / configuration version:** `1` / `1`
+- **Database schema / configuration version:** `2` / `1`
 
 MAUI is a web administration interface for on-premises MOVEit Automation. MOVEit remains the system of record and execution engine for Tasks, Hosts, Resources and Automation configuration. MAUI adds operational grids, metadata, reporting, administrative tools and optional editors.
 
 > **Release Candidate 3:** This is pre-release software. It may contain bugs, regressions or incomplete behavior, including differences between MOVEit builds. Evaluate it in a controlled environment, preserve backups and validate the workflows you need before production use. Automated tests do not replace live MOVEit acceptance testing.
 
-**On this page:** [Requirements](#requirements-and-compatibility) · [Capabilities](#main-capabilities) · [Editors and experimental features](#editors-and-experimental-features) · [Access and safeguards](#access-and-editing-safeguards) · [Getting started](#getting-started) · [Administration](#administration-and-maintenance) · [Limitations](#known-limitations) · [Documentation and project information](#documentation-project-origin-and-license).
+**On this page:** [Quick Start](#quick-start-with-visual-studio) · [Requirements](#requirements-and-compatibility) · [Capabilities](#main-capabilities) · [Editors and experimental features](#editors-and-experimental-features) · [Access and safeguards](#access-and-editing-safeguards) · [Getting started](#getting-started) · [Administration](#administration-and-maintenance) · [Limitations](#known-limitations) · [Documentation and project information](#documentation-project-origin-and-license).
+
+## Quick Start with Visual Studio
+
+For a new local instance, use a Windows development computer separate from the MOVEit Automation server. Install **Visual Studio 2022 or later** with the **ASP.NET and web development** workload and **.NET 8 SDK**, plus the compatible **MOVEit Automation Windows COM API**, installed and registered on that computer. Have a development or QA Automation Web Admin HTTPS URL and a MOVEit account ready. See [requirements](INSTALLATION.md#basic-requirements) for COM version compatibility.
+
+1. **Open the solution.** Clone or extract the project into a writable folder, open `MoveItAutomationUI.sln`, and set `MoveItAutomationUI` as the startup project.
+2. **Prepare the local settings file.** If `appsettings.json` is missing beside `MoveItAutomationUI.csproj`, create it with just `{}`. Keep any existing settings file and `Data` directory; do not replace them with an empty file or the release template.
+3. **Run MAUI.** Select **Debug** and the **https** project launch profile, restore NuGet packages if prompted, then press **F5** or **Ctrl+F5**. Trust the ASP.NET Core development certificate if prompted. MAUI opens at **https://localhost:7184**; IIS is not needed for this local run.
+4. **Complete Initial Setup.** Enter the MOVEit Display Name, Environment Key and Web Admin URL, then click **Test Connection**. Choose **SQLite**, keep `Data\maui.db`, click **Test Database**, and select **Complete Setup** after both tests pass. Setup saves the configuration and opens sign-in without an application restart.
+5. **Sign in and check the basics.** Select your Automation server and sign in with your MOVEit username and password. Open **Dashboard**, **Tasks > All Tasks** and **Hosts > All Hosts**. The first successful sign-in to a new MAUI database becomes a **MAUI Admin**.
+
+**The MAUI Integration components for MOVEit Web Admin are not required when using the MAUI Editors exclusively.** Enable the editors you need under **Configuration > Settings > Editors**, save the configuration and reload. The COM API remains required. If you choose native MOVEit editors, follow the [optional integration setup](INSTALLATION.md#install-the-moveit-integration-assets), including [reinstallation after every MOVEit Automation upgrade](INSTALLATION.md#reinstall-after-a-moveit-automation-upgrade).
 
 For deployment instructions, start with [INSTALLATION.md](INSTALLATION.md). Release history and RC1/RC2 comparisons are in [CHANGELOG.md](CHANGELOG.md).
 
@@ -21,7 +33,7 @@ For deployment instructions, start with [INSTALLATION.md](INSTALLATION.md). Rele
 | Component | RC3 requirements and targets |
 | --- | --- |
 | MOVEit Automation | Existing, appropriately licensed **2025.x or 2026.x** installation with API capability enabled. Validate the exact build and required workflows. |
-| MAUI host | Dedicated Windows/IIS server or VM, separate from the MOVEit Automation server; .NET 8 / ASP.NET Core and the compatible Windows COM API installed and registered locally. |
+| MAUI host | Windows computer separate from MOVEit Automation. Local Visual Studio runs use the **https** project profile; deployments use a dedicated Windows/IIS server or VM with .NET 8 / ASP.NET Core. Install and register the compatible COM API locally in either case. |
 | Application topology | **One active MAUI instance/worker.** For IIS, set Maximum Worker Processes to **1**. SQL Server does not make MAUI active-active capable. |
 | Metadata database | SQLite or Microsoft SQL Server. SQLite defaults to `Data\maui.db`. |
 | Browser/display | Desktop Google Chrome or Microsoft Edge; recommended resolution **1920×1080**. |
@@ -46,9 +58,27 @@ MOVEit version-specific controls are gated by the connected server's reported ca
 | Records and Reports | Task Run, File Activity and Audit grids; Audit configuration comparisons on supported MOVEit 2026 servers; saved reports with scheduled/on-demand HTML and CSV email delivery. |
 | Configuration | MOVEit connections, editor preferences, metadata, templates, SMTP, backups, System Jobs, security and application logs. |
 
+Saved Reports support shared CSV access through `/api/reports/{reportGuid}/csv`. Manage the link in **Create Report > API Access** or **Reports > Edit Report Information > API Access**. Create and Edit use matching **Delivery and Schedule** panels, with Time and Repeat alongside each other for recurring delivery. Choose **Delivery: None** to save a report without email recipients or scheduling; API Access remains independent of delivery. Enabling API Access prepares its URL immediately, with **Copy Link** and **Regenerate Link** available before Save. **Save Report** activates that exact URL; closing without saving discards the prepared link. Anyone with the enabled link can retrieve its current report data. See [Reporting API setup](INSTALLATION.md#shared-reporting-api) and the [changelog](CHANGELOG.md).
+
+CSV responses suggest the filename `report.csv`. The default response uses `text/csv` with an inline disposition; browsers can still download it according to their CSV handling. Add `?download=true` to explicitly request an attachment. Both modes return the same raw CSV data.
+
 Shared grids provide sorting, column filters, saved views, CSV/Print and per-user preferences. MAUI metadata includes Tags and organization-defined fields. Task filename search reads configured Source masks and Destination filenames on demand; ordinary grid loads do not fetch Task steps. Date/time filters support comparison operators, alternatives and relative-date macros; use the grid's Filter Help for syntax and examples.
 
+In **Configuration > Settings > Metadata**, choose a resource type and use the **up/down arrows beside Remove** to order its metadata fields. **Save Changes** applies that order to newly opened information dialogs and MAUI editors; **Discard Changes** restores the last saved configuration. Tags can move while its definition remains protected. Metadata Excel exports follow the configured order, and existing values stay associated with their field names.
+
+**List** metadata dropdowns include a blank first option for clearing optional values. The configured possible values follow in their saved order; required fields still require a selection.
+
+**Task Run** includes an optional **Tags** column in Grid Settings and Configuration > Grid Definitions. It uses the Task's current MAUI Tags, matched by Task ID within the active MOVEit environment, with the usual tag pills and column filters. Tags are hidden by default and can be included in CSV/Print and saved, scheduled or API Reports. These are current metadata values when each batch is loaded, not historical tag snapshots; missing metadata is blank. **Refresh Now** reloads the retained rows and their current Tags.
+
 Tasks and Hosts also support JSON element/value searches when the search begins with **`JSON:`**, for example `JSON: DoIfFailure=1`. Only matching objects appear; ordinary search and textbox hints are unchanged. This read-only search is independent of the experimental JSON Editor. In the Tasks grid, join comparisons with `AND` or `OR`, for example `JSON: DoIfFailure=1 AND DoIfSuccess=1`. `AND` takes precedence over `OR`. Put double quotes around literal values that could be read as another comparison. Calendar **Search** highlights matching days/time slots while keeping all runs visible; **Filter** shows only matching runs. Both Calendar modes match Task names.
+
+The **Tasks grid** also supports `ANY(collection, conditions)` and `NONE(collection, conditions)`. Conditions inside a function apply to the **same collection item**, with field paths relative to that item. For example, restrict the grid to Traditional Tasks and use this query to find Tasks without a failure Email Next Action:
+
+```text
+JSON:NONE(NextActions.NextAction[*], Type=Email AND DoIfFailure=1)
+```
+
+This includes Tasks with no Next Actions, success-only email, or a failure Run Task action without a failure email. Change `NONE` to `ANY` to find Tasks with a failure email. To find Tasks with no failure Next Action of any type, use `JSON:NONE(NextActions.NextAction[*], DoIfFailure=1)`. Arrays and MOVEit's single-object collection shape are supported. You can combine collection functions with ordinary comparisons using `AND`/`OR`; inside each function, use comparisons joined by `AND`/`OR`, rather than nested functions. Quote values containing commas, parentheses or Boolean joins. Existing unscoped comparisons retain their meaning: `DoIfFailure=0` finds at least one zero flag, and unscoped `AND` can match fields from different actions. These collection functions extend the Tasks grid search; the Host grid and JSON Editor search retain their existing syntax.
 
 Task editors and Quick Transfer use the same sortable Browse modal. Double-click a file to select its folder and filename, or select a folder and click OK to leave the filename unchanged. Host Editor **Browse Host** is inspection-only; selecting an entry there does not transfer or modify it.
 
@@ -154,9 +184,11 @@ Passwords/tokens stay server-side; COM/native editing can require the MOVEit pas
 
 ## Getting started
 
+For local development, use the [Visual Studio Quick Start](#quick-start-with-visual-studio) above. The steps below cover deployment to a separate IIS installation.
+
 **Do not install MAUI on the MOVEit Automation server.** Use a dedicated Windows/IIS host with network access to MOVEit Web Admin and the metadata database. MAUI uses REST for supported operations, a locally registered COM client for retained native operations, and the native Web Admin integration when launching MOVEit's editors. SQLite/SQL Server stores MAUI-owned state; MOVEit remains authoritative.
 
-**The MOVEit Integration components are not required if using only the MAUI Editors.** These are the browser bridge, styling and logo assets under `IntegrationAssets/MOVEitWebAdmin`. Install them when launching native MOVEit editors from MAUI; enable the applicable MAUI editor preferences for MAUI-only editing. The locally registered MOVEit COM API remains a separate prerequisite.
+**The MAUI Integration components for MOVEit Web Admin are not required when using the MAUI Editors exclusively.** These are the browser bridge, styling and logo assets under `IntegrationAssets/MOVEitWebAdmin`. Install them when launching native MOVEit editors from MAUI; enable the applicable MAUI editor preferences for MAUI-only editing. The locally registered MOVEit COM API remains a separate prerequisite. When the integration is used, **reinstall it after every MOVEit Automation upgrade**, because the upgrade overwrites the Web Admin Tomcat folder. Follow the [reinstallation steps](INSTALLATION.md#reinstall-after-a-moveit-automation-upgrade).
 
 1. Review [prerequisites and database choices](INSTALLATION.md#2-prerequisite-checklist).
 2. Build/publish from source or prepare a complete matching publish package. See [Build MAUI](INSTALLATION.md#4-build-maui); Visual Studio 2022 or later with the ASP.NET/web workload and .NET 8 is supported.
@@ -187,7 +219,25 @@ Connection-list updates apply to new logins/background connections without resta
 
 ### Scheduled work, imports and backups
 
+Traditional, Advanced and Synchronization Task editors share these schedule rules. Normal permission, read-only and busy locks still apply.
+
+| Schedule control | When it can be edited |
+| --- | --- |
+| **Repeat only until first success** | At least one time row in this schedule has **Repeat** selected. It remains editable when all source Hosts have file notifications enabled, with or without forced polling. |
+| **Poll for files even though file notifications are also enabled** | At least one time row in this schedule has **Repeat** selected and a source uses notifications. Confirmed non-notifying/no sources disable it; unknown Host metadata remains editable when Repeat is selected. |
+| **Every (minutes)** | Its own time row has **Repeat** selected and periodic polling applies: forced polling is selected or not all sources are known to use notifications. |
+
+Schedule help uses full weekday names and describes file arrival, polling or both: **when files arrive between 12:00 AM and 11:59 PM**, **when files arrive and every 5 minutes between 12:00 AM and 11:59 PM**, or **every 5 minutes between 12:00 AM and 11:59 PM**. Mixed notifying/non-notifying sources use the combined wording. One-time rows say **once at [time]**; overnight schedules retain their midnight note.
+
+Each schedule is evaluated independently. Disabling an option retains its saved checked value; source/Host refresh, Repeat changes and Undo update these dependencies immediately. Disabled explanations appear only as tooltips on the control and its label. **Log failure if no files found during scheduled run** remains available with notifications; MOVEit can run the task at the end of the window to determine that failure.
+
+Progress distinguishes editability from execution: its [Task Schedule documentation](https://docs.progress.com/bundle/moveit-automation-web-admin-help-2026/page/Task-Schedule.html) describes first-success as available with Repeat and separately describes when the engine ignores the option. MAUI leaves the choice editable and forwards its value to MOVEit.
+
 Scheduled reports need configured SMTP. IIS startup/preload is needed for scheduled work when the pool would otherwise be cold; **Keep Alive cannot start a stopped application**. See [IIS scheduling guidance](INSTALLATION.md#keep-maui-running-for-scheduled-jobs).
+
+Automatic Backup uses the selected 4-, 8-, 12- or 24-hour interval after the latest successful backup completes, including a manual backup. When an upgrade or restart causes a run to be missed, MAUI advances it to the next interval and retains that time when it becomes due.
+
+**Available Backups** distinguishes In Progress, Complete, Partial, Failed and Interrupted runs, with the current phase or a short explanation. The list refreshes automatically while the Backup section is visible (every 3 seconds during a run, otherwise every 30 seconds). MAUI copies its configuration before exporting MOVEit, logs cancellation, and recovers tracked interrupted runs at startup. Empty interrupted folders are removed only when they contain MAUI status files alone; existing backup data and legacy folders are preserved. Restore still requires a completed, validated backup. In **Restore MAUI Backup > Restore Scope**, **MAUI only** is selected by default and restores appsettings.json and the backed-up SQLite database without importing MOVEit configuration. Choose **MAUI and selected MOVEit configurations** to include checked environments; that scope requires at least one selection. SQL Server databases require separate recovery.
 
 Quick Transfer is separately enabled under General and uses an available Traditional Task slot. **Delete temporary task after successful transfer** controls retention; the redundant Create Traditional Task option has been removed. Successful temporary Tasks are eligible for verified cleanup; unsuccessful/ambiguous runs are retained. Confirmation-email recipients stay visible inside the email option grouping and are disabled while it is unchecked. Unattended cleanup needs Data Access credentials. See [Quick Transfer acceptance](TESTING.md#quick-transfer-validation).
 
@@ -221,7 +271,7 @@ Back up first, finish active work, take MAUI offline, replace release-owned file
 - **AS1/AS2/AS3 Host/editor support is deferred** because the required license is unavailable. SSO is not supported.
 - **OneDrive Host** configuration, Test and Browse are implemented for supported 2026 servers. OneDrive Task-step editing and Quick Transfer composition await native Source/Destination patterns.
 - **MOVEit System Log, Service Shutdown, Virus Test and Watched Tasks** have no MAUI replacement in RC3; use native MOVEit where applicable.
-- The COM support layer remains required for retained native operations. If native MOVEit editor integration is used, MOVEit upgrades may replace Tomcat `index.html`; recheck the deployed integration assets and script reference afterward.
+- The COM support layer remains required for retained native operations. Native-editor integration assets are optional for MAUI-only editing. When that integration is used, **reinstall it after every MOVEit Automation upgrade** because the upgrade overwrites the Tomcat folder; see the [reinstallation steps](INSTALLATION.md#reinstall-after-a-moveit-automation-upgrade).
 - A native rename can complete before a local MAUI audit update fails. Logging preserves the underlying database details, but the reported SQLite audit failure's cause remains unconfirmed. Verify the saved name before retrying.
 - MAUI's web tier is limited to the [single-instance topology](#requirements-and-compatibility). Copy To has additional [object/dependency limitations](#copy-between-environments--copy-to).
 

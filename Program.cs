@@ -13,6 +13,7 @@ using MoveItAutomationUI.Services.Backup;
 using MoveItAutomationUI.Services.Metadata;
 using MoveItAutomationUI.Services.Lifecycle;
 using MoveItAutomationUI.Services.Logging;
+using Microsoft.AspNetCore.RateLimiting;
 using MoveItAutomationUI.Services.Configuration;
 using MoveItAutomationUI.Services.MoveIt;
 using MoveItAutomationUI.Services.MoveIt.Tasks;
@@ -222,6 +223,25 @@ builder.Services.AddScoped<IOutboundReportDataSource, OutboundReportDataSource>(
 builder.Services.AddScoped<IOutboundReportEmailService, OutboundReportEmailService>();
 builder.Services.AddScoped<IOutboundReportService, OutboundReportService>();
 builder.Services.AddScoped<IOutboundReportPortabilityService, OutboundReportPortabilityService>();
+builder.Services.AddSingleton<ReportApiRuntime>();
+builder.Services.AddScoped<ReportApiSharingService>();
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddPolicy("ReportCsv", context =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 60, Window = TimeSpan.FromMinutes(1), QueueLimit = 0
+            }));
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.Headers.CacheControl = "no-store";
+        context.HttpContext.Response.Headers.RetryAfter = "60";
+        await Results.Problem(statusCode: 429, title: "Too many report requests. Try again shortly.")
+            .ExecuteAsync(context.HttpContext);
+    };
+});
 builder.Services.AddScoped<IMoveItComClient, MoveItComClient>();
 builder.Services.AddScoped<IAutomationTaskService, AutomationTaskService>();
 builder.Services.AddScoped<ITaskPreflightService, TaskPreflightService>();
@@ -287,6 +307,8 @@ builder.Services.AddScoped<IHostHealthCheckJob, HostHealthCheckJob>();
 builder.Services.AddScoped<ISystemJobService, SystemJobService>();
 builder.Services.AddSingleton<SystemJobScheduler>();
 builder.Services.AddSingleton<ISystemJobRuntime>(serviceProvider => serviceProvider.GetRequiredService<SystemJobScheduler>());
+// Recover interrupted backup records before the scheduler can start a new automatic run.
+builder.Services.AddHostedService<MauiBackupService>(serviceProvider => serviceProvider.GetRequiredService<MauiBackupService>());
 builder.Services.AddHostedService<SystemJobScheduler>(serviceProvider => serviceProvider.GetRequiredService<SystemJobScheduler>());
 builder.Services.AddScoped<IAutomationScriptService, AutomationScriptService>();
 builder.Services.AddScoped<IAutomationDateListService, AutomationDateListService>();
@@ -332,7 +354,8 @@ builder.Services.AddSingleton<IMoveItServerCatalog, MoveItServerCatalog>();
 builder.Services.AddSingleton<IDataAccessCredentialProtector, DataAccessCredentialProtector>();
 builder.Services.AddSingleton<IDataAccessCredentialService, DataAccessCredentialService>();
 builder.Services.AddSingleton<IMauiMetadataDatabaseBackupService, MauiMetadataDatabaseBackupService>();
-builder.Services.AddSingleton<IMauiBackupService, MauiBackupService>();
+builder.Services.AddSingleton<MauiBackupService>();
+builder.Services.AddSingleton<IMauiBackupService>(serviceProvider => serviceProvider.GetRequiredService<MauiBackupService>());
 builder.Services.AddSingleton<IConfigurationRestartDetector, ConfigurationRestartDetector>();
 builder.Services.AddSingleton<IConfigurationSettingsViewModelBuilder, ConfigurationSettingsViewModelBuilder>();
 builder.Services.AddSingleton<IConfigurationSettingsValidator, ConfigurationSettingsValidator>();
@@ -393,6 +416,7 @@ app.UseAuthentication();
 app.UseMiddleware<UpgradeAccessMiddleware>();
 
 app.UseAuthorization();
+app.UseRateLimiter();
 app.UseMiddleware<ObjectEditLeaseMiddleware>();
 app.UseMiddleware<MoveItGridConnectionMiddleware>();
 

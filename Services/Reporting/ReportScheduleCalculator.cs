@@ -21,7 +21,9 @@ public sealed class ReportScheduleCalculator : IReportScheduleCalculator
         ArgumentNullException.ThrowIfNull(schedule);
         var mode = NormalizeMode(schedule.DeliveryMode);
         if (mode == OutboundReportDeliveryModes.Now)
-            return new ReportScheduleDefinition { DeliveryMode = OutboundReportDeliveryModes.Now };
+            return new ReportScheduleDefinition { DeliveryMode = mode };
+        if (mode == OutboundReportDeliveryModes.None)
+            return new ReportScheduleDefinition { DeliveryMode = mode, TimeZoneId = (serverTimeZoneName ?? string.Empty).Trim() };
 
         var time = ParseTime(schedule.TimeOfDay);
         var timeZoneId = NormalizeTimeZoneId(string.IsNullOrWhiteSpace(schedule.TimeZoneId) ? serverTimeZoneName : schedule.TimeZoneId);
@@ -66,7 +68,7 @@ public sealed class ReportScheduleCalculator : IReportScheduleCalculator
     public DateTimeOffset? GetNextRunUtc(ReportScheduleDefinition schedule, DateTimeOffset afterUtc)
     {
         ArgumentNullException.ThrowIfNull(schedule);
-        if (schedule.DeliveryMode == OutboundReportDeliveryModes.Now) return null;
+        if (schedule.DeliveryMode is OutboundReportDeliveryModes.Now or OutboundReportDeliveryModes.None) return null;
         var zone = ResolveTimeZone(schedule.TimeZoneId);
         var time = ParseTime(schedule.TimeOfDay);
         var localAfter = TimeZoneInfo.ConvertTime(afterUtc, zone).DateTime;
@@ -94,6 +96,7 @@ public sealed class ReportScheduleCalculator : IReportScheduleCalculator
 
     public string Describe(ReportScheduleDefinition schedule)
     {
+        if (schedule.DeliveryMode == OutboundReportDeliveryModes.None) return "None";
         if (schedule.DeliveryMode == OutboundReportDeliveryModes.Now) return "Send now";
         var time = DateTime.Today.Add(ParseTime(schedule.TimeOfDay)).ToString("h:mm tt", CultureInfo.CurrentCulture);
         if (schedule.DeliveryMode == OutboundReportDeliveryModes.Once)
@@ -135,10 +138,11 @@ public sealed class ReportScheduleCalculator : IReportScheduleCalculator
 
     private static string NormalizeMode(string value)
     {
+        if (string.Equals(value, OutboundReportDeliveryModes.None, StringComparison.OrdinalIgnoreCase)) return OutboundReportDeliveryModes.None;
         if (string.Equals(value, OutboundReportDeliveryModes.Now, StringComparison.OrdinalIgnoreCase)) return OutboundReportDeliveryModes.Now;
         if (string.Equals(value, OutboundReportDeliveryModes.Once, StringComparison.OrdinalIgnoreCase)) return OutboundReportDeliveryModes.Once;
         if (string.Equals(value, OutboundReportDeliveryModes.Recurring, StringComparison.OrdinalIgnoreCase)) return OutboundReportDeliveryModes.Recurring;
-        throw new ArgumentException("Report delivery must be Now, Once, or Recurring.");
+        throw new ArgumentException("Report delivery must be None, Now, Once, or Recurring.");
     }
 
     private static string NormalizeFrequency(string value)

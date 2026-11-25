@@ -58,7 +58,7 @@
                                         || item.value !== null && !['string', 'boolean', 'number'].includes(typeof item.value)
                                         || typeof item.value === 'number' && (!Number.isFinite(item.value) || Math.abs(item.value) > Number.MAX_SAFE_INTEGER))
                                         throw new Error('Incomplete JSON search response.');
-                                    return { name: item.path.at(-1), pathText: model.pathText(item.path, root), value: item.value, readOnly: item.value === null };
+                                    return { name: item.path.at(-1), path: item.path, pathText: model.pathText(item.path, root), value: item.value, readOnly: item.value === null };
                                 });
                                 remember(id, leaves); values = { values: leaves };
                             }

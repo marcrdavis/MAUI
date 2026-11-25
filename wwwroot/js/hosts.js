@@ -938,6 +938,7 @@
         if (type === 'list') {
             const select = document.createElement('select');
             select.className = 'text-input';
+            select.appendChild(new Option('', ''));
             (field.possibleValues || []).forEach(optionValue => select.appendChild(new Option(optionValue, optionValue)));
             select.value = value;
             return select;

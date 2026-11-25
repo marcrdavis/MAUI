@@ -903,7 +903,8 @@
 }
 .traditional-task-editor-time-option:hover,
 .traditional-task-editor-time-option.is-current { background: var(--surface-3); }
-.traditional-task-editor-schedule-interval .field-block.is-disabled-value { opacity: .65; }
+.traditional-task-editor-schedule-interval .field-block.is-disabled-value,
+.traditional-task-editor-schedule-options .traditional-task-editor-inline-check.is-disabled-value { opacity: .65; }
 .traditional-task-editor-schedule-interval-remove {
     align-self: end;
     min-height: 36px;
@@ -911,12 +912,6 @@
 .traditional-task-editor-schedule-options {
     display: grid;
     gap: 12px;
-}
-.traditional-task-editor-schedule-options > small {
-    margin: -7px 0 2px 24px;
-    color: var(--text-muted);
-    font-size: 12px;
-    line-height: 1.4;
 }
 .traditional-task-editor-schedule-hint {
     margin: 10px 0 12px;

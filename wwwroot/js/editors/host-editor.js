@@ -250,6 +250,7 @@
             if (fieldType === 'list') {
                 const select = document.createElement('select');
                 select.className = 'text-input maui-host-editor-control';
+                select.appendChild(new Option('', ''));
                 (field?.possibleValues || []).forEach(optionValue => select.appendChild(new Option(optionValue, optionValue)));
                 select.value = value;
                 return select;

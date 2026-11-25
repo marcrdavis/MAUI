@@ -49,6 +49,9 @@
     let backupRestoreDatabase;
     let backupRestoreMoveItSummary;
     let backupRestoreSqlWarning;
+    let backupRestoreScopes = [];
+    let backupRestoreMoveItSection;
+    let backupRestoreNoMoveIt;
     let backupRestoreMoveItOptions;
     let backupRestoreMultiWarning;
     let backupRestoreBusy = false;
@@ -60,6 +63,8 @@
     let backupRestoreCloseButton;
     let activeBackup = null;
     let backupInventory = [];
+    let backupPollTimer = null;
+    let backupSectionActive = false;
     let backupLoadPromise = null;
 
     function backupSettingsSignature() {
@@ -279,6 +284,21 @@
         return `${bytes.toFixed(digits)} ${units[unit]}`;
     }
 
+    function isBackupRunning(item) {
+        return item?.isRunning === true || item?.status === 'InProgress';
+    }
+
+    function backupRowStatus(item) {
+        if (isBackupRunning(item)) return { label: 'In Progress', css: 'in-progress' };
+        const statuses = {
+            Complete: { label: 'Complete', css: 'complete' },
+            Partial: { label: 'Partial', css: 'partial' },
+            Failed: { label: 'Failed', css: 'failed' },
+            Interrupted: { label: 'Interrupted', css: 'interrupted' }
+        };
+        return statuses[item?.status] || (item?.isComplete ? statuses.Complete : statuses.Partial);
+    }
+
     function backupContentsText(item) {
         const parts = [];
         if (item?.hasAppSettings) parts.push('appsettings.json');
@@ -286,7 +306,7 @@
         else if (String(item?.databaseProvider || '').toLowerCase() === 'sqlserver') parts.push('SQL Server config');
         const moveItCount = Number(item?.moveItConfigurationCount || 0);
         if (moveItCount > 0) parts.push(`MOVEit config × ${moveItCount}`);
-        return parts.length ? parts.join(' · ') : 'No recognized backup files';
+        return parts.length ? parts.join(' · ') : isBackupRunning(item) ? 'Preparing backup…' : 'No backup data saved';
     }
 
     function renderBackups() {
@@ -308,9 +328,16 @@
 
             const statusCell = document.createElement('td');
             const badge = document.createElement('span');
-            badge.className = `backup-status-badge ${item.isComplete ? 'complete' : 'partial'}`;
-            badge.textContent = item.isComplete ? 'Complete' : 'Partial';
+            const status = backupRowStatus(item);
+            badge.className = `backup-status-badge ${status.css}`;
+            badge.textContent = status.label;
             statusCell.appendChild(badge);
+            if (item.statusMessage && status.css !== 'complete') {
+                const detail = document.createElement('small');
+                detail.className = 'backup-environment-list';
+                detail.textContent = item.statusMessage;
+                statusCell.appendChild(detail);
+            }
 
             const contentsCell = document.createElement('td');
             contentsCell.textContent = backupContentsText(item);
@@ -332,7 +359,7 @@
             restore.className = 'secondary-button backup-action-button';
             restore.dataset.backupAction = 'restore';
             restore.textContent = 'Restore';
-            restore.disabled = item.canRestore !== true;
+            restore.disabled = isBackupRunning(item) || item.canRestore !== true;
             if (restore.disabled && item.restoreBlockReason) restore.title = item.restoreBlockReason;
 
             const download = document.createElement('button');
@@ -340,18 +367,44 @@
             download.className = 'secondary-button backup-action-button';
             download.dataset.backupAction = 'download';
             download.textContent = 'Download';
+            download.disabled = isBackupRunning(item);
 
             const remove = document.createElement('button');
             remove.type = 'button';
             remove.className = 'danger-button backup-action-button';
             remove.dataset.backupAction = 'remove';
             remove.textContent = 'Remove';
+            remove.disabled = isBackupRunning(item);
             actionsWrap.append(restore, download, remove);
             actionsCell.appendChild(actionsWrap);
 
             row.append(dateCell, statusCell, contentsCell, sizeCell, actionsCell);
             backupList.appendChild(row);
         });
+    }
+
+    function backupPageVisible() {
+        return initialized && backupSectionActive && !document.hidden;
+    }
+
+    function scheduleBackupRefresh() {
+        window.clearTimeout(backupPollTimer);
+        backupPollTimer = null;
+        if (!backupPageVisible()) return;
+        const delay = backupInventory.some(isBackupRunning) ? 3000 : 30000;
+        backupPollTimer = window.setTimeout(() => {
+            backupPollTimer = null;
+            if (!backupPageVisible()) return;
+            if (backupRestoreDialog?.open) { scheduleBackupRefresh(); return; }
+            void loadBackups();
+        }, delay);
+    }
+
+    function setBackupSectionActive(active) {
+        const opening = !backupSectionActive && active;
+        backupSectionActive = Boolean(active);
+        if (opening && backupPageVisible()) void loadBackups();
+        else scheduleBackupRefresh();
     }
 
     function loadBackups() {
@@ -380,6 +433,7 @@
             } finally {
                 if (backupRefreshButton) backupRefreshButton.disabled = false;
                 backupLoadPromise = null;
+                scheduleBackupRefresh();
             }
         })();
 
@@ -424,19 +478,46 @@
         backupRestoreError.hidden = !message;
     }
 
+    function restoresMoveItConfiguration() {
+        return backupRestoreScopes.some(input => input.value === 'MauiAndMoveIt' && input.checked);
+    }
+
+    function selectedRestoreEnvironments() {
+        return restoresMoveItConfiguration()
+            ? [...(backupRestoreMoveItOptions?.querySelectorAll('input:checked') || [])].map(input => input.value)
+            : [];
+    }
+
     function updateRestoreConfirmState() {
         if (!backupRestoreConfirmButton) return;
+        const includeMoveIt = restoresMoveItConfiguration();
+        const hasMoveIt = Array.isArray(activeBackup?.moveItEnvironments) && activeBackup.moveItEnvironments.length > 0;
+        const selectedCount = selectedRestoreEnvironments().length;
+        backupRestoreScopes.forEach(input => { input.disabled = backupRestoreBusy || (input.value === 'MauiAndMoveIt' && !hasMoveIt); });
+        backupRestoreMoveItOptions?.querySelectorAll('input').forEach(input => { input.disabled = backupRestoreBusy || !includeMoveIt; });
+        if (backupRestoreMoveItSection) backupRestoreMoveItSection.hidden = !includeMoveIt;
+        if (backupRestoreNoMoveIt) backupRestoreNoMoveIt.hidden = hasMoveIt;
         backupRestoreConfirmButton.disabled = backupRestoreBusy || !activeBackup
             || activeBackup.canRestore !== true
+            || (includeMoveIt && (!hasMoveIt || selectedCount === 0))
             || !backupRestoreAcknowledge?.checked
             || String(backupRestoreConfirmation?.value || '').trim() !== 'RESTORE';
-        if (backupRestoreMultiWarning) backupRestoreMultiWarning.hidden = (backupRestoreMoveItOptions?.querySelectorAll('input:checked').length || 0) < 2;
+        if (backupRestoreMultiWarning) backupRestoreMultiWarning.hidden = selectedCount < 2;
+    }
+
+    function changeRestoreScope() {
+        if (backupRestoreBusy) return;
+        if (!restoresMoveItConfiguration())
+            backupRestoreMoveItOptions?.querySelectorAll('input').forEach(input => { input.checked = false; });
+        setRestoreError('');
+        updateRestoreConfirmState();
     }
 
     function closeBackupRestoreDialog() {
         if (backupRestoreBusy) return;
         if (backupRestoreDialog?.open) backupRestoreDialog.close();
         activeBackup = null;
+        backupRestoreScopes.forEach(input => { input.checked = input.value === 'MauiOnly'; });
         backupRestoreMoveItOptions?.replaceChildren();
         if (backupRestoreAcknowledge) backupRestoreAcknowledge.checked = false;
         if (backupRestoreConfirmation) backupRestoreConfirmation.value = '';
@@ -447,6 +528,7 @@
     function openBackupRestoreDialog(item) {
         if (!backupRestoreDialog || !item || backupRestoreBusy) return;
         activeBackup = item;
+        backupRestoreScopes.forEach(input => { input.checked = input.value === 'MauiOnly'; });
         if (backupRestoreDate) backupRestoreDate.textContent = formatBackupDate(item.backupUtc);
         if (backupRestoreDatabase) {
             const provider = String(item.databaseProvider || 'Unknown');
@@ -477,17 +559,17 @@
         setRestoreError(item.canRestore === true ? '' : (item.restoreBlockReason || 'This backup cannot be restored.'));
         updateRestoreConfirmState();
         backupRestoreDialog.showModal();
-        backupRestoreAcknowledge?.focus();
+        backupRestoreScopes.find(input => input.checked)?.focus();
     }
 
     async function restoreBackup() {
         if (!activeBackup || !backupRestoreUrl || !backupRestoreConfirmButton || backupRestoreConfirmButton.disabled) return;
         const backup = activeBackup;
         const originalLabel = backupRestoreConfirmButton.textContent;
-        const moveItEnvironments = [...(backupRestoreMoveItOptions?.querySelectorAll('input:checked') || [])].map(input => input.value);
+        const moveItEnvironments = selectedRestoreEnvironments();
         let restartPending = false;
         backupRestoreBusy = true;
-        backupRestoreMoveItOptions?.querySelectorAll('input').forEach(input => { input.disabled = true; });
+        updateRestoreConfirmState();
         backupRestoreConfirmButton.disabled = true;
         if (backupRestoreCancelButton) backupRestoreCancelButton.disabled = true;
         if (backupRestoreCloseButton) backupRestoreCloseButton.disabled = true;
@@ -521,7 +603,6 @@
             if (restartPending) return;
             backupRestoreBusy = false;
             if (!backupRestoreDialog?.open) return;
-            backupRestoreMoveItOptions?.querySelectorAll('input').forEach(input => { input.disabled = false; });
             backupRestoreConfirmButton.textContent = originalLabel || 'Restore Backup';
             if (backupRestoreCancelButton) backupRestoreCancelButton.disabled = false;
             if (backupRestoreCloseButton) backupRestoreCloseButton.disabled = false;
@@ -607,6 +688,9 @@
         backupRestoreDatabase = backupRestoreDialog?.querySelector('[data-backup-restore-database]');
         backupRestoreMoveItSummary = backupRestoreDialog?.querySelector('[data-backup-restore-moveit-summary]');
         backupRestoreSqlWarning = backupRestoreDialog?.querySelector('[data-backup-restore-sql-warning]');
+        backupRestoreScopes = [...(backupRestoreDialog?.querySelectorAll('[data-backup-restore-scope]') || [])];
+        backupRestoreMoveItSection = backupRestoreDialog?.querySelector('[data-backup-restore-moveit-section]');
+        backupRestoreNoMoveIt = backupRestoreDialog?.querySelector('[data-backup-restore-no-moveit]');
         backupRestoreMoveItOptions = backupRestoreDialog?.querySelector('[data-backup-restore-moveit-options]');
         backupRestoreMultiWarning = backupRestoreDialog?.querySelector('[data-backup-restore-multi-warning]');
         backupRestoreAcknowledge = backupRestoreDialog?.querySelector('[data-backup-restore-acknowledge]');
@@ -622,6 +706,7 @@
         backupList?.addEventListener('click', event => { void handleBackupListClick(event); });
         backupRestoreAcknowledge?.addEventListener('change', updateRestoreConfirmState);
         backupRestoreConfirmation?.addEventListener('input', updateRestoreConfirmState);
+        backupRestoreScopes.forEach(input => input.addEventListener('change', changeRestoreScope));
         backupRestoreMoveItOptions?.addEventListener('change', updateRestoreConfirmState);
         backupRestoreConfirmButton?.addEventListener('click', restoreBackup);
         backupRestoreCancelButton?.addEventListener('click', closeBackupRestoreDialog);
@@ -632,6 +717,12 @@
         dataAccessCancelButton?.addEventListener('click', closeDataAccessDialog);
         dataAccessCloseButton?.addEventListener('click', closeDataAccessDialog);
         dataAccessDialog?.addEventListener('cancel', event => { event.preventDefault(); closeDataAccessDialog(); });
+        document.addEventListener('visibilitychange', () => {
+            if (backupPageVisible()) void loadBackups();
+            else scheduleBackupRefresh();
+        });
+        window.addEventListener('pagehide', () => { backupSectionActive = false; scheduleBackupRefresh(); });
+        setBackupSectionActive(workspace.querySelector('[data-config-section="backup"]')?.classList.contains('active') === true);
         void loadDataAccessReadiness();
     }
 
@@ -639,5 +730,6 @@
         if (initialized) backupBaseline = backupSettingsSignature();
     }
 
-    window.MauiConfigurationOperations = Object.freeze({ initialize, wireDataAccessRow, syncDataAccessRow, markSettingsSaved, refreshBackups: loadBackups });
+    window.MauiConfigurationOperations = Object.freeze({ initialize, wireDataAccessRow, syncDataAccessRow, markSettingsSaved,
+        refreshBackups: loadBackups, setBackupSectionActive });
 })();

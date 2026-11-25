@@ -8,10 +8,10 @@
     <RootNamespace>MoveItAutomationUI</RootNamespace>
     <AssemblyName>MoveItAutomationUI</AssemblyName>
     <Authors>Marc R. Davis (marcdavis@comcast.net)</Authors>
-    <Version>0.18.556-RC3</Version>
-    <AssemblyVersion>0.18.556.0</AssemblyVersion>
-    <FileVersion>0.18.556.0</FileVersion>
-    <InformationalVersion>0.18.556-RC3+build.20261117</InformationalVersion>
+    <Version>0.18.583-RC3</Version>
+    <AssemblyVersion>0.18.583.0</AssemblyVersion>
+    <FileVersion>0.18.583.0</FileVersion>
+    <InformationalVersion>0.18.583-RC3+build.20261124</InformationalVersion>
 
     <!-- Separate tools/tests and any nested build output are outside the application.
          Keep these exclusions even when those projects are absent from the solution:

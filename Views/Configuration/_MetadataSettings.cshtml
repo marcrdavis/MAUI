@@ -7,7 +7,7 @@
     </div>
     <div class="panel-card configuration-card">
         <div class="configuration-card-heading row-heading">
-            <div><h3>Metadata Fields</h3><p>Choose a resource type, then add or modify the metadata fields shown in its information dialog and grid. Name is the stable identifier and becomes read-only after saving. MAUI-managed fields are shown read-only.</p></div>
+            <div><h3>Metadata Fields</h3><p>Choose a resource type, then add or modify its metadata fields. Use the arrows to change their display order, then Save Changes. Name is the stable identifier and becomes read-only after saving. MAUI-managed field definitions are read-only, but can be reordered.</p></div>
             <select class="text-input configuration-resource-select" data-metadata-resource-select>
                 @foreach (var resource in Model.MetadataResources)
                 {
@@ -22,7 +22,7 @@
                     @foreach (var field in resource.Fields)
                     {
                         var isManagedTagsField = field.Type.Equals("Tags", StringComparison.OrdinalIgnoreCase);
-                        var managedTitle = isManagedTagsField ? "This Tags field is managed by MAUI and cannot be modified." : null;
+                        var managedTitle = isManagedTagsField ? "This Tags field is managed by MAUI. Its definition is read-only, but its display order can be changed." : null;
                         <div class="configuration-metadata-row" data-metadata-row data-metadata-persisted="true" data-metadata-system-managed="@(isManagedTagsField ? "true" : "false")" title="@managedTitle">
                             <label class="configuration-metadata-control">
                                 <span>
@@ -50,7 +50,11 @@
                             </select></label>
                             <label class="configuration-metadata-control"><span>Possible Values</span><input class="text-input" value="@string.Join(", ", field.PossibleValues)" disabled="@(isManagedTagsField ? "disabled" : null)" data-metadata-field="possibleValues" /></label>
                             <label class="configuration-required-check configuration-metadata-required"><span>Required</span><input type="checkbox" @(field.Required ? "checked" : null) disabled="@(isManagedTagsField ? "disabled" : null)" data-metadata-field="required" /></label>
-                            <button type="button" class="configuration-remove-button configuration-metadata-remove" data-remove-metadata-field disabled="@(isManagedTagsField ? "disabled" : null)" title="@managedTitle">Remove</button>
+                            <div class="configuration-metadata-actions">
+                                <button type="button" class="secondary-button configuration-metadata-order-button" data-metadata-up title="Move up" aria-label="Move @field.Label up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 19V5M5 12l7-7 7 7" /></svg></button>
+                                <button type="button" class="secondary-button configuration-metadata-order-button" data-metadata-down title="Move down" aria-label="Move @field.Label down"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12l7 7 7-7" /></svg></button>
+                                <button type="button" class="configuration-remove-button configuration-metadata-remove" data-remove-metadata-field disabled="@(isManagedTagsField ? "disabled" : null)" title="@managedTitle">Remove</button>
+                            </div>
                             <label class="configuration-metadata-control configuration-metadata-description"><span>Description</span><input class="text-input" value="@field.Description" disabled="@(isManagedTagsField ? "disabled" : null)" data-metadata-field="description" /></label>
                         </div>
                     }

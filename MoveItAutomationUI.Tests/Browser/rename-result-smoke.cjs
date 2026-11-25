@@ -24,4 +24,26 @@ for (const error of [{ status: 400 }, { status: 401 }, { status: 403 }, { status
     { status: 500, payload: { moveItSaved: false, outcomeUnknown: false } }]) {
     assert.equal(policy.requiresReload(error), false); checks++;
 }
-console.log('PASS shared rename acknowledgement and failure policy: ' + checks + ' checks');
+const cleanupSource = fs.readFileSync(path.join(__dirname, 'rename-browser-cleanup.cjs'), 'utf8');
+function cleanupCase(platform, result, exists, killResult = true, exitCode = null) {
+    const errors = [], processState = { platform, kill() { if (!exists) throw Object.assign(new Error('Process exited'), { code: 'ESRCH' }); } };
+    let stops = 0, unreferenced = false;
+    const module = { exports: {} };
+    vm.runInNewContext(cleanupSource, { module, require: () => ({ spawnSync() { stops++; return result; } }),
+        process: processState, console: { error: (...args) => errors.push(args.join(' ')) } });
+    module.exports({ pid: 12345, exitCode, kill() { return killResult; }, unref() { unreferenced = true; } });
+    return { exitCode: processState.exitCode, errors, stops, unreferenced };
+}
+for (const platform of ['win32', 'linux']) {
+    const exited = cleanupCase(platform, { status: 128 }, false, false);
+    assert.equal(exited.exitCode, undefined); assert.equal(exited.errors.length, 0); checks++;
+    const alive = cleanupCase(platform, { status: 1, stderr: 'Fixture stop failure' }, true, false);
+    assert.equal(alive.exitCode, 1); assert.equal(alive.errors.length, 1); checks++;
+    const success = cleanupCase(platform, { status: 0 }, true);
+    assert.equal(success.exitCode, undefined); assert.equal(success.unreferenced, true); checks++;
+}
+const timeout = cleanupCase('win32', { status: null, error: { code: 'ETIMEDOUT' } }, true);
+assert.equal(timeout.exitCode, 1); assert.match(timeout.errors[0], /ETIMEDOUT/); checks++;
+const alreadyStopped = cleanupCase('win32', { status: 1 }, false, false, 0);
+assert.equal(alreadyStopped.stops, 0); assert.equal(alreadyStopped.exitCode, undefined); checks++;
+console.log('PASS shared rename acknowledgement, failure policy and verified browser cleanup: ' + checks + ' checks');

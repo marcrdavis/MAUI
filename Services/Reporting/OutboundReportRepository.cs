@@ -15,7 +15,7 @@ namespace MoveItAutomationUI.Services.Reporting;
 
 public interface IOutboundReportRepository
 {
-    Task<OutboundReportEntity> CreateAsync(CreateOutboundReportRequest request, ReportScheduleDefinition schedule, DateTimeOffset nextRunUtc, CancellationToken cancellationToken = default);
+    Task<OutboundReportEntity> CreateAsync(CreateOutboundReportRequest request, ReportScheduleDefinition schedule, DateTimeOffset? nextRunUtc, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<OutboundReportSummary>> GetAllAsync(string username, bool includeAllOwners, CancellationToken cancellationToken = default);
     Task<OutboundReportEntity?> GetAsync(string id, string username, bool includeAllOwners, CancellationToken cancellationToken = default);
     Task<OutboundReportEntity> UpdateAsync(UpdateOutboundReportRequest request, ReportScheduleDefinition schedule, DateTimeOffset? nextRunUtc, string username, bool includeAllOwners, CancellationToken cancellationToken = default);
@@ -40,13 +40,13 @@ public sealed class OutboundReportRepository : IOutboundReportRepository
         _sessionService = sessionService;
     }
 
-    public async Task<OutboundReportEntity> CreateAsync(CreateOutboundReportRequest request, ReportScheduleDefinition schedule, DateTimeOffset nextRunUtc, CancellationToken cancellationToken = default)
+    public async Task<OutboundReportEntity> CreateAsync(CreateOutboundReportRequest request, ReportScheduleDefinition schedule, DateTimeOffset? nextRunUtc, CancellationToken cancellationToken = default)
     {
         var session = _sessionService.Get() ?? throw new MoveItAuthenticationException("MOVEit session expired. Please sign in again.");
         var environmentKey = MoveItEnvironmentKey.Normalize(session.GetEnvironmentKey());
         var now = DateTimeOffset.UtcNow;
         var title = ValidateTitle(request.Title);
-        var recipients = NormalizeRecipients(request.Recipients);
+        var recipients = schedule.DeliveryMode == OutboundReportDeliveryModes.None ? Array.Empty<string>() : NormalizeRecipients(request.Recipients);
         ValidateViewState(request.ViewState);
         ValidateSourceContext(request.SourceContext, request.GridKey);
 
@@ -65,7 +65,7 @@ public sealed class OutboundReportRepository : IOutboundReportRepository
             ScheduleJson = JsonSerializer.Serialize(schedule, JsonOptions),
             Enabled = true,
             NextRunUtc = nextRunUtc,
-            LastStatus = "Pending",
+            LastStatus = schedule.DeliveryMode == OutboundReportDeliveryModes.None ? string.Empty : "Pending",
             LastMessage = string.Empty,
             CreatedUtc = now,
             ModifiedUtc = now
@@ -99,7 +99,7 @@ public sealed class OutboundReportRepository : IOutboundReportRepository
             ?? throw new ArgumentException("The Report no longer exists or you do not have access to it.");
         entity.Title = ValidateTitle(request.Title);
         entity.Description = ValidateDescription(request.Description);
-        entity.Recipients = string.Join(";", NormalizeRecipients(request.Recipients));
+        entity.Recipients = schedule.DeliveryMode == OutboundReportDeliveryModes.None ? string.Empty : string.Join(";", NormalizeRecipients(request.Recipients));
         entity.ScheduleJson = JsonSerializer.Serialize(schedule, JsonOptions);
         entity.Enabled = request.Enabled;
         entity.NextRunUtc = request.Enabled ? nextRunUtc : null;

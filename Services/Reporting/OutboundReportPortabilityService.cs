@@ -148,12 +148,13 @@ public sealed class OutboundReportPortabilityService : IOutboundReportPortabilit
 
         try
         {
-            _ = OutboundReportRepository.NormalizeRecipients(definition.Recipients);
             var viewState = JsonSerializer.Deserialize<ReportGridViewState>(definition.ViewStateJson, JsonOptions);
             if (viewState is null || viewState.SchemaVersion != 1 || viewState.Columns.Count == 0) return $"Report '{definition.Title}' contains an invalid saved grid view.";
             _ = OutboundReportSourceRoutes.NormalizeJson(definition.SourceContextJson, definition.GridKey);
             var schedule = JsonSerializer.Deserialize<ReportScheduleDefinition>(definition.ScheduleJson, JsonOptions) ?? throw new JsonException();
-            _ = _scheduleCalculator.ValidateAndNormalize(schedule, schedule.TimeZoneId);
+            var normalized = _scheduleCalculator.ValidateAndNormalize(schedule, schedule.TimeZoneId);
+            if (normalized.DeliveryMode != OutboundReportDeliveryModes.None)
+                _ = OutboundReportRepository.NormalizeRecipients(definition.Recipients);
         }
         catch (Exception ex) when (ex is ArgumentException or JsonException or TimeZoneNotFoundException or InvalidTimeZoneException)
         {
@@ -207,7 +208,7 @@ public sealed class OutboundReportPortabilityService : IOutboundReportPortabilit
                 Required(definitionElement, "GridKey").ToLowerInvariant(),
                 Required(definitionElement, "Title"),
                 Value(definitionElement, "Description"),
-                Required(definitionElement, "Recipients"),
+                Value(definitionElement, "Recipients"),
                 Required(definitionElement, "ViewStateJson"),
                 Required(definitionElement, "SourceContextJson"),
                 Required(definitionElement, "ScheduleJson"));

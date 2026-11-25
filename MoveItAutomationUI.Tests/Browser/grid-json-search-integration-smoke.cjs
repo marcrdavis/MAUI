@@ -40,7 +40,7 @@ const event = class { constructor(type, options) { this.type = type; this.detail
     assert.match(state.getReportCreationIssue('Now'), /Complete a valid JSON search/);
     state.jsonSearch.ready = () => true;
     assert.equal(state.getReportCreationIssue('Now'), '');
-    for (const mode of ['Once', 'Recurring']) assert.match(state.getReportCreationIssue(mode), /only be sent now/);
+    for (const mode of ['None', 'Once', 'Recurring']) assert.match(state.getReportCreationIssue(mode), /only be sent now/);
     state.jsonSearch.active = () => false;
     assert.equal(state.getReportCreationIssue('Recurring'), '', 'ordinary scheduled Reports are unchanged');
 
@@ -52,8 +52,8 @@ const event = class { constructor(type, options) { this.type = type; this.detail
     const snapshot = { columns: [{ key: 'Name' }], rows: [{ id: '1', values: { Name: 'Matched' } }] };
     const api = { gridKey: 'tasks', getCreateIssue: () => issue, captureSnapshot: () => { captured++; return snapshot; },
         captureViewState: () => ({ searchText: 'JSON:Active=1' }), captureSourceContext: () => ({ path: '/Tasks' }) };
-    const dialog = { close() {}, showModal: () => opened++, querySelector: selector => selector === '[data-report-error]' ? error : selector === '[data-report-submit]' ? button : { value: 'Example' } };
-    const report = { dialog, currentApi: api, createUrl: '/maui/OutboundReports/Create', ensureDialog() {}, reset() {}, refreshEmailStatus() {}, requestAnimationFrame() {},
+    const dialog = { querySelectorAll: () => [button], close() {}, showModal: () => opened++, querySelector: selector => selector === '[data-report-error]' ? error : selector === '[data-report-submit]' ? button : { value: 'Example' } };
+    const report = { creating: false, apiAccess: null, dialog, currentApi: api, createUrl: '/maui/OutboundReports/Create', ensureDialog() {}, reset() {}, refreshEmailStatus() {}, requestAnimationFrame() {},
         buildSchedule: () => ({ deliveryMode: mode, timeOfDay: '08:00' }), isFiveMinuteTime: () => true,
         postJson: async (url, payload) => { posts.push(payload); return {}; }, window: { mauiShowToast: message => notices.push(message) } };
     vm.runInNewContext(submit + open, report);

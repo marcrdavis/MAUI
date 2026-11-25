@@ -12,7 +12,7 @@ namespace MoveItAutomationUI.Services.Reporting;
 
 public interface IOutboundReportService
 {
-    Task<object> CreateAsync(CreateOutboundReportRequest request, CancellationToken cancellationToken = default);
+    Task<CreateOutboundReportResult> CreateAsync(CreateOutboundReportRequest request, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<OutboundReportSummary>> ListAsync(string username, bool isAdmin, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<OutboundReportHistorySummary>> HistoryAsync(string id, string username, bool isAdmin, CancellationToken cancellationToken = default);
     Task<OutboundReportSummary> UpdateAsync(UpdateOutboundReportRequest request, string username, bool isAdmin, CancellationToken cancellationToken = default);
@@ -22,6 +22,8 @@ public interface IOutboundReportService
     Task<OutboundReportSummary?> SetEnabledAsync(string id, bool enabled, string username, bool isAdmin, CancellationToken cancellationToken = default);
     Task<OutboundReportExecutionResult> RunSavedNowAsync(string id, string username, bool isAdmin, CancellationToken cancellationToken = default);
     Task<OutboundReportExecutionResult> ExecuteScheduledAsync(OutboundReportEntity report, CancellationToken cancellationToken = default);
+    Task<OutboundReportData> GenerateAsync(OutboundReportEntity report, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("Report generation is unavailable.");
 }
 
 public sealed class OutboundReportService : IOutboundReportService
@@ -59,7 +61,7 @@ public sealed class OutboundReportService : IOutboundReportService
         _logger = logger;
     }
 
-    public async Task<object> CreateAsync(CreateOutboundReportRequest request, CancellationToken cancellationToken = default)
+    public async Task<CreateOutboundReportResult> CreateAsync(CreateOutboundReportRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
         var session = _sessionService.Get() ?? throw new MoveItAuthenticationException("MOVEit session expired. Please sign in again.");
@@ -73,7 +75,7 @@ public sealed class OutboundReportService : IOutboundReportService
         var schedule = _scheduleCalculator.ValidateAndNormalize(request.Schedule, serverTimeZone);
         if (schedule.DeliveryMode != OutboundReportDeliveryModes.Now)
             OutboundReportSourcePolicy.EnsureScheduledSearchSupported(request.GridKey, request.ViewState?.SearchText);
-        var recipients = OutboundReportRepository.NormalizeRecipients(request.Recipients);
+        var recipients = schedule.DeliveryMode == OutboundReportDeliveryModes.None ? Array.Empty<string>() : OutboundReportRepository.NormalizeRecipients(request.Recipients);
 
         if (schedule.DeliveryMode == OutboundReportDeliveryModes.Now)
         {
@@ -87,7 +89,7 @@ public sealed class OutboundReportService : IOutboundReportService
                 await _email.SendAsync(request.Title.Trim(), request.Description.Trim(), recipients, data, cancellationToken);
                 var result = new OutboundReportExecutionResult(true, data.Rows.Count, "Report sent successfully.", DateTimeOffset.UtcNow);
                 await _repository.RecordAdHocExecutionAsync(session.GetEnvironmentKey(), request.Title, started, result, recipients.Count, cancellationToken);
-                return new { sent = true, saved = false, message = result.Message, rowCount = result.RowCount };
+                return new CreateOutboundReportResult(true, false, result.Message, RowCount: result.RowCount);
             }
             catch (Exception ex)
             {
@@ -95,6 +97,12 @@ public sealed class OutboundReportService : IOutboundReportService
                 await _repository.RecordAdHocExecutionAsync(session.GetEnvironmentKey(), request.Title, started, failed, recipients.Count, cancellationToken);
                 throw;
             }
+        }
+
+        if (schedule.DeliveryMode == OutboundReportDeliveryModes.None)
+        {
+            var definition = await _repository.CreateAsync(request, schedule, null, cancellationToken);
+            return new CreateOutboundReportResult(false, true, "Report saved.", definition.Id);
         }
 
         var environment = session.GetEnvironmentKey();
@@ -109,7 +117,7 @@ public sealed class OutboundReportService : IOutboundReportService
         var warning = smtpStatus.IsConfigured
             ? string.Empty
             : "Outbound email has not been configured. The report schedule was saved and will remain pending until SMTP Configuration is completed.";
-        return new { sent = false, saved = true, id = saved.Id, message = "Report schedule saved.", warning, nextRunUtc = saved.NextRunUtc };
+        return new CreateOutboundReportResult(false, true, "Report schedule saved.", saved.Id, warning, saved.NextRunUtc);
     }
 
 
@@ -148,13 +156,21 @@ public sealed class OutboundReportService : IOutboundReportService
             ?? throw new ArgumentException("The Report no longer exists or you do not have access to it.");
         OutboundReportSourcePolicy.EnsureAllowed(existing.GridKey, isAdmin);
         var existingSchedule = DeserializeSchedule(existing.ScheduleJson);
-        var zone = string.IsNullOrWhiteSpace(request.Schedule.TimeZoneId) ? existingSchedule.TimeZoneId : request.Schedule.TimeZoneId;
+        var noDelivery = string.Equals(request.Schedule.DeliveryMode, OutboundReportDeliveryModes.None, StringComparison.OrdinalIgnoreCase);
+        var zone = noDelivery || string.IsNullOrWhiteSpace(request.Schedule.TimeZoneId) ? existingSchedule.TimeZoneId : request.Schedule.TimeZoneId;
+        if (!noDelivery && string.IsNullOrWhiteSpace(zone))
+        {
+            var session = _sessionService.Get();
+            if (session?.GetEnvironmentKey() == existing.EnvironmentKey)
+                zone = session.Info?.ServerTimezoneInfo?.TimeZoneName ?? string.Empty;
+        }
         var schedule = _scheduleCalculator.ValidateAndNormalize(request.Schedule, zone);
-        if (schedule.DeliveryMode == OutboundReportDeliveryModes.Now) throw new ArgumentException("Saved reports must use a One Time or Recurring schedule.");
-        if (request.Enabled && !_dataAccessCredentials.IsEnvironmentConfigured(existing.EnvironmentKey))
+        if (schedule.DeliveryMode == OutboundReportDeliveryModes.Now) throw new ArgumentException("Saved reports must use None, One Time or Recurring delivery.");
+        var scheduled = schedule.DeliveryMode != OutboundReportDeliveryModes.None;
+        if (request.Enabled && scheduled && !_dataAccessCredentials.IsEnvironmentConfigured(existing.EnvironmentKey))
             throw new InvalidOperationException($"Data Access Credentials are not configured for any active MOVEit server in environment '{existing.EnvironmentKey}'.");
         var next = request.Enabled ? _scheduleCalculator.GetNextRunUtc(schedule, DateTimeOffset.UtcNow) : null;
-        if (request.Enabled && next is null) throw new ArgumentException("The selected report schedule does not contain a future delivery time.");
+        if (request.Enabled && scheduled && next is null) throw new ArgumentException("The selected report schedule does not contain a future delivery time.");
         var updated = await _repository.UpdateAsync(request, schedule, next, username, isAdmin, cancellationToken);
         return (await _repository.GetAllAsync(username, isAdmin, cancellationToken)).Single(item => item.Id == updated.Id);
     }
@@ -195,7 +211,7 @@ public sealed class OutboundReportService : IOutboundReportService
         if (existing is null) return null;
         OutboundReportSourcePolicy.EnsureAllowed(existing.GridKey, isAdmin);
         DateTimeOffset? next = null;
-        if (enabled)
+        if (enabled && DeserializeSchedule(existing.ScheduleJson).DeliveryMode != OutboundReportDeliveryModes.None)
         {
             if (!_dataAccessCredentials.IsEnvironmentConfigured(existing.EnvironmentKey))
                 throw new InvalidOperationException($"Data Access Credentials are not configured for any active MOVEit server in environment '{existing.EnvironmentKey}'.");
@@ -211,6 +227,8 @@ public sealed class OutboundReportService : IOutboundReportService
         var report = await _repository.GetAsync(id, username, isAdmin, cancellationToken)
             ?? throw new ArgumentException("The Report no longer exists or you do not have access to it.");
         OutboundReportSourcePolicy.EnsureAllowed(report.GridKey, isAdmin);
+        if (DeserializeSchedule(report.ScheduleJson).DeliveryMode == OutboundReportDeliveryModes.None)
+            throw new ArgumentException("This Report has no email delivery. Use its API link or configure email delivery before running it here.");
         return await ExecuteWithStoredCredentialAsync(report, updateSchedule: false, cancellationToken);
     }
 
@@ -249,13 +267,7 @@ public sealed class OutboundReportService : IOutboundReportService
                 return unavailable;
             }
 
-            var credentials = _dataAccessCredentials.GetConfiguredForEnvironment(report.EnvironmentKey);
-            if (credentials.Count == 0)
-                throw new InvalidOperationException($"Data Access Credentials are not configured for any active MOVEit server in environment '{report.EnvironmentKey}'.");
-            var state = await AuthenticateEnvironmentAsync(report.EnvironmentKey, credentials, cancellationToken);
-
-            using (_sessionService.PushBackgroundSession(state))
-                data = await _dataSource.LoadAsync(report, cancellationToken);
+            data = await GenerateAsync(report, cancellationToken);
 
             await _email.SendAsync(report.Title, report.Description, recipients, data, cancellationToken);
             var success = new OutboundReportExecutionResult(true, data.Rows.Count, "Report sent successfully.", DateTimeOffset.UtcNow);
@@ -279,6 +291,17 @@ public sealed class OutboundReportService : IOutboundReportService
         }
     }
 
+
+    public async Task<OutboundReportData> GenerateAsync(OutboundReportEntity report, CancellationToken cancellationToken = default)
+    {
+        OutboundReportSourcePolicy.EnsureAllowed(report.GridKey, _security.IsAdmin(report.OwnerUsername));
+        var credentials = _dataAccessCredentials.GetConfiguredForEnvironment(report.EnvironmentKey);
+        if (credentials.Count == 0)
+            throw new ReportDataUnavailableException($"Data Access Credentials are not configured for any active MOVEit server in environment '{report.EnvironmentKey}'.");
+        var state = await AuthenticateEnvironmentAsync(report.EnvironmentKey, credentials, cancellationToken);
+        using (_sessionService.PushBackgroundSession(state))
+            return await _dataSource.LoadAsync(report, cancellationToken);
+    }
 
     private async Task<MoveItSessionState> AuthenticateEnvironmentAsync(
         string environmentKey,

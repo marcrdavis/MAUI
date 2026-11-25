@@ -136,6 +136,7 @@
       data-saved-view-get-url="@Url.Action("Get", "SavedViews")"
       data-saved-view-save-url="@Url.Action("Save", "SavedViews")"
       data-saved-view-delete-url="@Url.Action("Delete", "SavedViews")"
+      data-outbound-report-api-prepare-url="@Url.Action("PrepareApiLink", "OutboundReports")"
       data-outbound-report-create-url="@Url.Action("Create", "OutboundReports")"
       data-outbound-report-email-status-url="@Url.Action("EmailStatus", "OutboundReports")"
       data-outbound-report-edit-definition-url="@Url.Action("EditDefinition", "Reports")"
@@ -779,6 +780,8 @@ else
 <script src="~/js/grid-view-state.js" asp-append-version="true"></script>
 <script src="~/js/grid-export.js" asp-append-version="true"></script>
 <script src="~/js/grid-print.js" asp-append-version="true"></script>
+<template data-report-api-template><partial name="_ReportApiAccess" /></template>
+<script src="~/js/report-api-access.js" asp-append-version="true"></script>
 <script src="~/js/outbound-reports.js" asp-append-version="true"></script>
 <script src="~/js/grid-actions.js" asp-append-version="true"></script>
 <script src="~/js/grid-date-macros.js" asp-append-version="true"></script>

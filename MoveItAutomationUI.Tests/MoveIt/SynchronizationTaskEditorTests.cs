@@ -11,6 +11,42 @@ namespace MoveItAutomationUI.Tests.MoveIt;
 public sealed class SynchronizationTaskEditorTests
 {
     [Theory]
+    [InlineData("FileSystem", 1, true)]
+    [InlineData("FileSystem", 0, false)]
+    [InlineData("FileSystem", null, null)]
+    [InlineData("Share", 1, true)]
+    [InlineData("Share", 0, false)]
+    [InlineData("Share", null, null)]
+    [InlineData("siLock", 1, true)]
+    [InlineData("siLock", 0, false)]
+    [InlineData("siLock", null, null)]
+    [InlineData("FTP", 1, false)]
+    [InlineData("S3", null, false)]
+    public async Task NotificationStateProjectsActualHostSettingsAndKeepsMissingSettingsUnknown(string type, int? enabled, bool? expected)
+    {
+        var task = Definition(type);
+        task["TT"] = "";
+        var rest = Rest(() => task, notifications: enabled);
+        var result = await new TraditionalTaskEditorService(rest, Coordinator(rest)).GetDefinitionAsync("100");
+        Assert.Equal(expected, Assert.Single(result.SourceHosts, host => host.TypeCode == type).Defaults.FileNotificationsEnabled);
+        Assert.All(result.Task.Steps, step => Assert.Equal(expected, step.Source!.HostDefaults.FileNotificationsEnabled));
+    }
+
+    [Theory]
+    [InlineData(1, true)]
+    [InlineData(0, false)]
+    [InlineData(null, null)]
+    public async Task SyncFolderNotificationStateUsesTheSameHostReadContract(int? enabled, bool? expected)
+    {
+        var task = Definition("Share");
+        var rest = Rest(() => task, notifications: enabled);
+        var result = await new TraditionalTaskEditorService(rest, Coordinator(rest)).GetDefinitionAsync("100");
+        Assert.Equal("Synchronization", result.Task.Type);
+        Assert.Equal(2, result.Task.Steps.Count);
+        Assert.All(result.Task.Steps, step => Assert.Equal(expected, step.Source!.HostDefaults.FileNotificationsEnabled));
+    }
+
+    [Theory]
     [InlineData("", "Traditional")]
     [InlineData("COS", "Advanced")]
     [InlineData("Sy", "Synchronization")]
@@ -638,7 +674,7 @@ public sealed class SynchronizationTaskEditorTests
     };
 
     private static JsonObject Acknowledgement() => new() { ["id"] = "100", ["status"] = "success", ["errorcode"] = 0, ["refreshRequired"] = false };
-    private static IMoveItRestClient Rest(Func<JsonObject> read, Func<string, JsonObject, Task<JsonObject>>? write = null, Func<Task<JsonObject>>? clear = null, Func<Task<JsonObject>>? preview = null, bool mailOAuth = false)
+    private static IMoveItRestClient Rest(Func<JsonObject> read, Func<string, JsonObject, Task<JsonObject>>? write = null, Func<Task<JsonObject>>? clear = null, Func<Task<JsonObject>>? preview = null, bool mailOAuth = false, int? notifications = null)
         => Stub<IMoveItRestClient>((method, args) => method.Name switch
         {
             nameof(IMoveItRestClient.CheckoutTaskV0Async) or nameof(IMoveItRestClient.ReleaseTaskCheckoutV0Async) => Task.CompletedTask,
@@ -652,6 +688,7 @@ public sealed class SynchronizationTaskEditorTests
                 .Concat(new[] { "POP3", "SMTP", "siLock" }).Select(type => new JsonObject { [type] = new JsonObject
                 { ["ID"] = type == "FileSystem" ? "0" : "host-" + type, ["Name"] = type + " host", ["DefRetryCount"] = 3, ["DefRetryTimeoutSecs"] = 30,
                   ["DefRescanSecs"] = 4, ["DefMxFi"] = 5, ["DefMxBy"] = 1024, ["DefPreserveFileTimestamp"] = 1,
+                  ["UseNotif"] = notifications.HasValue ? JsonValue.Create(notifications.Value) : null,
                   ["UseOAuth"] = (type is "SMTP" or "POP3") && mailOAuth ? 1 : 0,
                   ["OAuthClientID"] = (type is "SMTP" or "POP3") && mailOAuth ? "host-client" : "",
                   ["OAuthScope"] = (type is "SMTP" or "POP3") && mailOAuth ? "https://outlook.office365.com/.default" : "",

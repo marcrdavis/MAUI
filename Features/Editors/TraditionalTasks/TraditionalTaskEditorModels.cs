@@ -315,7 +315,8 @@ public sealed record TraditionalTaskEditorHostDefaults(
     string EmailOAuthScope,
     string EmailOAuthTokenUrl,
     string EmailOAuthTenantId,
-    string DataIntegrityRule);
+    string DataIntegrityRule,
+    bool? FileNotificationsEnabled = null);
 
 public sealed record TraditionalTaskEditorFolderBrowseResult(
     string HostId,

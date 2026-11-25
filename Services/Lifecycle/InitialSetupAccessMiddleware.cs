@@ -38,6 +38,11 @@ public sealed class InitialSetupAccessMiddleware
 
         if (!setupState.IsConfiguredAtStartup && !isSetupPath)
         {
+            if (MoveItAutomationUI.Services.Reporting.ReportApiRoutes.IsCsvRequest(context.Request.Path))
+            {
+                await MoveItAutomationUI.Services.Reporting.ReportApiRoutes.UnavailableAsync(context);
+                return;
+            }
             context.Response.Redirect(MauiLifecyclePaths.ForApplication(context.Request, MauiLifecyclePaths.Setup));
             return;
         }
