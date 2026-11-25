@@ -1,8 +1,8 @@
 # MAUI — MOVEit Automation User Interface
 
-- **Version:** `0.18.583-RC3`
+- **Version:** `0.18.584-RC3`
 - **Release:** Release Candidate 3 (RC3) — **not the final release**
-- **Build:** `20261124`
+- **Build:** `20261125`
 - **Target framework:** .NET 8
 - **Database schema / configuration version:** `2` / `1`
 
@@ -216,6 +216,8 @@ Local Visual Studio execution still requires the compatible COM API. RC3 support
 | Experimental | The opt-in tools described in [Experimental features](#experimental-features). |
 
 Connection-list updates apply to new logins/background connections without restarting. Existing sessions retain their original endpoint. Changing an endpoint, COM host or Environment Key clears unattended credentials. Startup-sensitive runtime/database changes can require restart.
+
+Task Source/Destination browsing uses native directory flags to distinguish files from folders across supported Host types. Double-clicking a folder opens it; choosing a folder updates the path and preserves the file mask/name. Choosing a file retains the current folder and selects that filename. Traditional and Advanced editors share this behavior with Sync Folder A/B within Sync's supported Host catalog.
 
 ### Scheduled work, imports and backups
 

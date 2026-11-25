@@ -1,6 +1,6 @@
 # MAUI Installation Guide
 
-**0.18.583-RC3** · Build **20261124** · .NET 8 · Database schema **2** / configuration **1**
+**0.18.584-RC3** · Build **20261125** · .NET 8 · Database schema **2** / configuration **1**
 
 Test this release candidate against a non-production MOVEit environment before deploying it for operators. For the shortest local setup, start with the [Visual Studio Quick Start](README.md#quick-start-with-visual-studio).
 

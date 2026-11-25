@@ -1,6 +1,6 @@
 # Deploy MAUI Local Groups Service
 
-**MAUI documentation version:** `0.18.583-RC3` · Build `20261124`. Service versioning is separate from the MAUI application version.
+**MAUI documentation version:** `0.18.584-RC3` · Build `20261125`. Service versioning is separate from the MAUI application version.
 
 This optional service supports **MOVEit User Management**. It is separate from the browser integration under `IntegrationAssets/MOVEitWebAdmin`, which is not required when using the MAUI Editors exclusively. For the MAUI application itself, start with the [Visual Studio Quick Start](../../README.md#quick-start-with-visual-studio); for optional native-editor integration and its required reinstallation after MOVEit Automation upgrades overwrite Tomcat, see [Integration setup and maintenance](../../INSTALLATION.md#install-the-moveit-integration-assets).
 

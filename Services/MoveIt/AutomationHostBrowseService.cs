@@ -462,9 +462,7 @@ public sealed class AutomationHostBrowseService : IAutomationHostBrowseService
         }
         if (node is not JsonObject obj) return;
 
-        var isDirectory = defaultDirectory;
-        var nativeIsDir = Read(obj, "IsDir");
-        if (nativeIsDir.Length > 0) isDirectory = nativeIsDir == "1" || nativeIsDir.Equals("true", StringComparison.OrdinalIgnoreCase);
+        var isDirectory = HostBrowseEntryClassification.IsDirectory(obj, defaultDirectory);
 
         var path = First(
             Read(obj, "DirName"),

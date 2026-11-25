@@ -1,8 +1,8 @@
 # MAUI Testing Guide
 
-- **Version:** `0.18.583-RC3`
+- **Version:** `0.18.584-RC3`
 - **Release:** Release Candidate 3 (pre-release)
-- **Build:** `20261124`
+- **Build:** `20261125`
 - **Database schema / configuration version:** `2` / `1`
 
 > **Release Candidate 3 — not the final release.** Bugs and regressions may remain. Passing CI validates the covered contracts and fixtures; it does not certify the candidate as bug-free or replace testing against your MOVEit environment.
@@ -15,9 +15,9 @@ The development regression suite runs outside IIS. Automated tests use fixtures,
 
 ### Current validation
 
-**0.18.583-RC3 validation:** Local compilation passed with zero warnings or errors, all **2,945 xUnit tests** passed, and the focused schedule suite passed **628 checks**. The expanded focused schedule suite checks exact notification-only, notification-plus-polling and polling-only help text in all three editors; heading/footer agreement; full weekday names; one-minute, one-time, overnight, multiple-time, month/date-list and empty-time variants; live polling changes; and light/dark responsive layouts. Existing schedule option, saved-value, Source/Host refresh, Undo and read-only coverage remains included. Use the current commit's Windows workflow for complete Debug/Release, package and editor validation.
+**0.18.584-RC3 validation:** Local compilation passed with zero warnings or errors and all **2,988 xUnit tests** passed, including 43 new browse regressions. The focused browse suite passed **350 checks** using service-produced DTOs across 58 supported editor/Host/role combinations, including both Sync folders, folder double-click/navigation, unchanged file fields for folder selection, real file selection, Undo and light/dark SFTP layouts. Use the current commit's Windows workflow for complete Debug/Release, package and editor validation.
 
-**Previous application baseline (0.18.582-RC3):** [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/45309222780) passed for commit `0f9fd6f738257b9f877c92013914c3d0b816914a`. Debug and Release each passed **2,945 xUnit tests**; package and browser checks passed, including **3,672 Task Editor checks**. This is historical validation, not the current release's workflow result.
+**Previous application baseline (0.18.583-RC3):** [Windows CI](https://github.com/marcrdavis/MAUI-RC2/actions/runs/45475169092) passed for commit `11e7471bb281aabc6a7c19ae3247c8f33d8c50f4`. Debug and Release each passed **2,945 xUnit tests**; package and browser checks passed, including **3,765 Task Editor checks**. This is historical validation, not the current release's workflow result.
 
 **Quick Start documentation acceptance:** Follow [README Quick Start](README.md#quick-start-with-visual-studio) on a separate Windows development computer with the compatible COM API. On a fresh checkout, create only the missing `appsettings.json` as `{}`, launch the **https** project profile at `https://localhost:7184`, complete Initial Setup with SQLite, and verify first sign-in, Dashboard, All Tasks and All Hosts. Use MAUI editor preferences without the browser integration for MAUI-only editing. Complete this acceptance check against your development or QA MOVEit server.
 
@@ -1066,3 +1066,9 @@ Check all-notifying Sources with forced polling off/on, mixed Sources, notificat
 - Check both Task will run summaries use full weekday names and explicit arrival/polling wording. All-notifying sources with forced polling off describe arrivals; with forced polling on they describe arrivals and the minute interval. Mixed sources also describe both. Non-notifying/entirely unknown sources do not claim arrival triggers. One-time rows, multiple times, month/date-list selections and overnight notes retain accurate text. Confirm live polling changes, heading/footer agreement, and 1400/600-pixel light/dark layouts.
 
 Progress references: [Task Schedule](https://docs.progress.com/bundle/moveit-automation-web-admin-help-2026/page/Task-Schedule.html), [File Notifications and Task Schedules](https://docs.progress.com/bundle/moveit-automation-web-admin-help-2025/page/File-Notifications-and-Task-Schedules.html), and [Enabling File Notifications](https://docs.progress.com/bundle/moveit-automation-web-admin-help-2026/page/Enabling-File-Notifications.html). Support alone does not imply that notifications are enabled; with mixed Sources, both scheduled and notification-triggered runs remain applicable.
+
+### Task browse directory regression
+
+Run the xUnit suite with `MAUI_SYNC_EDITOR_FIXTURE_PATH` set to the existing editor fixture path. The browse tests also write `TaskBrowseFixtures.json` beside it. The normal rendered Task Editor suite consumes these service-produced results; use `MAUI_TASK_EDITOR_BROWSE_ONLY=1` for the focused browse run, or `MAUI_TASK_BROWSE_FIXTURE_PATH` to select its fixture file explicitly.
+
+Verify both Source and Destination browsing in Traditional/Advanced editors and both Sync folders for every supported Host. Native Files.File entries with IsDir set must render as folders, double-click must navigate without changing the filename, choosing the current folder must update only the path, and Undo must restore it. Real files must still select their filename. Cover local drive/UNC paths, FTP and FTPS, SFTP, MOVEit Transfer and cloud folder listings; retain root bucket/container/library selectors and unsupported-Host restrictions. Validate numeric/Boolean/string flags, absent flags with separate directory/file collections, scalar/single/array entries, explicit native paths, folder size suppression and dot-name handling. Confirm native browse requests still include files and acquired checkouts release normally.

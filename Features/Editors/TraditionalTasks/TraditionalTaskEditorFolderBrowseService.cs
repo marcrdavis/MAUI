@@ -673,108 +673,49 @@ public sealed class TraditionalTaskEditorFolderBrowseService : ITraditionalTaskE
             items);
     }
 
+    // Cloud paths remain relative to the selected bucket/container/library.
     private static IReadOnlyList<TraditionalTaskEditorFolderBrowseItem> ParseS3FolderItems(JsonObject response, string currentPath)
-        => ParseCloudFilesWithDirectoryFlag(response, currentPath, includeGenericDirectoryCollections: true);
+        => ParseCloudFilesWithDirectoryFlag(response, currentPath);
 
     private static IReadOnlyList<TraditionalTaskEditorFolderBrowseItem> ParseAzureBlobFolderItems(JsonObject response, string currentPath)
-        => ParseCloudFilesWithDirectoryFlag(response, currentPath, includeGenericDirectoryCollections: true);
+        => ParseCloudFilesWithDirectoryFlag(response, currentPath);
 
     private static IReadOnlyList<TraditionalTaskEditorFolderBrowseItem> ParseGoogleStorageFolderItems(JsonObject response, string currentPath)
-        => ParseCloudFilesWithDirectoryFlag(response, currentPath, includeGenericDirectoryCollections: true);
-
-    private static IReadOnlyList<TraditionalTaskEditorFolderBrowseItem> ParseCloudFilesWithDirectoryFlag(
-        JsonObject response,
-        string currentPath,
-        bool includeGenericDirectoryCollections)
-    {
-        // Captured SharePoint cloud browse responses place directories under Files.File and identify
-        // them with IsDir=1. The user confirmed that Amazon S3/Azure may use the same native v0 shape.
-        // S3 and Azure call this helper only through their own profile parsers; it does not change the
-        // UNC/FTP/SFTP/MOVEit Transfer parsing contract.
-        var result = new List<TraditionalTaskEditorFolderBrowseItem>();
-        foreach (var node in CollectionItems(response, "Files", "File"))
-        {
-            var item = node as JsonObject;
-            if (item is null) continue;
-            var name = FirstNonBlank(Read(item, "Name"), Read(item, "FileName"), LastPathSegment(Read(item, "Path")));
-            if (name.Length == 0 || name is "." or "..") continue;
-            var isDirectory = ReadNullableInt(item, "IsDir") == 1 || ReadNullableFlag(item, "IsDir") == true;
-            var modified = FirstNonBlank(Read(item, "LastModified"), Read(item, "Modified"), Read(item, "Date"));
-            var size = isDirectory ? string.Empty : FirstNonBlank(Read(item, "Size"), Read(item, "Length"));
-            result.Add(new TraditionalTaskEditorFolderBrowseItem(
-                name,
-                isDirectory ? CombineEditorPath(currentPath, name) : string.Empty,
-                isDirectory,
-                size,
-                modified));
-        }
-
-        if (includeGenericDirectoryCollections)
-        {
-            foreach (var node in CollectionItems(response, "Dirs", "Dir").Concat(CollectionItems(response, "Folders", "Folder")))
-            {
-                var item = node as JsonObject;
-                var scalar = ScalarText(node);
-                var name = item is not null
-                    ? FirstNonBlank(Read(item, "Name"), Read(item, "FolderName"), LastPathSegment(Read(item, "DirName")), LastPathSegment(Read(item, "Path")))
-                    : LastPathSegment(scalar);
-                if (name.Length == 0 || name is "." or "..") continue;
-                result.Add(new TraditionalTaskEditorFolderBrowseItem(name, CombineEditorPath(currentPath, name), true, string.Empty,
-                    item is not null ? FirstNonBlank(Read(item, "LastModified"), Read(item, "Modified"), Read(item, "Date")) : string.Empty));
-            }
-        }
-
-        return result
-            .GroupBy(item => $"{(item.IsFolder ? "D" : "F")}:{item.Name}", StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.First())
-            .OrderByDescending(item => item.IsFolder)
-            .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
+        => ParseCloudFilesWithDirectoryFlag(response, currentPath);
 
     private static IReadOnlyList<TraditionalTaskEditorFolderBrowseItem> ParseSharePointBrowseItems(JsonObject response, string currentPath)
+        => ParseCloudFilesWithDirectoryFlag(response, currentPath);
+
+    private static IReadOnlyList<TraditionalTaskEditorFolderBrowseItem> ParseCloudFilesWithDirectoryFlag(JsonObject response, string currentPath)
     {
-        // The captured SharePoint v0 response returns both files and folders under Files.File and
-        // distinguishes folders with IsDir=1. Keep this parser protocol-specific rather than changing
-        // the generic browse parser used by UNC/FTP/SFTP/cloud profiles.
         var result = new List<TraditionalTaskEditorFolderBrowseItem>();
         foreach (var node in CollectionItems(response, "Files", "File"))
         {
-            var item = node as JsonObject;
-            if (item is null) continue;
+            if (node is not JsonObject item) continue;
             var name = FirstNonBlank(Read(item, "Name"), Read(item, "FileName"), LastPathSegment(Read(item, "Path")));
             if (name.Length == 0 || name is "." or "..") continue;
-            var isDirectory = ReadNullableInt(item, "IsDir") == 1 || ReadNullableFlag(item, "IsDir") == true;
+            var isDirectory = HostBrowseEntryClassification.IsDirectory(item, defaultDirectory: false);
             var modified = FirstNonBlank(Read(item, "LastModified"), Read(item, "Modified"), Read(item, "Date"));
             var size = isDirectory ? string.Empty : FirstNonBlank(Read(item, "Size"), Read(item, "Length"));
-            result.Add(new TraditionalTaskEditorFolderBrowseItem(
-                name,
-                isDirectory ? CombineEditorPath(currentPath, name) : string.Empty,
-                isDirectory,
-                size,
-                modified));
+            result.Add(new TraditionalTaskEditorFolderBrowseItem(name, isDirectory ? CombineEditorPath(currentPath, name) : string.Empty, isDirectory, size, modified));
         }
 
-        // Accept Dirs/Dir and Folders/Folder as conservative response variants without allowing this
-        // SharePoint contract to alter other host-profile parsers.
         foreach (var node in CollectionItems(response, "Dirs", "Dir").Concat(CollectionItems(response, "Folders", "Folder")))
         {
             var item = node as JsonObject;
-            var scalar = ScalarText(node);
             var name = item is not null
                 ? FirstNonBlank(Read(item, "Name"), Read(item, "FolderName"), LastPathSegment(Read(item, "DirName")), LastPathSegment(Read(item, "Path")))
-                : LastPathSegment(scalar);
+                : LastPathSegment(ScalarText(node));
             if (name.Length == 0 || name is "." or "..") continue;
-            result.Add(new TraditionalTaskEditorFolderBrowseItem(name, CombineEditorPath(currentPath, name), true, string.Empty,
+            var isDirectory = HostBrowseEntryClassification.IsDirectory(item, defaultDirectory: true);
+            var size = !isDirectory && item is not null ? FirstNonBlank(Read(item, "Size"), Read(item, "Length")) : string.Empty;
+            result.Add(new TraditionalTaskEditorFolderBrowseItem(name, isDirectory ? CombineEditorPath(currentPath, name) : string.Empty, isDirectory, size,
                 item is not null ? FirstNonBlank(Read(item, "LastModified"), Read(item, "Modified"), Read(item, "Date")) : string.Empty));
         }
 
-        return result
-            .GroupBy(item => $"{(item.IsFolder ? "D" : "F")}:{item.Name}", StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.First())
-            .OrderByDescending(item => item.IsFolder)
-            .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        return result.GroupBy(item => $"{(item.IsFolder ? "D" : "F")}:{item.Name}", StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First()).OrderByDescending(item => item.IsFolder)
+            .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
     private static IReadOnlyList<TraditionalTaskEditorFolderBrowseItem> ParseSharePointDocumentLibraries(JsonObject response)
@@ -999,6 +940,7 @@ public sealed class TraditionalTaskEditorFolderBrowseService : ITraditionalTaskE
                     LastPathSegment(Read(folder, "DirName")),
                     Read(folder, "Name"),
                     Read(folder, "FolderName"),
+                    Read(folder, "FileName"),
                     LastPathSegment(Read(folder, "Path")),
                     LastPathSegment(Read(folder, "FullPath")))
                 : LastPathSegment(scalar);
@@ -1014,7 +956,9 @@ public sealed class TraditionalTaskEditorFolderBrowseService : ITraditionalTaskE
                 ? FirstNonBlank(Read(folder, "LastModified"), Read(folder, "Modified"), Read(folder, "Date"))
                 : string.Empty;
 
-            result.Add(new TraditionalTaskEditorFolderBrowseItem(name, editorPath, true, string.Empty, modified));
+            var isDirectory = HostBrowseEntryClassification.IsDirectory(folder, defaultDirectory: true);
+            var size = !isDirectory && folder is not null ? FirstNonBlank(Read(folder, "Size"), Read(folder, "Length")) : string.Empty;
+            result.Add(new TraditionalTaskEditorFolderBrowseItem(name, isDirectory ? editorPath : string.Empty, isDirectory, size, modified));
         }
 
         foreach (var fileNode in CollectionItems(response, "Files", "File"))
@@ -1022,15 +966,22 @@ public sealed class TraditionalTaskEditorFolderBrowseService : ITraditionalTaskE
             var file = fileNode as JsonObject;
             var scalar = ScalarText(fileNode);
             var name = file is not null
-                ? FirstNonBlank(Read(file, "Name"), Read(file, "FileName"), LastPathSegment(Read(file, "Path")), LastPathSegment(Read(file, "FullPath")))
+                ? FirstNonBlank(Read(file, "Name"), Read(file, "FileName"), LastPathSegment(Read(file, "DirName")), LastPathSegment(Read(file, "FolderPath")), LastPathSegment(Read(file, "Path")), LastPathSegment(Read(file, "FullPath")), LastPathSegment(Read(file, "FilePath")))
                 : LastPathSegment(scalar);
-            if (name.Length == 0) continue;
+            if (name.Length == 0 || name is "." or "..") continue;
 
-            var size = file is not null ? FirstNonBlank(Read(file, "Size"), Read(file, "Length")) : string.Empty;
+            var isDirectory = HostBrowseEntryClassification.IsDirectory(file, defaultDirectory: false);
+            var returnedPath = file is not null
+                ? FirstNonBlank(Read(file, "DirName"), Read(file, "FolderPath"), Read(file, "Path"), Read(file, "FullPath"), Read(file, "FilePath"))
+                : string.Empty;
+            var editorPath = isDirectory
+                ? returnedPath.Length > 0 && LooksLikePath(returnedPath) ? normalizeReturnedPath(returnedPath) : CombineEditorPath(currentPath, name)
+                : string.Empty;
+            var size = !isDirectory && file is not null ? FirstNonBlank(Read(file, "Size"), Read(file, "Length")) : string.Empty;
             var modified = file is not null
                 ? FirstNonBlank(Read(file, "LastModified"), Read(file, "Modified"), Read(file, "Date"))
                 : string.Empty;
-            result.Add(new TraditionalTaskEditorFolderBrowseItem(name, string.Empty, false, size, modified));
+            result.Add(new TraditionalTaskEditorFolderBrowseItem(name, editorPath, isDirectory, size, modified));
         }
 
         return result

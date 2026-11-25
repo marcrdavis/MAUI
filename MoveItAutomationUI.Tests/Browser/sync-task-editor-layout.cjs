@@ -10,6 +10,8 @@ const { spawn, spawnSync } = require('node:child_process');
 const root = path.resolve(__dirname, '../..');
 const fixturePath = process.env.MAUI_SYNC_EDITOR_FIXTURE_PATH || path.join(root,'TestResults/SyncEditorFixtures.json');
 const fixtures = JSON.parse(fs.readFileSync(fixturePath,'utf8'));
+assert.ok(!(process.env.MAUI_TASK_EDITOR_SCHEDULES_ONLY==='1'&&process.env.MAUI_TASK_EDITOR_BROWSE_ONLY==='1'),'Select one focused editor suite.');
+const browseFixtures=process.env.MAUI_TASK_EDITOR_SCHEDULES_ONLY==='1'?{}:JSON.parse(fs.readFileSync(process.env.MAUI_TASK_BROWSE_FIXTURE_PATH || path.join(path.dirname(fixturePath),'TaskBrowseFixtures.json'),'utf8'));
 const output = path.join(root,'TestResults/SyncEditorLayout');
 fs.mkdirSync(output,{recursive:true});
 const candidates = [process.env.MAUI_BROWSER_EXECUTABLE,
@@ -149,6 +151,11 @@ window.fetch = async (url, options = {}) => {
     if (String(url).includes('BrowseFolders')) {
         window.lastBrowseUrl = String(url);
         const currentPath = new URL(url).searchParams.get('path');
+        if(window.nativeBrowseResult) {
+            const result=structuredClone(window.nativeBrowseResult);
+            if(currentPath!==result.currentPath){result.parentPath=result.currentPath;result.currentPath=currentPath;result.items=[];}
+            return new Response(JSON.stringify(result),{headers:{'Content-Type':'application/json'}});
+        }
         return new Response(JSON.stringify({currentPath,parentPath:'/',items:window.browseItems||[]}),{headers:{'Content-Type':'application/json'}});
     }
     if (window.failShell) return new Response(JSON.stringify({message:'Shell unavailable.'}),{status:503,headers:{'Content-Type':'application/json'}});
@@ -249,6 +256,60 @@ async function check(name) {
     assert.equal(await evaluate('Boolean(window.editor)'), true, 'Editor did not initialize');
     let checks = 0;
     await command('Emulation.setDeviceMetricsOverride',{width:1920,height:1000,deviceScaleFactor:1,mobile:false});
+    // Feed the production browser DTOs from the real browse service, including native Files.File/IsDir folders.
+    for(const name of ['Traditional','AdvancedBranches','Sync-Share'])for(const [key,result] of Object.entries(browseFixtures)) {
+        const [type,kind]=key.split('-'),model=structuredClone(fixtures[name]);
+        const role=name==='Sync-Share'?'Source':kind;
+        if(!model.task.steps.some(step=>step.kind===role)) {
+            const destination=structuredClone(fixtures.AdvancedBranches.task.steps.find(step=>step.kind==='Destination'));
+            destination.id='900';destination.index=model.task.steps.length;
+            model.task.steps.push(destination);
+        }
+        const candidates=model.task.steps.filter(step=>step.kind===role);
+        const step=candidates[name==='Sync-Share'&&kind==='Destination'?1:0];
+        assert.ok(step,name+'/'+key+' has a browseable step');
+        const field=role==='Source'?'source':'destination',value=step[field];
+        const host=(role==='Source'?model.sourceHosts:model.destinationHosts).find(host=>host.typeCode===type);
+        if(name==='Sync-Share'&&type==='siLock'){assert.equal(host,undefined,'Sync keeps MOVEit Transfer outside its supported Host catalog');continue;}
+        assert.ok(host,name+'/'+key+' has the supported Host');
+        Object.assign(value,{hostId:host.id,hostName:host.name,hostTypeCode:type,serverHostTypeCode:type,hostType:host.type,hostDefaults:structuredClone(host.defaults),path:result.currentPath,
+            bucket:'bucket',container:'container',documentLibrary:'Docs',documentLibraryGuid:'11111111-2222-3333-4444-555555555555',
+            useDefaultBucket:false,useDefaultContainer:false,useDefaultDocumentLibrary:false,blindDownload:false,useDefaultBlindDownload:false});
+        value.hostDefaults.blindDownload=false;
+        await evaluate(`loadFixture(${JSON.stringify(model)});`);
+        await evaluate(`document.querySelector('[data-traditional-task-editor-section-button="steps"]').click();document.querySelector(${JSON.stringify(model.task.type==='Advanced'?'[data-flow-key="'+role.toLowerCase()+':'+step.id+'"] > .advanced-task-flow-row':'[data-traditional-task-editor-step-key="'+role.toLowerCase()+':'+step.id+'"]')}).click();window.nativeBrowseResult=${JSON.stringify(result)};`);
+        const browse='[data-traditional-task-editor-'+field+'-browse]',pathField='[data-'+field+'-field="path"]',nameField='[data-'+field+'-field="'+(role==='Source'?'fileMask':'fileName')+'"]';
+        const originalName=await evaluate(`document.querySelector(${JSON.stringify(nameField)}).value`);
+        assert.equal(await evaluate(`document.querySelector(${JSON.stringify(browse)}).disabled`),false,name+'/'+key+' Browse is available');checks++;
+        await evaluate(`document.querySelector(${JSON.stringify(browse)}).click()`);
+        for(let i=0;i<100&&await evaluate(`document.querySelectorAll('[data-host-browser-rows] > *').length!==2`);i++)await pause(20);
+        assert.equal(await evaluate(`document.querySelectorAll('[data-host-browser-rows] .folder').length`),1,name+'/'+key+' native directory renders as a folder');checks++;
+        if(name==='Traditional'&&key==='SSHFTP-Source') {
+            for(const theme of ['light','dark']) {
+                await evaluate(`document.documentElement.dataset.theme=${JSON.stringify(theme)}`);
+                assert.deepEqual(await evaluate('inspectLayout()'),[],theme+' SFTP browse layout');checks++;
+                await screenshot('task-browse-sftp-files-folders-'+theme);
+            }
+            await evaluate(`document.documentElement.dataset.theme='light'`);
+        }
+        await evaluate(`document.querySelector('[data-host-browser-rows] .folder').dispatchEvent(new MouseEvent('dblclick',{bubbles:true}))`);
+        const child=result.items.find(item=>item.isFolder).path;
+        for(let i=0;i<100&&await evaluate(`document.querySelector('[data-host-browser-location]').value!==${JSON.stringify(child)}`);i++)await pause(20);
+        assert.equal(await evaluate(`document.querySelector('[data-host-browser]').open&&document.querySelector('[data-host-browser-location]').value===${JSON.stringify(child)}`),true,name+'/'+key+' double-click navigates into the directory');checks++;
+        await evaluate(`document.querySelector('[data-host-browser-ok]').click()`);
+        assert.deepEqual(await evaluate(`[document.querySelector(${JSON.stringify(pathField)}).value,document.querySelector(${JSON.stringify(nameField)}).value]`),[child,originalName],name+'/'+key+' folder selection changes only the path');checks++;
+        await evaluate(`document.querySelector('[data-traditional-task-editor-undo]').click()`);
+        assert.deepEqual(await evaluate(`[document.querySelector(${JSON.stringify(pathField)}).value,document.querySelector(${JSON.stringify(nameField)}).value]`),[result.currentPath,originalName],name+'/'+key+' Undo restores the path and preserves the file field');checks++;
+        await evaluate(`document.querySelector(${JSON.stringify(browse)}).click()`);
+        for(let i=0;i<100&&await evaluate(`document.querySelectorAll('[data-host-browser-rows] > *').length!==2`);i++)await pause(20);
+        await evaluate(`document.querySelector('[data-host-browser-rows] .file').dispatchEvent(new MouseEvent('dblclick',{bubbles:true}))`);
+        assert.deepEqual(await evaluate(`[document.querySelector(${JSON.stringify(pathField)}).value,document.querySelector(${JSON.stringify(nameField)}).value,document.querySelector('[data-host-browser]').open]`),[result.currentPath,'report.csv',false],name+'/'+key+' real files still select a filename');checks++;
+    }
+    await evaluate(`window.nativeBrowseResult=null`);
+    if(process.env.MAUI_TASK_EDITOR_BROWSE_ONLY==='1') {
+        assert.deepEqual(await evaluate('window.layoutErrors'),[]);
+        console.log('Task browse directory checks: '+JSON.stringify({result:'PASS',checks,profiles:Object.keys(browseFixtures).length,editors:['Traditional','Advanced','Synchronization']}));return;
+    }
     // The production shared schedule controls must follow effective notification settings in every editor.
     await evaluate(`window.scheduleField=name=>document.querySelector('[data-schedule-interval-field="'+name+'"]');window.pollOption=()=>document.querySelector('[data-schedule-field="runEvenIfNotifications"]');window.showSchedules=()=>{document.querySelector('[data-traditional-task-editor-section-button="schedules"]').click();document.querySelector('[data-traditional-task-editor-schedule-key]').click();document.querySelector('[data-traditional-task-editor-schedule-tab="times"]').click();};`);
     await evaluate(`window.firstSuccessOption=()=>document.querySelector('[data-schedule-field="onlyUntilFirstSuccess"]');`);

@@ -1,7 +1,7 @@
 {
   "ManifestVersion": 1,
-  "Description": "Clarify Task schedule summaries for file notifications and polling.",
-  "TargetVersion": "0.18.583-RC3",
+  "Description": "Correct Task browse folder classification across supported Hosts and editors.",
+  "TargetVersion": "0.18.584-RC3",
   "MinimumSupportedVersion": "0.16.77-integration",
   "RequiredSchemaVersion": 2,
   "RequiredConfigurationVersion": 1,

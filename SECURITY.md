@@ -1,8 +1,8 @@
 # MAUI Security Policy and Engineering Notes
 
-- **Version:** `0.18.583-RC3`
+- **Version:** `0.18.584-RC3`
 - **Release:** Release Candidate 3 (pre-release)
-- **Build:** `20261124`
+- **Build:** `20261125`
 
 > **Release Candidate 3 — not the final release.** This pre-release may contain defects, including security defects. The controls described here document implemented behavior, not a guarantee of security or production readiness.
 

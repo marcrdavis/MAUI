@@ -1,6 +1,17 @@
 # MAUI Changelog
 
-**Current candidate:** v0.18.583-RC3, build 20261124 — **Release Candidate 3, not the final release**. Bugs, regressions and incomplete behavior may remain; validate the candidate against the target MOVEit environment.
+**Current candidate:** v0.18.584-RC3, build 20261125 — **Release Candidate 3, not the final release**. Bugs, regressions and incomplete behavior may remain; validate the candidate against the target MOVEit environment.
+
+## v0.18.584-RC3 — 2026-11-25
+
+### Task browse directory classification
+
+- Honor native **IsDir** flags when folders appear under **Files.File**. Preserve directory paths so double-click navigates into the folder and selecting it changes the Step path without replacing its filename/file mask. Actual files continue to select a filename.
+- Share directory-flag interpretation between Task and Host browsing, including cloud Task listings. Keep existing collection-based defaults when the flag is absent, scalar/single/array response shapes, folder sorting and each protocol's path normalization. Consolidate the duplicated cloud/SharePoint listing parser; retain cloud root selectors, native browse requests, credentials and checkout/release coordination.
+- Cover Local File System, UNC, MOVEit Transfer, FTP/FTPS, SFTP, S3, Azure Blob, Google Storage and SharePoint through the public browse services. Render service-produced results in Traditional, Advanced and Sync editors, covering both Sync folders within its supported Host catalog, directory double-click, file selection and Undo.
+- Add regressions for flag formats and explicit false flags, separate collections, native paths, dot entries and folder/file preservation. Focused editor checks pass **350 assertions** across **58 supported editor/Host/role combinations**.
+- Local compilation passed with zero warnings or errors; all **2,988 xUnit tests** and **350 focused browse checks** passed. Use the release commit's Windows workflow for complete platform, package and editor validation.
+- Advance application/release metadata and all seven Markdown release banners to **0.18.584-RC3**, build **20261125**. Keep database schema **2** and configuration version **1**; no migration or live settings rewrite is added.
 
 ## v0.18.583-RC3 — 2026-11-24
 

@@ -1,8 +1,8 @@
 # MAUI Upgrade Guide
 
-- **Target release:** `0.18.583-RC3`
+- **Target release:** `0.18.584-RC3`
 - **Release:** Release Candidate 3 (pre-release)
-- **Build:** `20261124`
+- **Build:** `20261125`
 - **Database schema:** `2`
 - **Configuration version:** `1`
 
@@ -16,7 +16,7 @@ MAUI upgrades are driven by the cumulative `upgrade.json` manifest included with
 
 | Item | Current package |
 | --- | --- |
-| Application / build | `0.18.583-RC3` / `20261124` |
+| Application / build | `0.18.584-RC3` / `20261125` |
 | Minimum directly supported application version | `0.16.77-integration` |
 | Database schema / configuration version | `2` / `1` |
 | Manifest RestartRequired | `false`; startup-sensitive changes can still require restart. |
@@ -24,7 +24,7 @@ MAUI upgrades are driven by the cumulative `upgrade.json` manifest included with
 
 Live appsettings.json and Data remain installation-owned. Release templates/manifest/binaries must match. Application releases can advance without schema/configuration migrations; missing editable Settings definitions are added from the template when saved, preserving existing values.
 
-Version **0.18.583-RC3** clarifies the Task schedule help text across Traditional, Advanced and Synchronization editors. It states when files arrive, when periodic polling occurs, or both, with explicit start/end times and full weekday names. Heading/footer text stays synchronized; one-time rows, multiple times, month/date-list selections and overnight notes retain their distinct wording. Existing option editability, disabled tooltips, saved values and native schedule persistence remain compatible. Database schema **2** and configuration version **1** are unchanged; no migration is added.
+Version **0.18.584-RC3** corrects directory classification in Task browsing. Native directory flags are honored even when folders appear under Files.File, so double-click navigates and folder selection preserves the filename/file mask. Task and Host browsing share the flag interpretation; protocol-specific paths, browse requests, cloud root selection, authentication and checkout/release behavior remain compatible. The fix covers supported Hosts in Traditional, Advanced and Synchronization Task editors. Database schema **2** and configuration version **1** are unchanged; no migration is added.
 
 ## Before upgrading
 
